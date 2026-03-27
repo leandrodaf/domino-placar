@@ -1,0 +1,32 @@
+# Binary
+domino-placar
+domino-teste
+domino-game
+*.exe
+*.out
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+
+# Uploads (fotos dos jogadores)
+uploads/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Go
+vendor/
