@@ -1,0 +1,51 @@
+{{template "base" .}}
+
+{{define "title"}}Pontuação — {{.Player.Name}}{{end}}
+
+{{define "content"}}
+<div style="text-align:center; padding:24px 0 20px;">
+  <div style="font-size:0.78rem; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:6px;">
+    {{.Player.Name}} &bull; Rodada {{.Round.RoundNumber}}
+  </div>
+  <h1 style="margin-top:0; margin-bottom:6px; font-size:1.7rem;">✏️ Sua Pontuação</h1>
+  {{if gt .Player.TotalScore 0}}
+  <p style="color:var(--muted); font-size:0.85rem; margin:0;">
+    Placar atual:
+    <strong style="color:{{if ge .Player.TotalScore 40}}var(--red){{else if ge .Player.TotalScore 30}}var(--orange){{else}}var(--text){{end}};">
+      {{.Player.TotalScore}} pts
+    </strong>
+  </p>
+  {{end}}
+</div>
+
+<div class="card">
+  <form method="POST" action="/match/{{.Match.ID}}/round/{{.Round.ID}}/confirm/{{.Player.ID}}">
+    <input type="hidden" name="_csrf" value="{{.CSRFToken}}">
+
+    <label style="font-size:0.82rem; color:var(--text-2); margin-bottom:10px; display:block;">
+      Some os pontos de todas as suas peças restantes
+    </label>
+
+    <input
+      type="number"
+      id="override_points"
+      name="override_points"
+      {{if .ManualMode}}value="{{.HandImage.PointsCalculated}}"{{end}}
+      placeholder="0"
+      min="0"
+      max="200"
+      required
+      inputmode="numeric"
+      style="font-family:'Rajdhani',sans-serif; font-size:3rem; font-weight:700; text-align:center;
+             letter-spacing:0.05em; width:100%; border-radius:12px; margin-bottom:20px;">
+
+    <button type="submit" class="btn btn-primary" style="min-height:56px; font-size:1rem;">
+      ✅ Confirmar
+    </button>
+  </form>
+</div>
+
+<a href="/match/{{.Match.ID}}/round/{{.Round.ID}}/upload/{{.Player.ID}}" class="btn btn-ghost mt-8" style="font-size:0.85rem;">
+  ← Voltar / Refazer
+</a>
+{{end}}

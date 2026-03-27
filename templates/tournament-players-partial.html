@@ -1,0 +1,18 @@
+{{define "tournament-players-partial.html"}}
+<div class="card-title">👥 Jogadores ({{.Count}}/60)</div>
+{{if .Players}}
+  <ul class="player-list">
+    {{range .Players}}
+    <li class="player-item">
+      <span class="player-name">{{.Name}}</span>
+      <span class="badge badge-active">Entrou</span>
+    </li>
+    {{end}}
+  </ul>
+{{else}}
+  <div class="empty-state">
+    <span class="icon">⏳</span>
+    <p>Aguardando jogadores entrarem...</p>
+  </div>
+{{end}}
+{{end}}

@@ -1,0 +1,90 @@
+{{template "base" .}}
+
+{{define "title"}}Apelidos — {{.Match.ID}}{{end}}
+
+{{define "content"}}
+<div class="flex items-center justify-between mb-16">
+  <h1 style="margin-bottom: 0;">🏷️ Apelidos</h1>
+  <a href="/match/{{.Match.ID}}/ranking{{if .VoterID}}?voter_id={{.VoterID}}{{end}}" class="btn btn-outline" style="padding:6px 14px; font-size:0.85rem;">← Ranking</a>
+</div>
+
+<p style="font-size:0.9rem; color:var(--muted); margin-bottom:20px;">
+  Proponha e vote nos apelidos dos jogadores desta partida.
+</p>
+
+{{range .PlayerRows}}
+<div class="card mb-16">
+  <div class="flex items-center justify-between" style="margin-bottom:12px;">
+    <div>
+      <div class="rank-name" style="font-size:1.1rem; font-weight:700;">{{.Name}}</div>
+    </div>
+    {{if .TopNickname}}
+    <div style="background:var(--accent); color:#fff; padding:4px 10px; border-radius:20px; font-size:0.85rem; font-weight:600;">
+      "{{.TopNickname}}"
+    </div>
+    {{end}}
+  </div>
+
+  <!-- Nominations existentes -->
+  <div style="margin-bottom:12px;">
+    {{$uid := .UniqueIdentifier}}
+    {{range $.Nominations}}
+    {{if eq .NominatedUniqueID $uid}}
+    <div class="flex items-center justify-between" style="padding:8px 0; border-bottom:1px solid var(--border);">
+      <div>
+        <span style="font-weight:600;">"{{.Nickname}}"</span>
+        <span style="font-size:0.78rem; color:var(--muted); margin-left:8px;">{{.VoteCount}} voto{{if ne .VoteCount 1}}s{{end}}</span>
+      </div>
+      {{if $.VoterID}}
+      <form method="POST" action="/match/{{$.Match.ID}}/nickname/{{.ID}}/vote" style="display:inline;">
+        <input type="hidden" name="voter_id" value="{{$.VoterID}}">
+        <button type="submit" class="btn btn-outline" style="padding:4px 10px; font-size:0.8rem;">👍 Votar</button>
+      </form>
+      {{end}}
+    </div>
+    {{end}}
+    {{end}}
+  </div>
+
+  <!-- Propor novo apelido -->
+  {{if $.VoterID}}
+  <details style="margin-top:8px;">
+    <summary style="cursor:pointer; font-size:0.85rem; color:var(--accent); user-select:none;">+ Propor apelido</summary>
+    <form method="POST" action="/match/{{$.Match.ID}}/player/{{.ID}}/nominate" style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+      <input type="hidden" name="voter_id" value="{{$.VoterID}}">
+      <input type="text" name="nickname" placeholder="Apelido (máx. 30 chars)" maxlength="30" required
+             style="flex:1; min-width:0; padding:8px 10px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text); font-size:0.9rem;">
+      <button type="submit" class="btn btn-primary" style="padding:8px 14px; font-size:0.85rem; white-space:nowrap;">Enviar</button>
+    </form>
+  </details>
+  {{else}}
+  <p style="font-size:0.8rem; color:var(--muted); margin-top:8px;">
+    Acesse via link pessoal para votar ou propor apelidos.
+  </p>
+  {{end}}
+</div>
+{{end}}
+
+{{if not .PlayerRows}}
+<div class="card">
+  <div class="empty-state">
+    <span class="icon">🏷️</span>
+    <p>Nenhum jogador nesta partida ainda.</p>
+  </div>
+</div>
+{{end}}
+
+<!-- SSE: atualiza a página quando novos votos chegam -->
+<script>
+(function() {
+  var es = new EventSource('/match/{{.Match.ID}}/events');
+  es.onmessage = function(e) {
+    if (e.data === 'nickname_updated') {
+      var loc = window.location.href;
+      window.location.replace(loc);
+    }
+  };
+  window.addEventListener('beforeunload', function() { es.close(); });
+})();
+</script>
+{{end}}

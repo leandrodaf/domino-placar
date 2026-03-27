@@ -1,0 +1,75 @@
+{{template "base" .}}
+
+{{define "title"}}Pontos da Rodada {{.Round.RoundNumber}} — Dominó Placar{{end}}
+{{define "head-extra"}}
+<script>window._matchMeta={id:'{{.Match.ID}}',status:'{{.Match.Status}}',players:[{{range $i,$p:=.Players}}{{if $i}},{{end}}'{{$p.Name}}'{{end}}],round:{{.Round.RoundNumber}}};</script>
+{{end}}
+
+{{define "content"}}
+<div class="flex items-center justify-between mb-16">
+  <h1 style="margin-bottom:0;">📝 Pontos — Rodada {{.Round.RoundNumber}}</h1>
+  <span class="round-badge">Rodada {{.Round.RoundNumber}}</span>
+</div>
+
+{{if .ErrorMsg}}
+<div class="alert alert-danger" id="err-alert" style="margin-bottom:14px;">
+  ⚠️ {{.ErrorMsg}}
+</div>
+<script>(function(){var a=document.getElementById('err-alert');setTimeout(function(){a.style.transition='opacity .4s';a.style.opacity='0';setTimeout(function(){a.style.display='none';},400);},4500);})();</script>
+{{end}}
+
+{{if .Fechamento}}
+<div style="background:rgba(245,197,24,0.08); border:1px solid rgba(245,197,24,0.3); border-radius:12px; padding:12px 14px; margin-bottom:14px; display:flex; align-items:center; gap:10px;">
+  <span style="font-size:1.4rem;">🔒</span>
+  <div>
+    <div style="font-weight:600; font-size:0.9rem; color:var(--gold);">Jogo Fechado</div>
+    <div style="font-size:0.78rem; color:var(--text-2);">Informe as peças na mão de todos. Quem tiver menos pontos leva a rodada.</div>
+  </div>
+</div>
+{{end}}
+
+<!-- Formulário de pontos em lote -->
+<form method="POST" action="/match/{{.Match.ID}}/round/{{.Round.ID}}/round-scores">
+  <input type="hidden" name="_csrf" value="{{.CSRFToken}}">
+  {{if .Fechamento}}<input type="hidden" name="fechamento" value="1">{{end}}
+
+  <div class="card" style="padding-bottom:8px;">
+    <div class="card-title">🎯 Pontos de cada jogador</div>
+    {{if not .Fechamento}}
+    <div style="font-size:0.82rem; color:var(--text-2); margin-bottom:14px;">
+      Batida normal: vencedor fica com <strong>0 pts</strong>. Fechamento: informe as peças de todos.
+    </div>
+    {{end}}
+
+    {{range .Players}}
+    {{if eq .Status "active"}}
+    {{$isWinner := and (not $.Fechamento) (eq .ID $.Round.WinnerPlayerID)}}
+    <div style="display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--border);">
+      <div style="width:36px; height:36px; border-radius:50%; {{if $isWinner}}background:rgba(34,197,94,0.12); border:1.5px solid rgba(34,197,94,0.4);{{else}}background:rgba(255,255,255,0.08); border:1.5px solid var(--border);{{end}} display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0;">
+        {{if $isWinner}}👑{{else}}{{slice .Name 0 1}}{{end}}
+      </div>
+      <div style="flex:1; min-width:0;">
+        <div style="font-weight:600; font-size:0.95rem;">{{.Name}}{{if $isWinner}} <span style="font-size:0.75rem; color:var(--green); font-weight:400;">venceu</span>{{end}}</div>
+        <div style="font-size:0.75rem; color:var(--muted);">Total atual: {{.TotalScore}} pts</div>
+      </div>
+      <div style="flex-shrink:0; width:90px;">
+        <input type="number" name="score_{{.ID}}"
+               value="{{if and $isWinner (not (index $.Confirmed .ID))}}0{{else}}{{index $.Confirmed .ID}}{{end}}"
+               min="0" max="200" inputmode="numeric"
+               placeholder="pts"
+               style="width:100%; box-sizing:border-box; text-align:center; font-size:1.1rem; font-family:'Rajdhani',sans-serif; font-weight:700; min-height:44px; border-radius:10px; {{if $isWinner}}border-color:rgba(34,197,94,0.4); color:var(--green);{{end}}">
+      </div>
+    </div>
+    {{end}}
+    {{end}}
+  </div>
+
+  <button type="submit" class="btn btn-primary" style="margin-top:16px; font-size:1rem; min-height:52px;">
+    ✅ Confirmar Pontos da Rodada
+  </button>
+</form>
+
+<a href="/match/{{.Match.ID}}/ranking" style="display:block; text-align:center; margin-top:12px; font-size:0.85rem; color:var(--muted); text-decoration:none;">
+  Ver placar sem confirmar →
+</a>
+{{end}}

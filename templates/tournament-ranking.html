@@ -1,0 +1,60 @@
+{{template "base" .}}
+
+{{define "title"}}Ranking do Torneio — Dominó Placar{{end}}
+
+{{define "content"}}
+<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
+  <h1 style="margin-bottom: 0;">🏅 Ranking Geral</h1>
+  <span class="tournament-badge {{.Tournament.Status}}">
+    {{if eq .Tournament.Status "registration"}}Inscrições{{else if eq .Tournament.Status "active"}}Em Andamento{{else}}Encerrado{{end}}
+  </span>
+</div>
+
+<div class="card-title">🏆 {{.Tournament.Name}}</div>
+
+<a href="/tournament/{{.Tournament.ID}}/tables" class="btn btn-secondary mb-16" style="display: block; text-align: center;">
+  🎲 Ver Mesas
+</a>
+
+{{if .Ranking}}
+<ul class="ranking-list">
+  {{range $i, $entry := .Ranking}}
+  <li class="ranking-item {{if eq $entry.Status "estourou"}}estourou{{end}} {{if eq $i 0}}rank-1{{end}}">
+    <div class="rank-number {{if eq $i 0}}gold{{end}}">{{add $i 1}}</div>
+    <div class="rank-info">
+      <div class="rank-name {{if eq $entry.Status "estourou"}}eliminated{{end}}">{{$entry.Name}}</div>
+      <div style="font-size: 0.8rem; color: var(--muted);">Mesa {{$entry.TableNumber}}</div>
+    </div>
+    <div>
+      <div class="rank-score {{if eq $entry.Status "estourou"}}eliminated{{else if gt $entry.Score 40}}danger{{else if gt $entry.Score 25}}warning{{else}}safe{{end}}">
+        {{$entry.Score}}
+      </div>
+      {{if eq $entry.Status "estourou"}}
+      <span class="badge badge-estourou" style="font-size: 0.65rem;">Estourou</span>
+      {{end}}
+    </div>
+  </li>
+  {{end}}
+</ul>
+{{else}}
+<div class="empty-state">
+  <span class="icon">⏳</span>
+  <p>Nenhum resultado disponível ainda.<br>O torneio precisa ser iniciado.</p>
+</div>
+{{end}}
+
+<script>
+  // Connect to SSE for live updates
+  const evtSource = new EventSource('/tournament/{{.Tournament.ID}}/events');
+  evtSource.addEventListener('update', function(e) {
+    if (e.data === 'points_updated' || e.data === 'tournament_started') {
+      window.location.reload();
+    }
+  });
+
+  // Fallback reload every 15 seconds
+  setInterval(function() {
+    window.location.reload();
+  }, 15000);
+</script>
+{{end}}

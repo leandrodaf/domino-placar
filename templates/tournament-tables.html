@@ -1,0 +1,61 @@
+{{template "base" .}}
+
+{{define "title"}}Torneio — Mesas — Dominó Placar{{end}}
+
+{{define "content"}}
+<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
+  <h1 style="margin-bottom: 0;">🏆 {{.Tournament.Name}}</h1>
+  <span class="tournament-badge {{.Tournament.Status}}">
+    {{if eq .Tournament.Status "registration"}}Inscrições{{else if eq .Tournament.Status "active"}}Em Andamento{{else}}Encerrado{{end}}
+  </span>
+</div>
+
+<a href="/tournament/{{.Tournament.ID}}/ranking" class="btn btn-tournament mb-16" style="display: block; text-align: center;">
+  🏅 Ver Ranking Geral
+</a>
+
+{{if .Tables}}
+  {{range .Tables}}
+  <div class="table-card">
+    <div class="table-header">
+      <div class="table-number">{{.TableNumber}}</div>
+      <div>
+        <div class="table-title">Mesa {{.TableNumber}}</div>
+        <span class="badge {{if eq .Match.Status "active"}}badge-active{{else if eq .Match.Status "finished"}}badge-estourou{{else}}badge-waiting{{end}}">
+          {{if eq .Match.Status "active"}}Em jogo{{else if eq .Match.Status "finished"}}Finalizada{{else}}Aguardando{{end}}
+        </span>
+      </div>
+    </div>
+
+    {{if .Players}}
+    <ul class="table-players-list">
+      {{range .Players}}
+      <li class="table-player-item">
+        <span class="player-name {{if eq .Status "estourou"}}eliminated{{end}}">{{.Name}}</span>
+        <span style="font-size: 0.85rem; color: var(--accent); font-weight: 700;">{{.TotalScore}} pts</span>
+      </li>
+      {{end}}
+    </ul>
+    {{end}}
+
+    <div style="margin-top: 12px;">
+      <a href="/match/{{.MatchID}}/ranking" class="btn btn-secondary btn-sm">
+        📊 Ver Ranking da Mesa
+      </a>
+    </div>
+  </div>
+  {{end}}
+{{else}}
+  <div class="empty-state">
+    <span class="icon">⏳</span>
+    <p>Nenhuma mesa criada ainda.</p>
+  </div>
+{{end}}
+
+<script>
+  // Auto-refresh tables page every 10 seconds
+  setTimeout(function() {
+    window.location.reload();
+  }, 10000);
+</script>
+{{end}}

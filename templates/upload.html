@@ -1,0 +1,188 @@
+{{template "base" .}}
+
+{{define "title"}}Rodada {{.Round.RoundNumber}} — {{.Player.Name}}{{end}}
+
+{{define "content"}}
+
+{{if .ErrorMsg}}
+<div class="alert alert-danger" id="err-alert" style="margin-bottom:14px;">
+  ⚠️ {{.ErrorMsg}}
+</div>
+<script>(function(){var a=document.getElementById('err-alert');setTimeout(function(){a.style.transition='opacity .4s';a.style.opacity='0';setTimeout(function(){a.style.display='none';},400);},4500);})();</script>
+{{end}}
+
+<!-- Cabeçalho do jogador -->
+<div style="text-align:center; padding:20px 0 24px;">
+  <div style="font-size:0.78rem; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:6px;">
+    Rodada {{.Round.RoundNumber}}
+  </div>
+  <h1 style="margin-bottom:12px; font-size:1.8rem;">{{.Player.Name}}</h1>
+
+  <!-- Placar atual -->
+  {{if gt .Player.TotalScore 0}}
+  <div style="display:inline-flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:10px 20px;">
+    <div>
+      <div style="font-family:'Rajdhani',sans-serif; font-size:2rem; font-weight:700; line-height:1;
+        {{if ge .Player.TotalScore 40}}color:var(--red){{else if ge .Player.TotalScore 30}}color:var(--orange){{else}}color:var(--text){{end}};">
+        {{.Player.TotalScore}}
+      </div>
+      <div style="font-size:0.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em;">pontos</div>
+    </div>
+    <div style="width:1px; height:36px; background:var(--border);"></div>
+    <div>
+      <div style="font-family:'Rajdhani',sans-serif; font-size:2rem; font-weight:700; line-height:1; color:var(--text-2);">{{.Tiles.TilesEach}}</div>
+      <div style="font-size:0.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em;">pedras</div>
+    </div>
+  </div>
+  {{if ge .Player.TotalScore 40}}
+  <div style="margin-top:10px; font-size:0.82rem; color:var(--red); font-weight:600;">
+    ⚠️ Cuidado — você está próximo de estourar!
+  </div>
+  {{end}}
+  {{else}}
+  <div style="display:inline-flex; align-items:center; gap:6px; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:10px 20px;">
+    <div style="font-family:'Rajdhani',sans-serif; font-size:2rem; font-weight:700; line-height:1; color:var(--text-2);">{{.Tiles.TilesEach}}</div>
+    <div style="font-size:0.82rem; color:var(--muted);">pedras na mão</div>
+  </div>
+  {{end}}
+</div>
+
+<!-- Gate de permissão de câmera -->
+<div id="camera-gate" style="display:none;">
+  <div class="card" style="text-align:center; padding:24px 20px;">
+    <div style="font-size:2.8rem; margin-bottom:12px;">📷</div>
+    <div style="font-weight:700; font-size:1.05rem; margin-bottom:8px;">Permitir acesso à câmera</div>
+    <p style="font-size:0.85rem; color:var(--text-2); margin-bottom:18px;">
+      Para fotografar suas peças, o aplicativo precisa acessar a câmera do seu dispositivo.
+    </p>
+    <button type="button" id="request-camera-btn" class="btn btn-primary" style="min-height:52px; font-size:1rem;">
+      📷 Liberar Câmera
+    </button>
+    <p id="camera-denied-msg" style="display:none; margin-top:14px; font-size:0.83rem; color:var(--red);">
+      Câmera bloqueada. Vá em <strong>Configurações &rsaquo; Privacidade &rsaquo; Câmera</strong> e permita o acesso ao navegador. Ou use a entrada manual abaixo.
+    </p>
+  </div>
+</div>
+
+<!-- Upload de foto — ação principal -->
+<div id="photo-section" style="display:none;">
+  <form method="POST" action="/match/{{.Match.ID}}/round/{{.Round.ID}}/upload/{{.Player.ID}}" enctype="multipart/form-data" id="upload-form">
+    <input type="hidden" name="_csrf" value="{{.CSRFToken}}">
+
+    <div class="upload-area" id="upload-area" onclick="triggerCamera()">
+      <span class="upload-icon" id="upload-icon">📷</span>
+      <p class="upload-hint" id="upload-hint">Coloque as pedras em linha e fotografe</p>
+      <input type="file" name="image" id="image-input"
+             accept="image/*" capture="environment"
+             style="display:none;" onchange="handleImageSelect(this)">
+    </div>
+
+    <div id="preview-container" style="display:none; margin-top:12px;">
+      <img id="preview-img" style="width:100%; border-radius:10px; max-height:260px; object-fit:cover; border:1px solid var(--border);" alt="Preview">
+    </div>
+
+    <button type="submit" class="btn btn-primary mt-16" id="submit-btn" style="display:none; min-height:56px; font-size:1rem;">
+      ✅ Enviar foto
+    </button>
+  </form>
+</div>
+
+<!-- Divisor -->
+<div style="display:flex; align-items:center; gap:10px; margin:20px 0;">
+  <div style="flex:1; height:1px; background:var(--border);"></div>
+  <span style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em;">ou digitar</span>
+  <div style="flex:1; height:1px; background:var(--border);"></div>
+</div>
+
+<!-- Entrada manual -->
+<form method="POST" action="/match/{{.Match.ID}}/round/{{.Round.ID}}/upload/{{.Player.ID}}">
+  <input type="hidden" name="_csrf" value="{{.CSRFToken}}">
+  <div class="form-group">
+    <label for="manual_points" style="font-size:0.82rem;">Some os pontos de todas as peças restantes</label>
+    <input type="number" id="manual_points" name="manual_points"
+           placeholder="0" min="0" max="200"
+           style="font-family:'Rajdhani',sans-serif; font-size:2rem; font-weight:700; text-align:center; letter-spacing:0.05em;">
+  </div>
+  <button type="submit" class="btn btn-secondary" style="min-height:52px;">
+    📝 Confirmar pontos
+  </button>
+</form>
+
+<a href="/match/{{.Match.ID}}/round/{{.Round.ID}}/game" class="btn btn-ghost" style="margin-top:8px; font-size:0.85rem;">
+  ← Voltar
+</a>
+
+<script>
+function triggerCamera() {
+  document.getElementById('image-input').click();
+}
+
+function handleImageSelect(input) {
+  if (input.files && input.files[0]) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      document.getElementById('preview-img').src = e.target.result;
+      document.getElementById('preview-container').style.display = 'block';
+      document.getElementById('submit-btn').style.display = 'flex';
+      document.getElementById('upload-icon').textContent = '✅';
+      document.getElementById('upload-hint').textContent = input.files[0].name;
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+(function initCameraPermission() {
+  var gate = document.getElementById('camera-gate');
+  var photoSection = document.getElementById('photo-section');
+
+  function showPhoto() {
+    photoSection.style.display = 'block';
+    gate.style.display = 'none';
+  }
+  function showGate() {
+    gate.style.display = 'block';
+    photoSection.style.display = 'none';
+  }
+
+  // Se não há suporte a mediaDevices, mostra direto (ex: desktop)
+  if (!window.navigator.mediaDevices || !window.navigator.mediaDevices.getUserMedia) {
+    showPhoto();
+    return;
+  }
+
+  // Tenta verificar permissão sem pedir (Permissions API)
+  if (navigator.permissions && navigator.permissions.query) {
+    navigator.permissions.query({ name: 'camera' }).then(function(result) {
+      if (result.state === 'granted') {
+        showPhoto();
+      } else {
+        showGate();
+      }
+      result.onchange = function() {
+        if (result.state === 'granted') showPhoto();
+      };
+    }).catch(function() {
+      // Permissions API não suportada (iOS Safari) — mostra direto
+      showPhoto();
+    });
+  } else {
+    // Sem Permissions API — mostra direto (file input pedirá permissão ao ser clicado)
+    showPhoto();
+  }
+
+  // Botão de solicitar permissão
+  document.getElementById('request-camera-btn').addEventListener('click', function() {
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(function(stream) {
+        // Para o stream imediatamente — só precisávamos do grant
+        stream.getTracks().forEach(function(t) { t.stop(); });
+        showPhoto();
+      })
+      .catch(function(err) {
+        document.getElementById('camera-denied-msg').style.display = 'block';
+        document.getElementById('request-camera-btn').style.display = 'none';
+      });
+  });
+})();
+</script>
+{{end}}

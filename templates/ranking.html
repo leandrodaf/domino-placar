@@ -1,0 +1,366 @@
+{{template "base" .}}
+
+{{define "title"}}Ranking — Dominó Placar{{end}}
+{{define "head-extra"}}
+<script>window._matchMeta={id:'{{.Match.ID}}',status:'{{.Match.Status}}',players:[{{range $i,$p:=.Players}}{{if $i}},{{end}}'{{$p.Name}}'{{end}}],round:{{if .Round}}{{.Round.RoundNumber}}{{else}}0{{end}}};</script>
+<script src="https://unpkg.com/canvas-confetti@1/dist/confetti.browser.min.js"></script>
+{{end}}
+
+{{define "content"}}
+<div class="flex items-center justify-between mb-16">
+  <h1 style="margin-bottom: 0;">📊 Ranking</h1>
+  <div style="display:flex; gap:8px; align-items:center;">
+    {{if .Round}}
+    <span class="round-badge">Rodada {{.Round.RoundNumber}}</span>
+    {{end}}
+    <button onclick="shareScore()" class="btn btn-outline" style="padding:4px 10px; font-size:0.8rem;" title="Compartilhar placar">📤</button>
+  </div>
+</div>
+
+{{if .StarterName}}
+<div class="alert alert-info" style="margin-bottom:12px; padding:8px 12px; font-size:0.88rem;">
+  🎯 <strong>{{.StarterName}}</strong> inicia esta rodada
+</div>
+{{end}}
+
+{{if eq .Match.Status "finished"}}
+<div id="winner-banner" style="border-radius:16px; padding:20px 18px; margin-bottom:16px; background:linear-gradient(135deg, rgba(245,197,24,0.12), rgba(245,197,24,0.04)); border:2px solid rgba(245,197,24,0.4); text-align:center;">
+  <div style="font-size:3rem; line-height:1; margin-bottom:8px;">🐂</div>
+  {{range $i, $p := .Players}}{{if eq $i 0}}
+  <div style="font-family:'Rajdhani',sans-serif; font-size:1.6rem; font-weight:700; color:var(--gold); letter-spacing:0.05em; line-height:1.1;">
+    {{$p.Name}} GANHOU O BOI!
+  </div>
+  <div style="font-size:0.85rem; color:var(--text-2); margin-top:6px; line-height:1.4;">
+    Todos os outros estouraram.<br>
+    <em>O boi é seu, campeão. 🎉</em>
+  </div>
+  {{end}}{{end}}
+</div>
+{{end}}
+
+<div class="card" id="ranking-container">
+  <div class="card-title">{{if eq .Match.Status "finished"}}🐂 Resultado Final{{else}}🏆 Briga pelo BOI{{end}}</div>
+  <ol class="ranking-list">
+    {{range $i, $p := .Players}}
+    <li class="ranking-item {{if eq $i 0}}rank-1{{end}} {{if eq $p.Status "estourou"}}estourou{{end}}"
+        data-pid="{{$p.ID}}"
+        data-name="{{$p.Name}}"
+        data-score="{{$p.TotalScore}}"
+        data-status="{{$p.Status}}"
+        onclick="openPlayerSheet(this)"
+        style="cursor:pointer;">
+      <div class="rank-number {{if eq $i 0}}gold{{end}}">
+        {{if eq $i 0}}{{if eq $.Match.Status "finished"}}🐂{{else}}👑{{end}}{{else}}{{add $i 1}}{{end}}
+      </div>
+      <div class="rank-info">
+        <div class="rank-name {{if eq $p.Status "estourou"}}eliminated{{end}}">
+          {{$p.Name}}
+          {{$nick := index $.NickMap $p.UniqueIdentifier}}
+          {{if $nick}}<span style="font-size:0.75rem; color:var(--accent); font-weight:normal; margin-left:6px;">"{{$nick}}"</span>{{end}}
+        </div>
+        <div style="margin-top: 4px;">
+          {{if eq $p.Status "estourou"}}
+            <span class="badge badge-estourou">💥 Estourou</span>
+          {{else if and (eq $i 0) (eq $.Match.Status "finished")}}
+            <span class="badge" style="background:rgba(245,197,24,0.2); color:var(--gold); border-color:rgba(245,197,24,0.4);">🐂 Ganhou o BOI</span>
+          {{else}}
+            <span class="badge badge-active">✅ Na briga pelo BOI</span>
+          {{end}}
+        </div>
+        {{if ne $p.Status "estourou"}}
+        <div class="score-bar" style="margin-top: 6px; width: 120px;">
+          <div class="score-bar-fill
+            {{if gt $p.TotalScore 40}}danger
+            {{else if gt $p.TotalScore 30}}warning
+            {{end}}"
+            style="width: {{if gt $p.TotalScore 51}}100{{else}}{{mul $p.TotalScore 2}}{{end}}%;">
+          </div>
+        </div>
+        {{end}}
+      </div>
+      <div class="rank-score
+        {{if eq $p.Status "estourou"}}eliminated
+        {{else if gt $p.TotalScore 40}}danger
+        {{else if gt $p.TotalScore 30}}warning
+        {{else}}safe
+        {{end}}">
+        {{$p.TotalScore}}
+        <span style="font-size: 0.6rem; color: var(--muted);">/ 51</span>
+      </div>
+    </li>
+    {{else}}
+    <li class="empty-state">
+      <span class="icon">🎲</span>
+      <p>Nenhum jogador ainda</p>
+    </li>
+    {{end}}
+  </ol>
+  {{if .IsHost}}
+  <p style="font-size:0.75rem; color:var(--muted); text-align:center; margin-top:10px; margin-bottom:0;">
+    Toque em um jogador para editar a pontuação
+  </p>
+  {{end}}
+</div>
+
+{{if eq .Match.Status "active"}}
+{{if .Round}}
+<a href="/match/{{.Match.ID}}/round/{{.Round.ID}}/game{{if and (not .IsHost) .CurrentPlayerID}}?pid={{.CurrentPlayerID}}{{end}}" class="btn btn-secondary mb-8">
+  🎮 Ver Rodada Atual ({{.Round.RoundNumber}})
+</a>
+{{end}}
+
+{{if .IsHost}}
+<div class="card">
+  <div class="card-title">🎮 Anfitrião</div>
+
+  <form method="POST" action="/match/{{.Match.ID}}/round" style="margin-bottom:8px;">
+    <input type="hidden" name="_csrf" value="{{.CSRFToken}}">
+    {{if or .Round (gt .RoundCount 0)}}
+    <button type="submit" class="btn btn-outline" style="min-height:48px;">⏭️ Iniciar Próxima Rodada</button>
+    {{else}}
+    <button type="submit" class="btn btn-secondary" style="min-height:48px;">▶️ Iniciar Primeira Rodada</button>
+    {{end}}
+  </form>
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:4px;">
+    <button type="button" onclick="openFinishSheet()" class="btn btn-danger" style="min-height:44px; font-size:0.88rem;">🏁 Encerrar</button>
+    <a href="/match/{{.Match.ID}}/nicknames" class="btn btn-outline" style="min-height:44px; font-size:0.88rem; text-align:center; display:flex; align-items:center; justify-content:center;">🏷️ Apelidos</a>
+  </div>
+  <form method="POST" action="/match/{{.Match.ID}}/cancel" style="margin-top:8px;">
+    <input type="hidden" name="_csrf" value="{{.CSRFToken}}">
+    <button type="submit" class="btn btn-ghost" style="width:100%; font-size:0.82rem; color:var(--muted);">🗑️ Cancelar e dispensar jogadores</button>
+  </form>
+  <button onclick="shareControlLink()" class="btn btn-ghost" style="font-size:0.82rem; margin-top:8px;">
+    🔑 Transferir Controle
+  </button>
+</div>
+{{end}}
+{{end}}
+
+{{if eq .Match.Status "finished"}}
+{{if .IsHost}}
+<form method="POST" action="/match">
+  <button type="submit" class="btn btn-primary mt-8">🎮 Criar Nova Partida</button>
+</form>
+{{end}}
+{{end}}
+
+<!-- ── Overlay geral ── -->
+<div class="sheet-overlay" id="sheet-overlay" onclick="closeAllSheets()"></div>
+
+<!-- ── Sheet: confirmar encerramento ── -->
+<div class="player-popup" id="finish-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-inner">
+    <div style="padding:6px 0 18px; text-align:center;">
+      <div style="font-size:2.4rem; line-height:1; margin-bottom:10px;">🏁</div>
+      <div class="sheet-name">Encerrar Partida?</div>
+      <p style="color:var(--text-2); font-size:0.88rem; margin-top:6px; padding:0 4px;">
+        A partida será encerrada para todos os jogadores.
+      </p>
+    </div>
+    <div class="sheet-sep"></div>
+    <div class="sheet-actions">
+      <form method="POST" action="/match/{{.Match.ID}}/finish">
+        <input type="hidden" name="_csrf" value="{{.CSRFToken}}">
+        <button type="submit" class="sheet-row sheet-row-danger">
+          <span class="sheet-row-icon">🏁</span>
+          <span class="sheet-row-label">Sim, encerrar agora</span>
+        </button>
+      </form>
+      <button type="button" onclick="closeAllSheets()" class="sheet-row">
+        <span class="sheet-row-icon" style="opacity:0.5;">✕</span>
+        <span class="sheet-row-label">Cancelar</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Sheet: jogador (editar pontuação) ── -->
+<div class="player-popup" id="player-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-inner">
+    <div class="sheet-player-header" style="align-items:flex-start;">
+      <div style="flex:1; min-width:0;">
+        <div class="sheet-name" id="ps-name"></div>
+        <div id="ps-badge" style="margin-top:6px;"></div>
+      </div>
+      <div id="ps-score" style="font-family:'Rajdhani',sans-serif; font-size:2.6rem; font-weight:700; line-height:1; margin-left:12px;"></div>
+    </div>
+    <div class="sheet-sep"></div>
+    <div class="sheet-actions" id="ps-actions"></div>
+  </div>
+</div>
+
+<script>
+var IS_HOST    = {{if .IsHost}}true{{else}}false{{end}};
+var CSRF_TOKEN = '{{.CSRFToken}}';
+var MATCH_ID   = '{{.Match.ID}}';
+var ROUND_ID   = '{{if .Round}}{{.Round.ID}}{{end}}';
+
+// Confetti de vencedor da rodada no page-load (ranking também exibe durante a partida)
+(function() {
+  {{if and .Round .CurrentPlayerID}}
+  var myPID   = '{{.CurrentPlayerID}}';
+  var winID   = '{{.Round.WinnerPlayerID}}';
+  var roundID = '{{.Round.ID}}';
+  if (myPID && winID && myPID === winID) {
+    var key = 'confetti_round_' + roundID;
+    if (!sessionStorage.getItem(key) && typeof confetti === 'function') {
+      sessionStorage.setItem(key, '1');
+      confetti({ particleCount: 120, spread: 80, origin: { y: 0.55 } });
+      setTimeout(function() { confetti({ particleCount: 70, angle: 60, spread: 60, origin: { x: 0 } }); }, 300);
+      setTimeout(function() { confetti({ particleCount: 70, angle: 120, spread: 60, origin: { x: 1 } }); }, 600);
+    }
+  }
+  {{end}}
+})();
+
+function openFinishSheet() {
+  document.getElementById('finish-sheet').classList.add('open');
+  document.getElementById('sheet-overlay').classList.add('open');
+}
+
+function closeAllSheets() {
+  document.getElementById('finish-sheet').classList.remove('open');
+  document.getElementById('player-sheet').classList.remove('open');
+  document.getElementById('sheet-overlay').classList.remove('open');
+}
+
+function openPlayerSheet(el) {
+  var pid     = el.dataset.pid;
+  var name    = el.dataset.name;
+  var score   = parseInt(el.dataset.score, 10);
+  var status  = el.dataset.status;
+  var bust    = status === 'estourou';
+
+  document.getElementById('ps-name').textContent = name;
+
+  var scoreEl = document.getElementById('ps-score');
+  scoreEl.textContent = score;
+  scoreEl.style.color = bust ? 'var(--muted)' : score > 40 ? 'var(--red)' : score > 30 ? 'var(--orange)' : 'var(--green)';
+
+  var matchFinished = '{{.Match.Status}}' === 'finished';
+  document.getElementById('ps-badge').innerHTML = bust
+    ? '<span class="badge badge-estourou">💥 Estourou</span>'
+    : matchFinished
+      ? '<span class="badge" style="background:rgba(245,197,24,0.2);color:var(--gold);border-color:rgba(245,197,24,0.4);">🐂 Ganhou o BOI</span>'
+      : '<span class="badge badge-active">✅ Na briga pelo BOI</span>';
+
+  var s = '';
+  if (IS_HOST) {
+    s = '<form method="POST" action="/match/'+MATCH_ID+'/player/'+pid+'/score" style="padding:4px 0;">'
+      + '<input type="hidden" name="_csrf" value="'+CSRF_TOKEN+'">'
+      + '<label style="font-size:0.78rem; color:var(--text-2); display:block; margin-bottom:10px;">Corrigir pontuação</label>'
+      + '<input type="number" name="score" value="'+score+'" min="0" max="200" required inputmode="numeric"'
+      + ' style="width:100%; box-sizing:border-box; font-family:Rajdhani,sans-serif; font-size:2.4rem; font-weight:700;'
+      + ' text-align:center; border-radius:12px; padding:10px 12px; border:1px solid var(--border);'
+      + ' background:var(--surface); color:var(--text); margin-bottom:12px; display:block;">'
+      + '<button type="submit" class="btn btn-primary" style="width:100%; min-height:48px; font-size:1rem;">Salvar</button>'
+      + '</form>';
+  } else {
+    s = '<div class="sheet-row sheet-row-muted" style="cursor:default;">'
+      + '<span class="sheet-row-icon">🎯</span>'
+      + '<span class="sheet-row-label">'+score+' pontos de 51</span>'
+      + '</div>';
+  }
+  document.getElementById('ps-actions').innerHTML = s;
+
+  document.getElementById('player-sheet').classList.add('open');
+  document.getElementById('sheet-overlay').classList.add('open');
+}
+
+function shareControlLink() {
+  var url = window.location.origin + '/match/{{.Match.ID}}';
+  if (navigator.share) {
+    navigator.share({ title: 'Dominó — Controle', text: '🎮 Controle da partida:', url: url }).catch(function(){});
+  } else {
+    navigator.clipboard.writeText(url).then(function() {
+      alert('Link de controle copiado!\n\n' + url);
+    }).catch(function() { prompt('Copie o link de controle:', url); });
+  }
+}
+
+function shareScore() {
+  var lines = ['📊 Placar — Dominó'];
+  {{range $i, $p := .Players}}
+  lines.push('{{add $i 1}}. {{$p.Name}} — {{$p.TotalScore}} pts{{if eq $p.Status "estourou"}} (estourou){{end}}');
+  {{end}}
+  {{if .Round}}lines.push('Rodada {{.Round.RoundNumber}}');{{end}}
+  var text = lines.join('\n');
+  var url = window.location.href;
+  if (navigator.share) {
+    navigator.share({ title: 'Dominó Placar', text: text, url: url }).catch(function(){});
+  } else {
+    navigator.clipboard.writeText(text + '\n' + url).then(function() {
+      alert('Placar copiado!');
+    }).catch(function() { prompt('Copie o placar:', text); });
+  }
+}
+
+(function() {
+  const matchStatus = "{{.Match.Status}}";
+
+  if (matchStatus === "finished" && document.getElementById('winner-banner')) {
+    if (typeof confetti === 'function') {
+      var boiShape, hoofShape;
+      try {
+        boiShape  = confetti.shapeFromText({ text: '🐂', scalar: 3 });
+        hoofShape = confetti.shapeFromText({ text: '🦶', scalar: 2 });
+      } catch(e) { boiShape = null; }
+      function chuvaDeBoiS() {
+        var opts = boiShape ? { shapes: [boiShape], scalar: 3 } : {};
+        confetti(Object.assign({}, opts, { particleCount: 18, spread: 100, startVelocity: 35, origin: { y: 0.1 } }));
+        confetti(Object.assign({}, opts, { particleCount: 10, angle: 60, spread: 70, startVelocity: 40, origin: { x: 0, y: 0.3 } }));
+        confetti(Object.assign({}, opts, { particleCount: 10, angle: 120, spread: 70, startVelocity: 40, origin: { x: 1, y: 0.3 } }));
+      }
+      chuvaDeBoiS();
+      setTimeout(chuvaDeBoiS, 900);
+      setTimeout(chuvaDeBoiS, 2000);
+      setTimeout(function() {
+        var opts = boiShape ? { shapes: [boiShape], scalar: 3 } : {};
+        confetti(Object.assign({}, opts, { particleCount: 30, spread: 180, startVelocity: 20, gravity: 0.5, origin: { y: 0 } }));
+      }, 3200);
+    }
+    return;
+  }
+
+  if (matchStatus === "finished") return;
+
+  var myPID = '{{.CurrentPlayerID}}';
+  const evtSource = new EventSource('/match/{{.Match.ID}}/events');
+  evtSource.addEventListener('update', function(e) {
+    const d = e.data;
+    if (d.startsWith('round_started:')) {
+      var roundID = d.split(':')[1];
+      evtSource.close();
+      window.location.href = '/match/{{.Match.ID}}/round/' + roundID + '/game' + (myPID ? '?pid=' + myPID : '');
+      return;
+    }
+    if (d === 'match_cancelled') {
+      evtSource.close();
+      window.location.href = '/?msg=cancelled';
+      return;
+    }
+    if (d.startsWith('round_winner_set:')) {
+      var winnerPID = d.split(':')[1];
+      if (myPID && myPID === winnerPID && typeof confetti === 'function') {
+        if (ROUND_ID) sessionStorage.setItem('confetti_round_' + ROUND_ID, '1');
+        confetti({ particleCount: 120, spread: 80, origin: { y: 0.55 } });
+        setTimeout(function() { confetti({ particleCount: 70, angle: 60, spread: 60, origin: { x: 0 } }); }, 300);
+        setTimeout(function() { confetti({ particleCount: 70, angle: 120, spread: 60, origin: { x: 1 } }); }, 600);
+        setTimeout(function() { window.location.reload(); }, 2200);
+      } else {
+        window.location.reload();
+      }
+      return;
+    }
+    if (d === 'points_updated' || d === 'match_finished' ||
+        d === 'table_image_updated' ||
+        d.startsWith('player_estourou')) {
+      window.location.reload();
+    }
+  });
+})();
+</script>
+{{end}}

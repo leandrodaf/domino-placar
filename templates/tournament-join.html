@@ -1,0 +1,63 @@
+{{template "base" .}}
+
+{{define "title"}}Entrar no Torneio — Dominó Placar{{end}}
+
+{{define "content"}}
+<div class="text-center mb-16">
+  <span style="font-size: 3rem;">🏆</span>
+  <h1>{{.Tournament.Name}}</h1>
+  <p class="text-muted">Preencha seus dados para participar do torneio</p>
+</div>
+
+{{if .Error}}
+<div class="alert alert-danger">
+  {{.Error}}
+</div>
+{{end}}
+
+{{if eq .Tournament.Status "registration"}}
+<div class="card">
+  <form method="POST" action="/tournament/{{.Tournament.ID}}/join">
+    <div class="form-group">
+      <label for="name">Seu Nome</label>
+      <input
+        type="text"
+        id="name"
+        name="name"
+        placeholder="Como você quer ser chamado?"
+        required
+        autocomplete="off"
+        autofocus
+        maxlength="50">
+    </div>
+
+    <div class="form-group">
+      <label for="unique_id">Identificador Único</label>
+      <input
+        type="text"
+        id="unique_id"
+        name="unique_id"
+        placeholder="Ex: seu apelido ou número"
+        required
+        autocomplete="off"
+        maxlength="50">
+      <p class="text-muted mt-8" style="font-size: 0.8rem;">
+        Use um identificador que só você conhece. Serve para recuperar sua sessão caso precise.
+      </p>
+    </div>
+
+    <button type="submit" class="btn btn-tournament">
+      ✅ Entrar no Torneio
+    </button>
+  </form>
+</div>
+{{else}}
+<div class="alert alert-warning">
+  Este torneio já foi iniciado e não aceita novos jogadores.
+</div>
+{{end}}
+
+<div class="alert alert-info mt-16">
+  ID do Torneio: <strong>{{.Tournament.ID}}</strong>
+</div>
+{{end}}

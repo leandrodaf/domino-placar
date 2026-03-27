@@ -1,0 +1,56 @@
+{{template "base" .}}
+
+{{define "title"}}Aguardando Torneio — Dominó Placar{{end}}
+
+{{define "content"}}
+<div class="text-center" style="padding: 40px 0;">
+  <span style="font-size: 4rem; display: block; margin-bottom: 16px;">🏆</span>
+
+  {{if .Player}}
+    <h1>Olá, {{.Player.Name}}!</h1>
+    <p class="text-muted mt-8">Você está inscrito no torneio.</p>
+  {{else}}
+    <h1>Aguardando...</h1>
+  {{end}}
+
+  <p class="text-muted mt-16">
+    O torneio ainda não começou.<br>
+    Aguarde o anfitrião iniciar.
+  </p>
+
+  <div class="card mt-24">
+    <div class="spinner"></div>
+    <p class="text-muted mt-16" style="font-size: 0.875rem;">
+      Esta página vai atualizar automaticamente quando o torneio começar.
+    </p>
+  </div>
+
+  <div class="alert alert-info mt-16">
+    <strong>{{.Tournament.Name}}</strong><br>
+    Você será automaticamente alocado a uma mesa quando o torneio iniciar.
+  </div>
+</div>
+
+<script>
+  // Connect to SSE and listen for tournament_started event
+  const evtSource = new EventSource('/tournament/{{.Tournament.ID}}/events');
+  evtSource.addEventListener('update', function(e) {
+    if (e.data === 'tournament_started') {
+      evtSource.close();
+      window.location.href = '/tournament/{{.Tournament.ID}}/tables';
+    }
+  });
+
+  // Fallback: poll every 5 seconds
+  function checkTournamentStatus() {
+    fetch(window.location.href, { method: 'HEAD' })
+      .then(response => {
+        if (response.redirected) {
+          window.location.href = response.url;
+        }
+      })
+      .catch(() => {});
+  }
+  setInterval(checkTournamentStatus, 5000);
+</script>
+{{end}}

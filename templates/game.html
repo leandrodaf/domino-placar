@@ -1,0 +1,396 @@
+{{template "base" .}}
+
+{{define "title"}}Rodada {{.Round.RoundNumber}} — Dominó Placar{{end}}
+{{define "head-extra"}}
+<script>window._matchMeta={id:'{{.Match.ID}}',status:'{{.Match.Status}}',players:[{{range $i,$p:=.PlayerRows}}{{if $i}},{{end}}'{{$p.Player.Name}}'{{end}}],round:{{.Round.RoundNumber}}};
+</script>
+<script src="https://unpkg.com/canvas-confetti@1/dist/confetti.browser.min.js"></script>
+{{end}}
+
+{{define "content"}}
+<div class="flex items-center justify-between mb-16">
+  <h1 style="margin-bottom:0;">Rodada {{.Round.RoundNumber}}</h1>
+  <span class="badge badge-active">Em Andamento</span>
+</div>
+
+{{if .ErrorMsg}}
+<div class="alert alert-danger" id="err-alert" style="margin-bottom:14px;">
+  ⚠️ {{.ErrorMsg}}
+</div>
+<script>(function(){var a=document.getElementById('err-alert');setTimeout(function(){a.style.transition='opacity .4s';a.style.opacity='0';setTimeout(function(){a.style.display='none';},400);},4500);})();</script>
+{{end}}
+
+<!-- MESA INTERATIVA -->
+<div class="game-mesa-wrap">
+
+  <div class="mesa-surface {{if eq .MesaType "rect"}}mesa-rect{{else}}mesa-round players-{{len .SeatRows}}{{end}}{{if .IsHost}} mesa-tappable{{end}}"
+       {{if .IsHost}}onclick="openMesaPopup(this)" title="Gerenciar rodada"{{end}}>
+    {{if .Round.WinnerPlayerID}}
+      <div class="mesa-info">🏆</div>
+      <div class="mesa-label">toque para<br>gerenciar</div>
+    {{else}}
+      {{$pending := 0}}
+      {{range .SeatRows}}{{if and (ne .Player.ID $.Round.WinnerPlayerID) (not .Confirmed) (eq .Player.Status "active")}}{{$pending = add $pending 1}}{{end}}{{end}}
+      <div class="mesa-info">{{$pending}}</div>
+      <div class="mesa-label">toque para<br>gerenciar</div>
+    {{end}}
+  </div>
+
+  {{range .SeatRows}}
+  {{$status := "pending"}}
+  {{if eq .Player.Status "estourou"}}{{$status = "eliminated"}}
+  {{else if .IsWinner}}{{$status = "winner"}}
+  {{else if .Confirmed}}{{$status = "confirmed"}}
+  {{else if .Submitted}}{{$status = "submitted"}}
+  {{end}}
+
+  <div class="player-seat seat-{{$status}}{{if .IsLeader}} seat-leader{{end}} seat-tappable"
+       style="left:{{.SeatX}}%; top:{{.SeatY}}%;"
+       data-player-id="{{.Player.ID}}"
+       data-name="{{.Player.Name}}"
+       data-status="{{.Player.Status}}"
+       data-submitted="{{.Submitted}}"
+       data-confirmed="{{.Confirmed}}"
+       data-is-winner="{{if .IsWinner}}true{{else}}false{{end}}"
+       data-is-starter="{{if eq .Player.ID $.Round.StarterPlayerID}}true{{else}}false{{end}}"
+       onclick="openPlayerSheet(this)">
+    <div class="seat-avatar">
+      {{if .IsLeader}}🏅
+      {{else if eq $status "winner"}}👑
+      {{else if eq $status "confirmed"}}✅
+      {{else if eq $status "submitted"}}⏳
+      {{else if eq $status "eliminated"}}💥
+      {{else}}🎲
+      {{end}}
+    </div>
+    <div class="seat-name">{{.Player.Name}}</div>
+    {{if eq .Player.ID $.Round.StarterPlayerID}}<div class="seat-starter-badge">🎯 inicia</div>{{end}}
+    <div class="seat-score" style="font-family:'Rajdhani',sans-serif; font-size:0.8rem; font-weight:700; line-height:1; margin-top:1px;
+      {{if eq .Player.Status "estourou"}}color:var(--red);
+      {{else if gt .Player.TotalScore 40}}color:var(--red);
+      {{else if gt .Player.TotalScore 30}}color:var(--orange);
+      {{else if .IsLeader}}color:var(--gold);
+      {{else}}color:var(--text-2);
+      {{end}}">{{.Player.TotalScore}}</div>
+    <div class="seat-status">
+      {{if .IsLeader}}lidera
+      {{else if eq $status "winner"}}venceu
+      {{else if eq $status "confirmed"}}ok
+      {{else if eq $status "submitted"}}enviado
+      {{else if eq $status "eliminated"}}estourou
+      {{else}}pendente
+      {{end}}
+    </div>
+  </div>
+  {{end}}
+
+</div>
+<p style="text-align:center; font-size:0.72rem; color:var(--muted); margin-top:-12px; margin-bottom:16px; letter-spacing:0.03em;">
+  {{if .IsHost}}👆 Toque em um jogador para registrar ações{{else}}👆 Toque no seu nome para enviar sua foto{{end}}
+</p>
+
+<!-- Lembretes de pedras -->
+<div class="tiles-reminder">
+  🁣 <strong>{{.Tiles.TilesEach}} pedras</strong> por jogador &bull; <strong>{{.Tiles.Reserve}}</strong> para comprar &bull; <span style="color:var(--muted);">{{.Tiles.SetType}}</span>
+</div>
+
+<!-- Formulário oculto para foto da mesa — disparado pelo sheet da mesa -->
+{{if not .TileStats.HasTablePhoto}}
+<form method="POST" action="/match/{{.Match.ID}}/round/{{.Round.ID}}/table-image"
+      enctype="multipart/form-data" id="table-form" style="display:none;">
+  <input type="hidden" name="_csrf" value="{{.CSRFToken}}">
+  <input type="file" name="image" accept="image/*" capture="environment"
+         id="table-image-input" onchange="previewTable(event)" style="display:none;">
+</form>
+<div id="table-photo-panel" style="display:none; margin-bottom:12px;">
+  <div class="card">
+    <div class="card-title">📷 Foto da Mesa</div>
+    <img id="table-preview-img" style="width:100%; border-radius:8px; margin-bottom:12px; border:1px solid var(--border);">
+    <button type="button" class="btn btn-secondary" onclick="document.getElementById('table-form').submit();" style="min-height:44px;">
+      📸 Registrar Foto da Mesa
+    </button>
+  </div>
+</div>
+{{end}}
+
+<a href="/match/{{.Match.ID}}/round/{{.Round.ID}}/ranking{{if not .IsHost}}?pid={{.CurrentPlayerID}}{{end}}" class="btn btn-ghost" style="margin-top:4px;">
+  📊 Ver Ranking
+</a>
+
+<!-- ── Overlay ── -->
+<div class="sheet-overlay" id="sheet-overlay" onclick="closePopup()"></div>
+
+<!-- ── Sheet: jogador ── -->
+<div class="player-popup" id="player-popup">
+  <div class="sheet-handle"></div>
+  <div class="sheet-inner">
+    <div class="sheet-player-header">
+      <span class="sheet-avatar" id="popup-avatar"></span>
+      <div style="min-width:0;">
+        <div class="sheet-name" id="popup-name"></div>
+        <div class="sheet-badges" id="popup-badges"></div>
+      </div>
+    </div>
+    <div class="sheet-sep"></div>
+    <div class="sheet-actions" id="popup-actions"></div>
+  </div>
+</div>
+
+<!-- ── Sheet: mesa ── -->
+<div class="player-popup" id="mesa-popup">
+  <div class="sheet-handle"></div>
+  <div class="sheet-inner">
+    <div style="padding-bottom:14px;">
+      <div class="sheet-sub">Gerenciar</div>
+      <div class="sheet-name">🎮 <span id="mesa-popup-title"></span></div>
+    </div>
+    <div class="sheet-sep"></div>
+    <div class="sheet-actions" id="mesa-popup-actions"></div>
+  </div>
+</div>
+
+<script>
+var ROUND = {
+  matchID:      '{{.Match.ID}}',
+  roundID:      '{{.Round.ID}}',
+  winnerID:     '{{.Round.WinnerPlayerID}}',
+  starterID:    '{{.Round.StarterPlayerID}}',
+  roundNumber:  {{.Round.RoundNumber}},
+  hasTablePhoto: {{if .TileStats.HasTablePhoto}}true{{else}}false{{end}}
+};
+var IS_HOST    = {{if .IsHost}}true{{else}}false{{end}};
+var MY_PID     = '{{.CurrentPlayerID}}';
+var CSRF_TOKEN = '{{.CSRFToken}}';
+
+// Confetti no page-load: cobre casos onde SSE perdeu o evento
+(function() {
+  if (!MY_PID || !ROUND.winnerID || MY_PID !== ROUND.winnerID) return;
+  var key = 'confetti_round_' + ROUND.roundID;
+  if (sessionStorage.getItem(key)) return;
+  sessionStorage.setItem(key, '1');
+  if (typeof confetti !== 'function') return;
+  confetti({ particleCount: 120, spread: 80, origin: { y: 0.55 } });
+  setTimeout(function() { confetti({ particleCount: 70, angle: 60, spread: 60, origin: { x: 0 } }); }, 300);
+  setTimeout(function() { confetti({ particleCount: 70, angle: 120, spread: 60, origin: { x: 1 } }); }, 600);
+})();
+
+var seatMap = {};
+document.querySelectorAll('[data-player-id]').forEach(function(el) {
+  seatMap[el.dataset.playerId] = el;
+});
+
+function openPlayerSheet(el) {
+  var pid       = el.dataset.playerId;
+  var name      = el.dataset.name;
+  var status    = el.dataset.status;
+  var submitted = el.dataset.submitted === 'true';
+  var confirmed = el.dataset.confirmed === 'true';
+  var isWinner  = el.dataset.isWinner  === 'true';
+  var isStarter = el.dataset.isStarter === 'true';
+  var eliminated = status === 'estourou';
+
+  // Avatar do assento
+  document.getElementById('popup-avatar').textContent =
+    el.querySelector('.seat-avatar').textContent.trim().replace(/\s+/g, '');
+  document.getElementById('popup-name').textContent = name;
+
+  // Badges
+  var b = '';
+  if (isWinner)         b += '<span class="badge badge-active" style="font-size:0.65rem;">🏆 Vencedor</span>';
+  else if (confirmed)   b += '<span class="badge badge-active" style="font-size:0.65rem;">✅ Confirmado</span>';
+  else if (submitted)   b += '<span class="badge badge-submitted" style="font-size:0.65rem;">⏳ Enviado</span>';
+  else if (eliminated)  b += '<span class="badge badge-estourou" style="font-size:0.65rem;">💥 Estourou</span>';
+  else                  b += '<span class="badge badge-waiting" style="font-size:0.65rem;">📸 Pendente</span>';
+  if (isStarter)        b += '<span class="badge" style="font-size:0.65rem;background:rgba(245,197,24,.15);color:var(--gold);border:1px solid rgba(245,197,24,.3);">🎯 Saiu primeiro</span>';
+  document.getElementById('popup-badges').innerHTML = b;
+
+  // Ações — host vê tudo; jogador vê só upload do próprio assento
+  var s = '';
+  if (!eliminated) {
+    if (IS_HOST) {
+      // Botão "saiu primeiro" só aparece na rodada 1 (nas demais o iniciador é automático)
+      if (ROUND.roundNumber === 1) {
+        s += '<form method="POST" action="/match/'+ROUND.matchID+'/round/'+ROUND.roundID+'/starter/'+pid+'">'
+           + '<input type="hidden" name="_csrf" value="'+CSRF_TOKEN+'">'
+           + '<button type="submit" class="sheet-row'+(isStarter?' sheet-row-done':'')+'">'
+           + '<span class="sheet-row-icon">🎯</span>'
+           + '<span class="sheet-row-label">Saiu primeiro nesta rodada</span>'
+           + (isStarter ? '<span class="sheet-row-check">✓</span>' : '')
+           + '</button></form>';
+      }
+
+      s += '<form method="POST" action="/match/'+ROUND.matchID+'/round/'+ROUND.roundID+'/winner/'+pid+'">'
+         + '<input type="hidden" name="_csrf" value="'+CSRF_TOKEN+'">'
+         + '<button type="submit" class="sheet-row'+(isWinner?' sheet-row-done':'')+'">'
+         + '<span class="sheet-row-icon">🏆</span>'
+         + '<span class="sheet-row-label">Ganhou esta rodada</span>'
+         + (isWinner ? '<span class="sheet-row-check">✓</span>' : '')
+         + '</button></form>';
+    }
+
+    // Upload: host pode enviar por qualquer jogador; jogador só pelo próprio
+    if ((IS_HOST || pid === MY_PID) && !isWinner && !confirmed) {
+      s += '<a href="/match/'+ROUND.matchID+'/round/'+ROUND.roundID+'/upload/'+pid+'" class="sheet-row sheet-row-primary">'
+         + '<span class="sheet-row-icon">'+(submitted?'📋':'📸')+'</span>'
+         + '<span class="sheet-row-label">'+(submitted?'Ver foto enviada':'Enviar foto das peças')+'</span>'
+         + '</a>';
+    }
+
+    if (s === '') {
+      s = '<div class="sheet-row sheet-row-muted" style="cursor:default;">'
+        + '<span class="sheet-row-icon">ℹ️</span>'
+        + '<span class="sheet-row-label">'+(isWinner?'Vencedor desta rodada':'Sem ações disponíveis')+'</span>'
+        + '</div>';
+    }
+  } else {
+    s = '<div class="sheet-row sheet-row-muted" style="cursor:default;">'
+      + '<span class="sheet-row-icon">💥</span>'
+      + '<span class="sheet-row-label">Estourou — sem ações disponíveis</span>'
+      + '</div>';
+  }
+  document.getElementById('popup-actions').innerHTML = s;
+
+  document.getElementById('player-popup').classList.add('open');
+  document.getElementById('sheet-overlay').classList.add('open');
+}
+
+function openPlayerSheetById(pid) {
+  var el = seatMap[pid];
+  if (el) openPlayerSheet(el);
+}
+
+function closePopup() {
+  document.getElementById('sheet-overlay').classList.remove('open');
+  document.getElementById('player-popup').classList.remove('open');
+  document.getElementById('mesa-popup').classList.remove('open');
+}
+
+function openMesaPopup(mesaEl) {
+  var popup   = document.getElementById('mesa-popup');
+  var overlay = document.getElementById('sheet-overlay');
+
+  // Constrói ações da rodada — management só para host
+  var s = '';
+
+  if (IS_HOST) {
+    // Foto da mesa
+    if (!ROUND.hasTablePhoto) {
+      s += '<button type="button" class="sheet-row" onclick="closePopup();document.getElementById(\'table-image-input\').click();">'
+         + '<span class="sheet-row-icon">📷</span>'
+         + '<span class="sheet-row-label">Fotografar a mesa</span>'
+         + '</button>';
+    } else {
+      s += '<div class="sheet-row sheet-row-done" style="cursor:default;">'
+         + '<span class="sheet-row-icon">📷</span>'
+         + '<span class="sheet-row-label">Mesa fotografada</span>'
+         + '<span class="sheet-row-check">✓</span>'
+         + '</div>';
+    }
+  }
+
+  // Ranking — todos veem
+  var rankURL = '/match/'+ROUND.matchID+'/round/'+ROUND.roundID+'/ranking'+(MY_PID?'?pid='+MY_PID:'');
+  s += '<a href="'+rankURL+'" class="sheet-row">'
+     + '<span class="sheet-row-icon">📊</span>'
+     + '<span class="sheet-row-label">Ver Ranking da Rodada</span>'
+     + '</a>';
+
+  if (IS_HOST) {
+    // Próxima rodada (só quando há vencedor)
+    if (ROUND.winnerID) {
+      s += '<form method="POST" action="/match/'+ROUND.matchID+'/round">'
+         + '<input type="hidden" name="_csrf" value="'+CSRF_TOKEN+'">'
+         + '<button type="submit" class="sheet-row">'
+         + '<span class="sheet-row-icon">⏭️</span>'
+         + '<span class="sheet-row-label">Iniciar Próxima Rodada</span>'
+         + '</button></form>';
+    } else {
+      // Fechamento: ninguém consegue mais jogar
+      s += '<a href="/match/'+ROUND.matchID+'/round/'+ROUND.roundID+'/round-scores?fechamento=1" class="sheet-row">'
+         + '<span class="sheet-row-icon">🔒</span>'
+         + '<span class="sheet-row-label">Jogo Fechou (ninguém joga)</span>'
+         + '</a>';
+    }
+    // Encerrar partida
+    s += '<form method="POST" action="/match/'+ROUND.matchID+'/finish">'
+       + '<input type="hidden" name="_csrf" value="'+CSRF_TOKEN+'">'
+       + '<button type="submit" class="sheet-row sheet-row-danger">'
+       + '<span class="sheet-row-icon">🏁</span>'
+       + '<span class="sheet-row-label">Encerrar Partida</span>'
+       + '</button></form>';
+    // Cancelar partida
+    s += '<form method="POST" action="/match/'+ROUND.matchID+'/cancel">'
+       + '<input type="hidden" name="_csrf" value="'+CSRF_TOKEN+'">'
+       + '<button type="submit" class="sheet-row sheet-row-danger" style="opacity:0.7;">'
+       + '<span class="sheet-row-icon">🗑️</span>'
+       + '<span class="sheet-row-label">Cancelar e dispensar jogadores</span>'
+       + '</button></form>';
+  }
+
+  document.getElementById('mesa-popup-title').textContent = 'Rodada ' + ROUND.roundNumber;
+  document.getElementById('mesa-popup-actions').innerHTML = s;
+
+  popup.classList.add('open');
+  overlay.classList.add('open');
+}
+
+function previewTable(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    document.getElementById('table-preview-img').src = e.target.result;
+    document.getElementById('table-photo-panel').style.display = 'block';
+    document.getElementById('table-form').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+(function() {
+  var es = new EventSource('/match/{{.Match.ID}}/events');
+  es.addEventListener('update', function(e) {
+    var d = e.data;
+    if (d.startsWith('round_started:')) {
+      var newRoundID = d.split(':')[1];
+      es.close();
+      window.location.href = '/match/{{.Match.ID}}/round/' + newRoundID + '/game' + (MY_PID ? '?pid=' + MY_PID : '');
+      return;
+    }
+    if (d === 'match_finished') {
+      es.close();
+      window.location.href = '/match/{{.Match.ID}}/ranking' + (MY_PID ? '?pid=' + MY_PID : '');
+      return;
+    }
+    if (d === 'match_cancelled') {
+      es.close();
+      window.location.href = '/?msg=cancelled';
+      return;
+    }
+    if (d.startsWith('round_winner_set:')) {
+      var winnerPID = d.split(':')[1];
+      if (MY_PID && MY_PID === winnerPID && typeof confetti === 'function') {
+        sessionStorage.setItem('confetti_round_' + ROUND.roundID, '1');
+        confetti({ particleCount: 120, spread: 80, origin: { y: 0.55 } });
+        setTimeout(function() { confetti({ particleCount: 70, angle: 60, spread: 60, origin: { x: 0 } }); }, 300);
+        setTimeout(function() { confetti({ particleCount: 70, angle: 120, spread: 60, origin: { x: 1 } }); }, 600);
+        setTimeout(function() { window.location.reload(); }, 2200);
+      } else {
+        window.location.reload();
+      }
+      return;
+    }
+    if (d === 'points_updated' || d === 'table_image_updated' ||
+        d.startsWith('player_estourou')) {
+      window.location.reload();
+    }
+  });
+  es.onerror = function() {
+    // Se SSE cair, recarrega após 6s para reconectar
+    setTimeout(function() {
+      if (!document.hidden) window.location.reload();
+    }, 6000);
+  };
+  window.addEventListener('beforeunload', function() { es.close(); });
+})();
+</script>
+{{end}}

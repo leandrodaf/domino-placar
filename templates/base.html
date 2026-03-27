@@ -1,0 +1,66 @@
+{{define "base"}}<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#09090f">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>{{block "title" .}}Dominó Placar{{end}}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js" defer></script>
+  {{block "head-extra" .}}{{end}}
+  {{if .CSRFToken}}<meta name="csrf-token" content="{{.CSRFToken}}">{{end}}
+  <script>
+  // Salva partida no histórico localStorage quando visitar uma página de partida
+  (function() {
+    if (typeof window._matchMeta === 'undefined') return;
+    var m = window._matchMeta;
+    try {
+      var list = JSON.parse(localStorage.getItem('domino_matches') || '[]');
+      var existing = null;
+      list = list.filter(function(x) { if (x.id === m.id) { existing = x; return false; } return true; });
+      var entry = {
+        id: m.id,
+        status: m.status,
+        ts: Date.now(),
+        players: (m.players && m.players.length) ? m.players : (existing && existing.players) || [],
+        round: m.round || (existing && existing.round) || 0
+      };
+      list.unshift(entry);
+      list = list.slice(0, 8);
+      localStorage.setItem('domino_matches', JSON.stringify(list));
+    } catch(e) {}
+  })();
+  </script>
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo">
+        <span class="logo-tile">🁣</span>
+        <span class="logo-text">Dominó<span class="logo-accent"> Placar</span></span>
+      </a>
+      <a href="/global-ranking" class="nav-link" title="Hall da Fama">🏆 <span class="nav-link-text">Hall da Fama</span></a>
+    </div>
+  </nav>
+
+  <main>
+    <div class="container">
+      {{block "content" .}}{{end}}
+    </div>
+  </main>
+
+  <footer>
+    <p>Dominó Placar &mdash; Pontuação inteligente para o seu jogo</p>
+    <p style="margin-top:6px; font-size:0.75rem; opacity:0.6;">
+      Feito com 🤍 no Brasil, em Diadema &mdash;
+      por <a href="https://github.com/leandrodaf" target="_blank" rel="noopener" style="color:inherit; text-decoration:underline;">leandrodaf</a>
+    </p>
+  </footer>
+</body>
+</html>{{end}}

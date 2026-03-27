@@ -1,0 +1,214 @@
+{{template "base" .}}
+
+{{define "title"}}Hall da Fama — Dominó Placar{{end}}
+
+{{define "content"}}
+<div class="flex items-center justify-between mb-16">
+  <h1 style="margin-bottom: 0;">🏆 Hall da Fama</h1>
+  <a href="/" class="btn btn-outline" style="padding: 6px 14px; font-size: 0.85rem;">← Início</a>
+</div>
+
+{{if not .Stats}}
+<div class="card">
+  <div class="empty-state">
+    <span class="icon">🎲</span>
+    <p>Nenhuma partida finalizada ainda.</p>
+    <p style="font-size: 0.85rem; color: var(--muted);">Jogue algumas partidas para ver as estatísticas aqui!</p>
+  </div>
+</div>
+{{else}}
+
+<!-- Mais Vitórias -->
+<div class="card mb-16">
+  <div class="card-title">🥇 Mais Vitórias em Partidas</div>
+  <ol class="ranking-list">
+    {{range $i, $s := .Stats}}
+    {{if gt $s.MatchesWon 0}}
+    <li class="ranking-item {{if eq $i 0}}rank-1{{end}}">
+      <div class="rank-number {{if eq $i 0}}gold{{end}}">
+        {{if eq $i 0}}👑{{else}}{{add $i 1}}{{end}}
+      </div>
+      <div class="rank-info">
+        <div class="rank-name">{{$s.Name}}</div>
+        <div style="margin-top:4px; font-size:0.8rem; color:var(--muted);">
+          {{$s.MatchesPlayed}} partida{{if ne $s.MatchesPlayed 1}}s{{end}} jogada{{if ne $s.MatchesPlayed 1}}s{{end}}
+        </div>
+        <div style="margin-top:4px; font-size:0.8rem;">
+          <span style="color:var(--success);">🎮 {{$s.TotalRoundWins}} rodada{{if ne $s.TotalRoundWins 1}}s{{end}} vencida{{if ne $s.TotalRoundWins 1}}s{{end}}</span>
+        </div>
+      </div>
+      <div class="rank-score safe">
+        {{$s.MatchesWon}}
+        <span style="font-size:0.6rem; color:var(--muted);">vitória{{if ne $s.MatchesWon 1}}s{{end}}</span>
+      </div>
+    </li>
+    {{end}}
+    {{end}}
+  </ol>
+</div>
+
+<!-- Maiores Estouros (hall da vergonha 😅) -->
+<div class="card mb-16">
+  <div class="card-title">💥 Recordes de Estouro</div>
+  <p style="font-size:0.85rem; color:var(--muted); margin-bottom:12px;">Maior pontuação ao estourar os 51 pontos.</p>
+  <ol class="ranking-list">
+    {{range $i, $s := .Stats}}
+    {{if gt $s.BustCount 0}}
+    <li class="ranking-item {{if eq $s.MaxBustScore 0}}{{end}}">
+      <div class="rank-number" style="background: var(--accent2);">💥</div>
+      <div class="rank-info">
+        <div class="rank-name">{{$s.Name}}</div>
+        <div style="margin-top:4px; font-size:0.8rem; color:var(--muted);">
+          Estourou {{$s.BustCount}}× no total
+        </div>
+      </div>
+      <div class="rank-score danger">
+        {{$s.MaxBustScore}}
+        <span style="font-size:0.6rem; color:var(--muted);">pts</span>
+      </div>
+    </li>
+    {{end}}
+    {{end}}
+  </ol>
+</div>
+
+<!-- Zoeiras -->
+{{if .MostLost}}
+<div class="card mb-16">
+  <div class="card-title">😭 Maior Perdedor</div>
+  <p style="font-size:0.85rem; color:var(--muted); margin-bottom:12px;">Quem mais perdeu rodadas no total.</p>
+  <ol class="ranking-list">
+    {{range $i, $s := .MostLost}}
+    <li class="ranking-item">
+      <div class="rank-number" style="background:#6b3fa0;">{{if eq $i 0}}💀{{else}}{{add $i 1}}{{end}}</div>
+      <div class="rank-info">
+        <div class="rank-name">{{$s.Name}}</div>
+        <div style="font-size:0.8rem; color:var(--muted);">{{$s.Name}}</div>
+      </div>
+      <div class="rank-score danger">{{$s.Count}}<span style="font-size:0.6rem; color:var(--muted);"> derr.</span></div>
+    </li>
+    {{end}}
+  </ol>
+</div>
+{{end}}
+
+{{if .PintoKings}}
+<div class="card mb-16">
+  <div class="card-title">🦆 Rei do Pinto</div>
+  <p style="font-size:0.85rem; color:var(--muted); margin-bottom:12px;">Quem mais termina rodadas com apenas 1 ponto na mão.</p>
+  <ol class="ranking-list">
+    {{range $i, $s := .PintoKings}}
+    <li class="ranking-item">
+      <div class="rank-number" style="background:#2563eb;">{{if eq $i 0}}🦆{{else}}{{add $i 1}}{{end}}</div>
+      <div class="rank-info">
+        <div class="rank-name">{{$s.Name}}</div>
+        <div style="font-size:0.8rem; color:var(--muted);">{{$s.Name}}</div>
+      </div>
+      <div class="rank-score">{{$s.Count}}<span style="font-size:0.6rem; color:var(--muted);"> vez.</span></div>
+    </li>
+    {{end}}
+  </ol>
+</div>
+{{end}}
+
+{{if .BrancoKings}}
+<div class="card mb-16">
+  <div class="card-title">⚪ Rei da Pedra Branca</div>
+  <p style="font-size:0.85rem; color:var(--muted); margin-bottom:12px;">Quem mais termina com apenas a pedra 0-0 (vale 12 pts!).</p>
+  <ol class="ranking-list">
+    {{range $i, $s := .BrancoKings}}
+    <li class="ranking-item">
+      <div class="rank-number" style="background:#059669;">{{if eq $i 0}}⚪{{else}}{{add $i 1}}{{end}}</div>
+      <div class="rank-info">
+        <div class="rank-name">{{$s.Name}}</div>
+        <div style="font-size:0.8rem; color:var(--muted);">{{$s.Name}}</div>
+      </div>
+      <div class="rank-score safe">{{$s.Count}}<span style="font-size:0.6rem; color:var(--muted);"> vez.</span></div>
+    </li>
+    {{end}}
+  </ol>
+</div>
+{{end}}
+
+{{if .CloseCallKings}}
+<div class="card mb-16">
+  <div class="card-title">😰 Quase Estouro</div>
+  <p style="font-size:0.85rem; color:var(--muted); margin-bottom:12px;">Quem mais termina rodadas entre 40-50 pontos (vivendo na beira do abismo).</p>
+  <ol class="ranking-list">
+    {{range $i, $s := .CloseCallKings}}
+    <li class="ranking-item">
+      <div class="rank-number" style="background:#d97706;">{{if eq $i 0}}😰{{else}}{{add $i 1}}{{end}}</div>
+      <div class="rank-info">
+        <div class="rank-name">{{$s.Name}}</div>
+        <div style="font-size:0.8rem; color:var(--muted);">{{$s.Name}}</div>
+      </div>
+      <div class="rank-score" style="color:var(--warning);">{{$s.Count}}<span style="font-size:0.6rem; color:var(--muted);"> vez.</span></div>
+    </li>
+    {{end}}
+  </ol>
+</div>
+{{end}}
+
+{{if .AllTimeNicks}}
+<div class="card mb-16">
+  <div class="card-title">🏷️ Apelidos Imortais</div>
+  <p style="font-size:0.85rem; color:var(--muted); margin-bottom:12px;">Os apelidos mais votados de todos os tempos (mín. 2 votos).</p>
+  <ol class="ranking-list">
+    {{range $i, $n := .AllTimeNicks}}
+    <li class="ranking-item">
+      <div class="rank-number" style="background:#7c3aed;">{{if eq $i 0}}🏷️{{else}}{{add $i 1}}{{end}}</div>
+      <div class="rank-info">
+        <div class="rank-name">"{{$n.Nickname}}"</div>
+        <div style="font-size:0.8rem; color:var(--muted);">para {{$n.NominatedName}}</div>
+      </div>
+      <div class="rank-score" style="color:#7c3aed;">{{$n.VoteCount}}<span style="font-size:0.6rem; color:var(--muted);"> voto{{if ne $n.VoteCount 1}}s{{end}}</span></div>
+    </li>
+    {{end}}
+  </ol>
+</div>
+{{end}}
+
+<!-- Tabela completa -->
+<div class="card">
+  <div class="card-title">📊 Estatísticas Completas</div>
+  <div style="overflow-x:auto;">
+    <table class="stats-table">
+      <thead>
+        <tr>
+          <th>Jogador</th>
+          <th>Partidas</th>
+          <th>Vitórias</th>
+          <th>Rodadas</th>
+          <th>Estouros</th>
+          <th>Maior Estouro</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{range .Stats}}
+        <tr>
+          <td>
+            <strong>{{.Name}}</strong>
+          </td>
+          <td style="text-align:center;">{{.MatchesPlayed}}</td>
+          <td style="text-align:center;">
+            {{if gt .MatchesWon 0}}<span style="color:var(--success);">{{.MatchesWon}}</span>
+            {{else}}<span style="color:var(--muted);">0</span>{{end}}
+          </td>
+          <td style="text-align:center;">{{.TotalRoundWins}}</td>
+          <td style="text-align:center;">
+            {{if gt .BustCount 0}}<span style="color:var(--accent);">{{.BustCount}}</span>
+            {{else}}<span style="color:var(--muted);">0</span>{{end}}
+          </td>
+          <td style="text-align:center;">
+            {{if gt .MaxBustScore 0}}<span style="color:var(--danger);">{{.MaxBustScore}}</span>
+            {{else}}<span style="color:var(--muted);">—</span>{{end}}
+          </td>
+        </tr>
+        {{end}}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{{end}}
+{{end}}

@@ -1,0 +1,54 @@
+{{template "base" .}}
+
+{{define "title"}}Entrar na Partida — Dominó Placar{{end}}
+
+{{define "content"}}
+<div style="text-align:center; padding:24px 0 20px;">
+  <div style="display:inline-flex; align-items:center; justify-content:center;
+       width:56px; height:56px; background:var(--accent); border-radius:14px;
+       font-size:1.8rem; box-shadow:0 0 20px var(--accent-glow); margin-bottom:16px;">
+    🁣
+  </div>
+  <h1 style="margin-bottom:6px;">Entrar na Partida</h1>
+  <p style="color:var(--text-2); font-size:0.9rem;">Preencha seus dados para participar</p>
+</div>
+
+{{if .Error}}
+<div class="alert alert-danger">⚠️ {{.Error}}</div>
+{{end}}
+
+{{if eq .Match.Status "waiting"}}
+<div class="card">
+  <form method="POST" action="/match/{{.Match.ID}}/join">
+    <div class="form-group">
+      <label for="name">Seu Nome</label>
+      <input type="text" id="name" name="name"
+             placeholder="Como quer ser chamado?"
+             required autocomplete="off" autofocus maxlength="50"
+             style="font-size:1.05rem;">
+    </div>
+    <div class="form-group" style="margin-bottom:20px;">
+      <label for="unique_id">Identificador Único</label>
+      <input type="text" id="unique_id" name="unique_id"
+             placeholder="Ex: seu @, apelido ou número"
+             required autocomplete="off" maxlength="50">
+      <p style="font-size:0.78rem; color:var(--muted); margin-top:6px;">
+        Serve para recuperar sua sessão. Use algo que só você conhece.
+      </p>
+    </div>
+    <button type="submit" class="btn btn-primary" style="font-size:1.05rem; min-height:52px;">
+      ✅ Entrar na Partida
+    </button>
+  </form>
+</div>
+{{else}}
+<div class="alert alert-warning">
+  <span>⚠️</span>
+  <span>Esta partida já foi iniciada e não aceita novos jogadores.</span>
+</div>
+{{end}}
+
+<div style="text-align:center; margin-top:8px; font-size:0.78rem; color:var(--muted);">
+  Partida: {{.Match.ID}}
+</div>
+{{end}}
