@@ -30,3 +30,9 @@ Thumbs.db
 
 # Go
 vendor/
+
+# Firebase CLI artifacts
+firebase-debug.log
+.firebaserc
+firebase.json
+database.rules.json

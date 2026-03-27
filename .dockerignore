@@ -1,0 +1,15 @@
+*.db
+*.db-shm
+*.db-wal
+uploads/
+.env
+.env.*
+!.env.example
+.git/
+.gitignore
+firebase-debug.log
+database.rules.json
+README.md
+domino-placar
+domino-teste
+domino-game
