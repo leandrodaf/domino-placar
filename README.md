@@ -46,7 +46,7 @@ Ser o último jogador sem estourar. Quem acumular **mais de 51 pontos no total**
 
 ### Pré-requisitos
 
-- **Go 1.23+** — [download](https://go.dev/dl/)
+- **Go 1.26+** — [download](https://go.dev/dl/)
 
 ### Instalação
 
@@ -109,7 +109,15 @@ Substitua `192.168.1.100` pelo IP da sua máquina na rede local. Os QR codes apo
 | `GCS_CREDENTIALS` | JSON da Service Account (conteúdo, não caminho). Se omitido, usa ADC — funciona automaticamente no GCP. |
 
 > Quando `GCS_BUCKET` está definido, as fotos vão para o GCS. Caso contrário, são salvas na pasta `uploads/` local.
+### Visão computacional — Roboflow (detecção automática de pedras)
 
+| Variável | Descrição | Padrão |
+|----------|-----------|--------|
+| `ROBOFLOW_API_KEY` | Chave de API do Roboflow. Sem ela, apenas entrada manual de pontos funciona. | — |
+| `ROBOFLOW_MODEL` | Nome do modelo de detecção de dominó no Roboflow | `domino-detection` |
+| `ROBOFLOW_VERSION` | Versão do modelo | `1` |
+
+> Quando `ROBOFLOW_API_KEY` está definida, os jogadores podem fotografar as pedras restantes e o sistema detecta automaticamente as peças e calcula os pontos. Sem a chave, o app funciona normalmente com entrada manual.
 ---
 
 ## Deploy no Google Cloud (Cloud Run / Cloud Functions)
@@ -154,7 +162,7 @@ gcloud run deploy domino-placar \
 ### Dockerfile de exemplo
 
 ```dockerfile
-FROM golang:1.23-alpine AS builder
+FROM golang:1.26-alpine AS builder
 WORKDIR /app
 COPY . .
 RUN go build -o domino-placar .
@@ -184,6 +192,11 @@ FIREBASE_DATABASE_URL=https://meu-projeto-default-rtdb.firebaseio.com
 # GCS (fotos)
 GCS_BUCKET=domino-placar-fotos
 # GCS_CREDENTIALS={"type":"service_account",...}  # Só se não estiver no GCP
+
+# Roboflow (detecção automática de pedras — opcional)
+ROBOFLOW_API_KEY=sua-chave-roboflow
+# ROBOFLOW_MODEL=domino-detection
+# ROBOFLOW_VERSION=1
 
 HOST=192.168.1.100
 PORT=8080
@@ -256,6 +269,7 @@ domino-placar/
     └── service/
         ├── image.go             # Compressão e validação de imagens
         ├── storage.go           # Upload para Google Cloud Storage
+        ├── vision.go            # Detecção de pedras via Roboflow (visão computacional)
         └── qrcode.go            # Geração de QR codes
 ```
 
