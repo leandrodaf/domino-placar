@@ -1,50 +1,50 @@
 {{template "base" .}}
 
-{{define "title"}}Lobby — Dominó Placar{{end}}
+{{define "title"}}{{T .Lang "lobby.title"}}{{end}}
 {{define "head-extra"}}<script>window._matchMeta={id:'{{.Match.ID}}',status:'{{.Match.Status}}',players:[{{range $i,$p:=.Players}}{{if $i}},{{end}}'{{$p.Name}}'{{end}}],round:0};</script>{{end}}
 
 {{define "content"}}
 <div class="flex items-center justify-between mb-16">
-  <h1 style="margin-bottom:0;">🎲 Sala de Espera</h1>
-  <span class="badge badge-waiting">Aguardando</span>
+  <h1 style="margin-bottom:0;">{{T .Lang "lobby.heading"}}</h1>
+  <span class="badge badge-waiting">{{T .Lang "lobby.badge_waiting"}}</span>
 </div>
 
 <!-- QR + Compartilhar -->
 <div class="card">
-  <div class="card-title">📱 Convidar Jogadores</div>
+  <div class="card-title">{{T .Lang "lobby.invite_title"}}</div>
   <div class="qr-container">
     <img src="/match/{{.Match.ID}}/qrcode" alt="QR Code">
     <p class="qr-url">{{.Match.BaseURL}}/match/{{.Match.ID}}/join</p>
   </div>
   <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;">
     <button onclick="shareJoinLink()" class="btn btn-secondary" style="flex:1; min-width:130px; min-height:44px;">
-      🔗 Compartilhar
+      {{T .Lang "lobby.share"}}
     </button>
-    <a href="https://wa.me/?text=Entra+na+partida+de+Dominó!%0A{{.Match.BaseURL}}/match/{{.Match.ID}}/join"
+    <a href="https://wa.me/?text={{T .Lang "lobby.wa_join_text"}}%0A{{.Match.BaseURL}}/match/{{.Match.ID}}/join"
        target="_blank" rel="noopener"
        class="btn btn-outline" style="flex:1; min-width:130px; min-height:44px; text-align:center;">
-      💬 WhatsApp
+      {{T .Lang "lobby.whatsapp"}}
     </a>
   </div>
 </div>
 
 <!-- Link de controle (para recuperar ou transferir) -->
 <div class="card" style="border-color: rgba(245,197,24,0.3); background: rgba(245,197,24,0.04);">
-  <div class="card-title" style="color:var(--gold);">🔑 Link de Controle</div>
+  <div class="card-title" style="color:var(--gold);">{{T .Lang "lobby.control_title"}}</div>
   <p style="font-size:0.85rem; color:var(--text-2); margin-bottom:12px;">
-    Salve ou compartilhe este link para retomar o controle da partida em outro dispositivo ou repassar para outra pessoa.
+    {{T .Lang "lobby.control_desc"}}
   </p>
   <div class="qr-url" style="margin-bottom:10px; font-size:0.78rem;">
     {{.Match.BaseURL}}/match/{{.Match.ID}}
   </div>
   <div style="display:flex; gap:8px; flex-wrap:wrap;">
     <button onclick="shareControlLink()" class="btn btn-ghost" style="flex:1; min-width:120px; min-height:42px; font-size:0.88rem;">
-      🔗 Copiar Link
+      {{T .Lang "lobby.copy_link"}}
     </button>
-    <a href="https://wa.me/?text=🎮+Controle+da+partida+de+Dominó:%0A{{.Match.BaseURL}}/match/{{.Match.ID}}"
+    <a href="https://wa.me/?text={{T .Lang "lobby.wa_control_text"}}%0A{{.Match.BaseURL}}/match/{{.Match.ID}}"
        target="_blank" rel="noopener"
        class="btn btn-ghost" style="flex:1; min-width:120px; min-height:42px; font-size:0.88rem; text-align:center;">
-      💬 Enviar no WhatsApp
+      {{T .Lang "lobby.send_whatsapp"}}
     </a>
   </div>
 </div>
@@ -52,25 +52,25 @@
 <!-- Anfitrião entrar como jogador -->
 <details class="card" style="cursor:default;">
   <summary style="cursor:pointer; list-style:none; display:flex; align-items:center; justify-content:space-between;">
-    <div class="card-title" style="margin-bottom:0;">🎯 Entrar como Jogador</div>
-    <span style="font-size:0.8rem; color:var(--muted);">toque para expandir</span>
+    <div class="card-title" style="margin-bottom:0;">{{T .Lang "lobby.join_as_player"}}</div>
+    <span style="font-size:0.8rem; color:var(--muted);">{{T .Lang "lobby.expand"}}</span>
   </summary>
   <div style="margin-top:14px;">
     <p style="font-size:0.85rem; color:var(--text-2); margin-bottom:14px;">
-      Você também quer jogar? Entre como jogador desta partida.
+      {{T .Lang "lobby.join_as_player_desc"}}
     </p>
     <form method="POST" action="/match/{{.Match.ID}}/join">
       <input type="hidden" name="redirect_to" value="/match/{{.Match.ID}}/lobby">
       <input type="hidden" name="_csrf" value="{{.CSRFToken}}">
       <div class="form-group">
-        <label for="host-name">Seu Nome</label>
-        <input type="text" id="host-name" name="name" placeholder="Como quer ser chamado?" maxlength="50" autocomplete="off">
+        <label for="host-name">{{T .Lang "lobby.your_name"}}</label>
+        <input type="text" id="host-name" name="name" placeholder="{{T .Lang "lobby.name_placeholder"}}" maxlength="50" autocomplete="off">
       </div>
       <div class="form-group" style="margin-bottom:12px;">
-        <label for="host-uid">Identificador Único</label>
-        <input type="text" id="host-uid" name="unique_id" placeholder="Ex: seu apelido" maxlength="50" autocomplete="off">
+        <label for="host-uid">{{T .Lang "lobby.unique_id"}}</label>
+        <input type="text" id="host-uid" name="unique_id" placeholder="{{T .Lang "lobby.uid_placeholder"}}" maxlength="50" autocomplete="off">
       </div>
-      <button type="submit" class="btn btn-success">✅ Entrar na Partida</button>
+      <button type="submit" class="btn btn-success">{{T .Lang "lobby.join_submit"}}</button>
     </form>
   </div>
 </details>
@@ -83,22 +83,22 @@
      hx-target="this"
      hx-swap="innerHTML">
 
-  <div class="card-title">👥 Jogadores ({{.Count}}/10)</div>
+  <div class="card-title">{{T .Lang "lobby.players_title"}} ({{.Count}}/10)</div>
 
   {{if .Players}}
     <ul class="player-list">
       {{range .Players}}
       <li class="player-item">
         <span class="player-name">{{.Name}}</span>
-        <span class="badge badge-active">✓ Entrou</span>
+        <span class="badge badge-active">{{T .Lang "common.player_joined"}}</span>
       </li>
       {{end}}
     </ul>
   {{else}}
     <div class="empty-state" style="padding:20px;">
       <span class="icon">⏳</span>
-      <p>Aguardando jogadores entrarem...</p>
-      <p style="font-size:0.8rem; margin-top:4px;">Compartilhe o link acima</p>
+      <p>{{T .Lang "common.waiting_players"}}</p>
+      <p style="font-size:0.8rem; margin-top:4px;">{{T .Lang "lobby.share_link_above"}}</p>
     </div>
   {{end}}
 
@@ -107,15 +107,15 @@
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; text-align:center;">
       <div>
         <div style="font-family:'Rajdhani',sans-serif; font-size:1.6rem; font-weight:700; color:var(--blue); line-height:1;">{{.Tiles.TilesEach}}</div>
-        <div style="font-size:0.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; margin-top:2px;">pedras cada</div>
+        <div style="font-size:0.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; margin-top:2px;">{{T .Lang "common.tiles_each"}}</div>
       </div>
       <div>
         <div style="font-family:'Rajdhani',sans-serif; font-size:1.6rem; font-weight:700; color:var(--blue); line-height:1;">{{.Tiles.Reserve}}</div>
-        <div style="font-size:0.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; margin-top:2px;">para comprar</div>
+        <div style="font-size:0.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em; margin-top:2px;">{{T .Lang "common.tiles_reserve"}}</div>
       </div>
     </div>
     <div style="text-align:center; margin-top:8px; font-size:0.8rem; color:var(--text-2);">
-      Jogo {{.Tiles.SetType}} &bull; {{.Tiles.TotalTiles}} pedras no total
+      {{T .Lang "lobby.tiles_game_prefix"}} {{.Tiles.SetType}} &bull; {{.Tiles.TotalTiles}} {{T .Lang "lobby.tiles_total_suffix"}}
     </div>
   </div>
   {{end}}
@@ -125,9 +125,9 @@
       <input type="hidden" name="_csrf" value="{{.CSRFToken}}">
       <button type="submit" class="btn btn-primary" style="min-height:52px; font-size:1rem;" {{if lt .Count 2}}disabled{{end}}>
         {{if lt .Count 2}}
-          ⏳ Aguardando jogadores (mín. 2)
+          {{T .Lang "lobby.waiting_min"}}
         {{else}}
-          🚀 Iniciar Partida com {{.Count}} jogadores
+          {{T .Lang "lobby.start_match_prefix"}} {{.Count}} {{T .Lang "lobby.start_match_suffix"}}
         {{end}}
       </button>
     </form>
@@ -136,7 +136,7 @@
 
 <div class="alert alert-info">
   <span>ℹ️</span>
-  <span><strong>Você é o anfitrião.</strong> O botão acima ativa quando 2 ou mais jogadores entrarem. Cada rodada também começa manualmente.</span>
+  <span><strong>{{T .Lang "lobby.host_info"}}</strong> {{T .Lang "lobby.host_info_desc"}}</span>
 </div>
 
 <!-- Cancelar partida -->
@@ -144,11 +144,11 @@
   <form method="POST" action="/match/{{.Match.ID}}/cancel" id="cancel-form" style="display:none;">
     <input type="hidden" name="_csrf" value="{{.CSRFToken}}">
     <button type="submit" class="btn btn-danger" style="width:100%; min-height:44px; font-size:0.88rem;">
-      🗑️ Confirmar cancelamento
+      {{T .Lang "lobby.confirm_cancel"}}
     </button>
   </form>
   <button type="button" onclick="toggleCancel()" class="btn btn-ghost" style="width:100%; font-size:0.82rem; color:var(--muted);">
-    🗑️ Cancelar partida
+    {{T .Lang "lobby.cancel_match"}}
   </button>
 </div>
 
@@ -156,11 +156,11 @@
 function shareControlLink() {
   var url = '{{.Match.BaseURL}}/match/{{.Match.ID}}';
   if (navigator.share) {
-    navigator.share({ title: 'Dominó — Controle da Partida', text: 'Controle da partida:', url: url }).catch(function(){});
+    navigator.share({ title: '{{T .Lang "lobby.js.control_title"}}', text: '{{T .Lang "lobby.js.control_text"}}', url: url }).catch(function(){});
   } else {
     navigator.clipboard.writeText(url).then(function() {
-      alert('Link de controle copiado!');
-    }).catch(function() { prompt('Copie:', url); });
+      alert('{{T .Lang "lobby.js.control_copied"}}');
+    }).catch(function() { prompt('{{T .Lang "lobby.js.copy_control_prompt"}}', url); });
   }
 }
 function toggleCancel() {
@@ -170,12 +170,12 @@ function toggleCancel() {
 function shareJoinLink() {
   var url = '{{.Match.BaseURL}}/match/{{.Match.ID}}/join';
   if (navigator.share) {
-    navigator.share({ title: 'Dominó Placar', text: 'Entre na partida de Dominó!', url: url }).catch(function(){});
+    navigator.share({ title: '{{T .Lang "lobby.js.share_title"}}', text: '{{T .Lang "lobby.js.share_text"}}', url: url }).catch(function(){});
   } else {
     navigator.clipboard.writeText(url).then(function() {
-      alert('Link copiado!');
+      alert('{{T .Lang "lobby.js.link_copied"}}');
     }).catch(function() {
-      prompt('Copie o link:', url);
+      prompt('{{T .Lang "lobby.js.copy_prompt"}}', url);
     });
   }
 }

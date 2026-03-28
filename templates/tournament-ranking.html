@@ -1,19 +1,19 @@
 {{template "base" .}}
 
-{{define "title"}}Ranking do Torneio — Dominó Placar{{end}}
+{{define "title"}}{{T .Lang "tournament.ranking_title"}}{{end}}
 
 {{define "content"}}
 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
-  <h1 style="margin-bottom: 0;">🏅 Ranking Geral</h1>
+  <h1 style="margin-bottom: 0;">{{T .Lang "tournament.ranking_heading"}}</h1>
   <span class="tournament-badge {{.Tournament.Status}}">
-    {{if eq .Tournament.Status "registration"}}Inscrições{{else if eq .Tournament.Status "active"}}Em Andamento{{else}}Encerrado{{end}}
+    {{if eq .Tournament.Status "registration"}}{{T .Lang "tournament.status_registration"}}{{else if eq .Tournament.Status "active"}}{{T .Lang "tournament.status_active"}}{{else}}{{T .Lang "tournament.status_finished"}}{{end}}
   </span>
 </div>
 
 <div class="card-title">🏆 {{.Tournament.Name}}</div>
 
 <a href="/tournament/{{.Tournament.ID}}/tables" class="btn btn-secondary mb-16" style="display: block; text-align: center;">
-  🎲 Ver Mesas
+  {{T .Lang "tournament.view_tables"}}
 </a>
 
 {{if .Ranking}}
@@ -23,14 +23,14 @@
     <div class="rank-number {{if eq $i 0}}gold{{end}}">{{add $i 1}}</div>
     <div class="rank-info">
       <div class="rank-name {{if eq $entry.Status "estourou"}}eliminated{{end}}">{{$entry.Name}}</div>
-      <div style="font-size: 0.8rem; color: var(--muted);">Mesa {{$entry.TableNumber}}</div>
+      <div style="font-size: 0.8rem; color: var(--muted);">{{T $.Lang "tournament.table"}} {{$entry.TableNumber}}</div>
     </div>
     <div>
       <div class="rank-score {{if eq $entry.Status "estourou"}}eliminated{{else if gt $entry.Score 40}}danger{{else if gt $entry.Score 25}}warning{{else}}safe{{end}}">
         {{$entry.Score}}
       </div>
       {{if eq $entry.Status "estourou"}}
-      <span class="badge badge-estourou" style="font-size: 0.65rem;">Estourou</span>
+      <span class="badge badge-estourou" style="font-size: 0.65rem;">{{T $.Lang "tournament.busted"}}</span>
       {{end}}
     </div>
   </li>
@@ -39,7 +39,7 @@
 {{else}}
 <div class="empty-state">
   <span class="icon">⏳</span>
-  <p>Nenhum resultado disponível ainda.<br>O torneio precisa ser iniciado.</p>
+  <p>{{T .Lang "tournament.no_results"}}<br>{{T .Lang "tournament.no_results_hint"}}</p>
 </div>
 {{end}}
 

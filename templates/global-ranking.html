@@ -1,26 +1,26 @@
 {{template "base" .}}
 
-{{define "title"}}Hall da Fama — Dominó Placar{{end}}
+{{define "title"}}{{T .Lang "global.title"}}{{end}}
 
 {{define "content"}}
 <div class="flex items-center justify-between mb-16">
-  <h1 style="margin-bottom: 0;">🏆 Hall da Fama</h1>
-  <a href="/" class="btn btn-outline" style="padding: 6px 14px; font-size: 0.85rem;">← Início</a>
+  <h1 style="margin-bottom: 0;">{{T .Lang "global.heading"}}</h1>
+  <a href="/" class="btn btn-outline" style="padding: 6px 14px; font-size: 0.85rem;">{{T .Lang "global.back_home"}}</a>
 </div>
 
 {{if not .Stats}}
 <div class="card">
   <div class="empty-state">
     <span class="icon">🎲</span>
-    <p>Nenhuma partida finalizada ainda.</p>
-    <p style="font-size: 0.85rem; color: var(--muted);">Jogue algumas partidas para ver as estatísticas aqui!</p>
+    <p>{{T .Lang "global.no_matches"}}</p>
+    <p style="font-size: 0.85rem; color: var(--muted);">{{T .Lang "global.no_matches_hint"}}</p>
   </div>
 </div>
 {{else}}
 
 <!-- Mais Vitórias -->
 <div class="card mb-16">
-  <div class="card-title">🥇 Mais Vitórias em Partidas</div>
+  <div class="card-title">{{T .Lang "global.most_wins"}}</div>
   <ol class="ranking-list">
     {{range $i, $s := .Stats}}
     {{if gt $s.MatchesWon 0}}
@@ -31,15 +31,15 @@
       <div class="rank-info">
         <div class="rank-name">{{$s.Name}}</div>
         <div style="margin-top:4px; font-size:0.8rem; color:var(--muted);">
-          {{$s.MatchesPlayed}} partida{{if ne $s.MatchesPlayed 1}}s{{end}} jogada{{if ne $s.MatchesPlayed 1}}s{{end}}
+          {{$s.MatchesPlayed}} {{if ne $s.MatchesPlayed 1}}{{T $.Lang "global.match_other"}}{{else}}{{T $.Lang "global.match_one"}}{{end}}
         </div>
         <div style="margin-top:4px; font-size:0.8rem;">
-          <span style="color:var(--success);">🎮 {{$s.TotalRoundWins}} rodada{{if ne $s.TotalRoundWins 1}}s{{end}} vencida{{if ne $s.TotalRoundWins 1}}s{{end}}</span>
+          <span style="color:var(--success);">🎮 {{$s.TotalRoundWins}} {{if ne $s.TotalRoundWins 1}}{{T $.Lang "global.round_won_other"}}{{else}}{{T $.Lang "global.round_won_one"}}{{end}}</span>
         </div>
       </div>
       <div class="rank-score safe">
         {{$s.MatchesWon}}
-        <span style="font-size:0.6rem; color:var(--muted);">vitória{{if ne $s.MatchesWon 1}}s{{end}}</span>
+        <span style="font-size:0.6rem; color:var(--muted);">{{if ne $s.MatchesWon 1}}{{T $.Lang "global.win_other"}}{{else}}{{T $.Lang "global.win_one"}}{{end}}</span>
       </div>
     </li>
     {{end}}
@@ -49,8 +49,8 @@
 
 <!-- Maiores Estouros (hall da vergonha 😅) -->
 <div class="card mb-16">
-  <div class="card-title">💥 Recordes de Estouro</div>
-  <p style="font-size:0.85rem; color:var(--muted); margin-bottom:12px;">Maior pontuação ao estourar os 51 pontos.</p>
+  <div class="card-title">{{T .Lang "global.bust_records"}}</div>
+  <p style="font-size:0.85rem; color:var(--muted); margin-bottom:12px;">{{T .Lang "global.bust_desc"}}</p>
   <ol class="ranking-list">
     {{range $i, $s := .Stats}}
     {{if gt $s.BustCount 0}}
@@ -59,7 +59,7 @@
       <div class="rank-info">
         <div class="rank-name">{{$s.Name}}</div>
         <div style="margin-top:4px; font-size:0.8rem; color:var(--muted);">
-          Estourou {{$s.BustCount}}× no total
+          {{T $.Lang "global.busted_total_prefix"}} {{$s.BustCount}}{{T $.Lang "global.busted_total_suffix"}}
         </div>
       </div>
       <div class="rank-score danger">
@@ -75,8 +75,8 @@
 <!-- Zoeiras -->
 {{if .MostLost}}
 <div class="card mb-16">
-  <div class="card-title">😭 Maior Perdedor</div>
-  <p style="font-size:0.85rem; color:var(--muted); margin-bottom:12px;">Quem mais perdeu rodadas no total.</p>
+  <div class="card-title">{{T .Lang "global.most_lost"}}</div>
+  <p style="font-size:0.85rem; color:var(--muted); margin-bottom:12px;">{{T .Lang "global.most_lost_desc"}}</p>
   <ol class="ranking-list">
     {{range $i, $s := .MostLost}}
     <li class="ranking-item">
@@ -85,7 +85,7 @@
         <div class="rank-name">{{$s.Name}}</div>
         <div style="font-size:0.8rem; color:var(--muted);">{{$s.Name}}</div>
       </div>
-      <div class="rank-score danger">{{$s.Count}}<span style="font-size:0.6rem; color:var(--muted);"> derr.</span></div>
+      <div class="rank-score danger">{{$s.Count}}<span style="font-size:0.6rem; color:var(--muted);"> {{T $.Lang "global.losses_suffix"}}</span></div>
     </li>
     {{end}}
   </ol>
@@ -94,8 +94,8 @@
 
 {{if .PintoKings}}
 <div class="card mb-16">
-  <div class="card-title">🦆 Rei do Pinto</div>
-  <p style="font-size:0.85rem; color:var(--muted); margin-bottom:12px;">Quem mais termina rodadas com apenas 1 ponto na mão.</p>
+  <div class="card-title">{{T .Lang "global.pinto_king"}}</div>
+  <p style="font-size:0.85rem; color:var(--muted); margin-bottom:12px;">{{T .Lang "global.pinto_desc"}}</p>
   <ol class="ranking-list">
     {{range $i, $s := .PintoKings}}
     <li class="ranking-item">
@@ -104,7 +104,7 @@
         <div class="rank-name">{{$s.Name}}</div>
         <div style="font-size:0.8rem; color:var(--muted);">{{$s.Name}}</div>
       </div>
-      <div class="rank-score">{{$s.Count}}<span style="font-size:0.6rem; color:var(--muted);"> vez.</span></div>
+      <div class="rank-score">{{$s.Count}}<span style="font-size:0.6rem; color:var(--muted);"> {{T $.Lang "global.times_suffix"}}</span></div>
     </li>
     {{end}}
   </ol>
@@ -113,8 +113,8 @@
 
 {{if .BrancoKings}}
 <div class="card mb-16">
-  <div class="card-title">⚪ Rei da Pedra Branca</div>
-  <p style="font-size:0.85rem; color:var(--muted); margin-bottom:12px;">Quem mais termina com apenas a pedra 0-0 (vale 12 pts!).</p>
+  <div class="card-title">{{T .Lang "global.branco_king"}}</div>
+  <p style="font-size:0.85rem; color:var(--muted); margin-bottom:12px;">{{T .Lang "global.branco_desc"}}</p>
   <ol class="ranking-list">
     {{range $i, $s := .BrancoKings}}
     <li class="ranking-item">
@@ -123,7 +123,7 @@
         <div class="rank-name">{{$s.Name}}</div>
         <div style="font-size:0.8rem; color:var(--muted);">{{$s.Name}}</div>
       </div>
-      <div class="rank-score safe">{{$s.Count}}<span style="font-size:0.6rem; color:var(--muted);"> vez.</span></div>
+      <div class="rank-score safe">{{$s.Count}}<span style="font-size:0.6rem; color:var(--muted);"> {{T $.Lang "global.times_suffix"}}</span></div>
     </li>
     {{end}}
   </ol>
@@ -132,8 +132,8 @@
 
 {{if .CloseCallKings}}
 <div class="card mb-16">
-  <div class="card-title">😰 Quase Estouro</div>
-  <p style="font-size:0.85rem; color:var(--muted); margin-bottom:12px;">Quem mais termina rodadas entre 40-50 pontos (vivendo na beira do abismo).</p>
+  <div class="card-title">{{T .Lang "global.close_call"}}</div>
+  <p style="font-size:0.85rem; color:var(--muted); margin-bottom:12px;">{{T .Lang "global.close_call_desc"}}</p>
   <ol class="ranking-list">
     {{range $i, $s := .CloseCallKings}}
     <li class="ranking-item">
@@ -142,7 +142,7 @@
         <div class="rank-name">{{$s.Name}}</div>
         <div style="font-size:0.8rem; color:var(--muted);">{{$s.Name}}</div>
       </div>
-      <div class="rank-score" style="color:var(--warning);">{{$s.Count}}<span style="font-size:0.6rem; color:var(--muted);"> vez.</span></div>
+      <div class="rank-score" style="color:var(--warning);">{{$s.Count}}<span style="font-size:0.6rem; color:var(--muted);"> {{T $.Lang "global.times_suffix"}}</span></div>
     </li>
     {{end}}
   </ol>
@@ -151,17 +151,17 @@
 
 {{if .AllTimeNicks}}
 <div class="card mb-16">
-  <div class="card-title">🏷️ Apelidos Imortais</div>
-  <p style="font-size:0.85rem; color:var(--muted); margin-bottom:12px;">Os apelidos mais votados de todos os tempos (mín. 2 votos).</p>
+  <div class="card-title">{{T .Lang "global.immortal_nicks"}}</div>
+  <p style="font-size:0.85rem; color:var(--muted); margin-bottom:12px;">{{T .Lang "global.nicks_desc"}}</p>
   <ol class="ranking-list">
     {{range $i, $n := .AllTimeNicks}}
     <li class="ranking-item">
       <div class="rank-number" style="background:#7c3aed;">{{if eq $i 0}}🏷️{{else}}{{add $i 1}}{{end}}</div>
       <div class="rank-info">
         <div class="rank-name">"{{$n.Nickname}}"</div>
-        <div style="font-size:0.8rem; color:var(--muted);">para {{$n.NominatedName}}</div>
+        <div style="font-size:0.8rem; color:var(--muted);">{{T $.Lang "global.for_player"}} {{$n.NominatedName}}</div>
       </div>
-      <div class="rank-score" style="color:#7c3aed;">{{$n.VoteCount}}<span style="font-size:0.6rem; color:var(--muted);"> voto{{if ne $n.VoteCount 1}}s{{end}}</span></div>
+      <div class="rank-score" style="color:#7c3aed;">{{$n.VoteCount}}<span style="font-size:0.6rem; color:var(--muted);"> {{if ne $n.VoteCount 1}}{{T $.Lang "global.vote_other"}}{{else}}{{T $.Lang "global.vote_one"}}{{end}}</span></div>
     </li>
     {{end}}
   </ol>
@@ -170,17 +170,17 @@
 
 <!-- Tabela completa -->
 <div class="card">
-  <div class="card-title">📊 Estatísticas Completas</div>
+  <div class="card-title">{{T .Lang "global.full_stats"}}</div>
   <div style="overflow-x:auto;">
     <table class="stats-table">
       <thead>
         <tr>
-          <th>Jogador</th>
-          <th>Partidas</th>
-          <th>Vitórias</th>
-          <th>Rodadas</th>
-          <th>Estouros</th>
-          <th>Maior Estouro</th>
+          <th>{{T .Lang "global.col_player"}}</th>
+          <th>{{T .Lang "global.col_matches"}}</th>
+          <th>{{T .Lang "global.col_wins"}}</th>
+          <th>{{T .Lang "global.col_rounds"}}</th>
+          <th>{{T .Lang "global.col_busts"}}</th>
+          <th>{{T .Lang "global.col_max_bust"}}</th>
         </tr>
       </thead>
       <tbody>

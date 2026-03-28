@@ -51,7 +51,7 @@ func NicknamePageHandler(database db.Store, tmpl *Templates) http.HandlerFunc {
 		// Voter ID comes from the player cookie (not directly exposed to the user)
 		voterID := r.URL.Query().Get("voter_id")
 
-		tmpl.Render(w, "nicknames.html", map[string]any{
+		tmpl.Render(w, r, "nicknames.html", map[string]any{
 			"Match":       match,
 			"Players":     players,
 			"Nominations": nominations,

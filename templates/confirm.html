@@ -1,18 +1,18 @@
 {{template "base" .}}
 
-{{define "title"}}Pontuação — {{.Player.Name}}{{end}}
+{{define "title"}}{{T .Lang "confirm.title"}} — {{.Player.Name}}{{end}}
 
 {{define "content"}}
 <div style="text-align:center; padding:24px 0 20px;">
   <div style="font-size:0.78rem; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:6px;">
-    {{.Player.Name}} &bull; Rodada {{.Round.RoundNumber}}
+    {{.Player.Name}} &bull; {{T .Lang "common.round"}} {{.Round.RoundNumber}}
   </div>
-  <h1 style="margin-top:0; margin-bottom:6px; font-size:1.7rem;">✏️ Sua Pontuação</h1>
+  <h1 style="margin-top:0; margin-bottom:6px; font-size:1.7rem;">✏️ {{T .Lang "confirm.heading"}}</h1>
   {{if gt .Player.TotalScore 0}}
   <p style="color:var(--muted); font-size:0.85rem; margin:0;">
-    Placar atual:
+    {{T .Lang "confirm.current_score"}}
     <strong style="color:{{if ge .Player.TotalScore 40}}var(--red){{else if ge .Player.TotalScore 30}}var(--orange){{else}}var(--text){{end}};">
-      {{.Player.TotalScore}} pts
+      {{.Player.TotalScore}} {{T .Lang "common.pts"}}
     </strong>
   </p>
   {{end}}
@@ -23,7 +23,7 @@
     <input type="hidden" name="_csrf" value="{{.CSRFToken}}">
 
     <label style="font-size:0.82rem; color:var(--text-2); margin-bottom:10px; display:block;">
-      Some os pontos de todas as suas peças restantes
+      {{T .Lang "confirm.sum_instruction"}}
     </label>
 
     <input
@@ -40,12 +40,12 @@
              letter-spacing:0.05em; width:100%; border-radius:12px; margin-bottom:20px;">
 
     <button type="submit" class="btn btn-primary" style="min-height:56px; font-size:1rem;">
-      ✅ Confirmar
+      {{T .Lang "confirm.submit"}}
     </button>
   </form>
 </div>
 
 <a href="/match/{{.Match.ID}}/round/{{.Round.ID}}/upload/{{.Player.ID}}" class="btn btn-ghost mt-8" style="font-size:0.85rem;">
-  ← Voltar / Refazer
+  {{T .Lang "confirm.back"}}
 </a>
 {{end}}

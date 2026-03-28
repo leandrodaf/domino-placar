@@ -1,6 +1,6 @@
 {{template "base" .}}
 
-{{define "title"}}Aguardando — Dominó Placar{{end}}
+{{define "title"}}{{T .Lang "waiting.title"}}{{end}}
 
 {{define "content"}}
 <div style="text-align:center; padding: 40px 0 20px;">
@@ -22,31 +22,31 @@
   </div>
 
   {{if .Player}}
-    <h1 style="margin-bottom:6px;">Olá, {{.Player.Name}}! 👋</h1>
-    <p style="color:var(--text-2); font-size:0.95rem;">Você entrou na partida com sucesso.</p>
+    <h1 style="margin-bottom:6px;">{{T .Lang "tournament.waiting_hello"}} {{.Player.Name}}! 👋</h1>
+    <p style="color:var(--text-2); font-size:0.95rem;">{{T .Lang "waiting.joined"}}</p>
   {{else}}
-    <h1>Na sala de espera...</h1>
+    <h1>{{T .Lang "waiting.heading"}}</h1>
   {{end}}
 </div>
 
 <div class="card" style="text-align:center;">
   <div style="display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:12px;">
     <div class="spinner"></div>
-    <span style="color:var(--text-2); font-size:0.9rem;">Aguardando o anfitrião iniciar</span>
+    <span style="color:var(--text-2); font-size:0.9rem;">{{T .Lang "waiting.waiting_host"}}</span>
   </div>
   <div class="alert alert-info" style="margin-bottom:0; text-align:left;">
     <span>📡</span>
-    <span>Esta página atualiza automaticamente quando a partida começar.</span>
+    <span>{{T .Lang "waiting.auto_refresh"}}</span>
   </div>
 </div>
 
 <div class="card" style="text-align:center;">
-  <div class="card-title" style="justify-content:center;">🎲 ID da Partida</div>
+  <div class="card-title" style="justify-content:center;">🎲 {{T .Lang "waiting.match_id"}}</div>
   <div style="font-family:'Rajdhani',sans-serif; font-size:1.1rem; color:var(--text-2); word-break:break-all; padding:8px;">
     {{.Match.ID}}
   </div>
   <p style="font-size:0.78rem; color:var(--muted); margin-top:4px;">
-    Guarde este identificador para recuperar sua sessão se precisar.
+    {{T .Lang "tournament.uid_help"}}
   </p>
 </div>
 

@@ -33,7 +33,7 @@ func TournamentLobbyHandler(database db.Store, tmpl *Templates) http.HandlerFunc
 			"MinPlayers": 2,
 			"Groups":     groups,
 		}
-		tmpl.Render(w, "tournament-lobby.html", data)
+		tmpl.Render(w, r, "tournament-lobby.html", data)
 	}
 }
 
@@ -62,7 +62,7 @@ func TournamentJoinPageHandler(database db.Store, tmpl *Templates) http.HandlerF
 			"Tournament": tournament,
 			"Error":      errMsg,
 		}
-		tmpl.Render(w, "tournament-join.html", data)
+		tmpl.Render(w, r, "tournament-join.html", data)
 	}
 }
 
@@ -98,7 +98,7 @@ func TournamentWaitingHandler(database db.Store, tmpl *Templates) http.HandlerFu
 			"Tournament": tournament,
 			"Player":     player,
 		}
-		tmpl.Render(w, "tournament-waiting.html", data)
+		tmpl.Render(w, r, "tournament-waiting.html", data)
 	}
 }
 
@@ -150,7 +150,7 @@ func TournamentTablesHandler(database db.Store, tmpl *Templates) http.HandlerFun
 			"Tournament": tournament,
 			"Tables":     tables,
 		}
-		tmpl.Render(w, "tournament-tables.html", data)
+		tmpl.Render(w, r, "tournament-tables.html", data)
 	}
 }
 
@@ -175,6 +175,6 @@ func TournamentRankingHandler(database db.Store, tmpl *Templates) http.HandlerFu
 			"Tournament": tournament,
 			"Ranking":    ranking,
 		}
-		tmpl.Render(w, "tournament-ranking.html", data)
+		tmpl.Render(w, r, "tournament-ranking.html", data)
 	}
 }

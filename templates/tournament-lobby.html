@@ -1,18 +1,18 @@
 {{template "base" .}}
 
-{{define "title"}}Lobby do Torneio — Dominó Placar{{end}}
+{{define "title"}}{{T .Lang "tournament.lobby_title"}}{{end}}
 
 {{define "content"}}
 <h1>🏆 {{.Tournament.Name}}</h1>
 
 <div class="card">
-  <div class="card-title">📱 QR Code para Entrar no Torneio</div>
+  <div class="card-title">{{T .Lang "tournament.qr_title"}}</div>
   <div class="qr-container">
     <img src="/tournament/{{.Tournament.ID}}/qrcode" alt="QR Code para entrar no torneio">
     <p class="qr-url">{{.Tournament.BaseURL}}/tournament/{{.Tournament.ID}}/join</p>
   </div>
   <div class="alert alert-info mt-8">
-    Escaneie o QR code ou compartilhe o link para os jogadores entrarem.
+    {{T .Lang "tournament.qr_scan"}}
   </div>
 </div>
 
@@ -27,30 +27,30 @@
       {{range .Players}}
       <li class="player-item">
         <span class="player-name">{{.Name}}</span>
-        <span class="badge badge-active">Entrou</span>
+        <span class="badge badge-active">{{T .Lang "common.player_joined"}}</span>
       </li>
       {{end}}
     </ul>
   {{else}}
     <div class="empty-state">
       <span class="icon">⏳</span>
-      <p>Aguardando jogadores entrarem...</p>
+      <p>{{T .Lang "common.waiting_players"}}</p>
     </div>
   {{end}}
 </div>
 
 {{if ge .Count 2}}
 <div class="card tiles-card">
-  <div class="card-title">🁣 Distribuição das Mesas — {{.Count}} jogadores</div>
+  <div class="card-title">{{T .Lang "tournament.table_distribution"}} — {{.Count}} {{T .Lang "common.players"}}</div>
   {{if .Groups}}
     <p style="color: var(--muted); margin-bottom: 10px; font-size: 0.9rem;">
-      Com {{.Count}} jogadores serão criadas <strong style="color: var(--text);">{{len .Groups}} mesas</strong>:
+      {{T .Lang "tournament.with_prefix"}} {{.Count}} {{T .Lang "common.players"}} {{T .Lang "tournament.will_create"}} <strong style="color: var(--text);">{{len .Groups}} {{T .Lang "tournament.tables_suffix"}}</strong>:
     </p>
     <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;">
       {{range $i, $size := .Groups}}
       <div style="background: rgba(15,52,96,0.5); border: 1px solid var(--accent2); border-radius: 8px; padding: 8px 14px; text-align: center;">
         <div style="font-size: 1.2rem; font-weight: 700; color: var(--accent);">{{$size}}</div>
-        <div style="font-size: 0.7rem; color: var(--muted);">Mesa {{add $i 1}}</div>
+        <div style="font-size: 0.7rem; color: var(--muted);">{{T $.Lang "tournament.table"}} {{add $i 1}}</div>
       </div>
       {{end}}
     </div>
@@ -64,14 +64,14 @@
     class="btn btn-primary"
     {{if lt .Count .MinPlayers}}disabled{{end}}>
     {{if lt .Count .MinPlayers}}
-      ⏳ Aguardando jogadores (mín. {{.MinPlayers}})
+      {{T .Lang "tournament.waiting_min_prefix"}} {{.MinPlayers}})
     {{else}}
-      🚀 Iniciar Torneio ({{.Count}} jogadores)
+      {{T .Lang "tournament.start_prefix"}}{{.Count}} {{T .Lang "tournament.start_suffix"}}
     {{end}}
   </button>
 </form>
 
 <div class="alert alert-info mt-16">
-  <strong>Você é o anfitrião.</strong> Quando iniciar o torneio, os jogadores serão distribuídos automaticamente em mesas e cada mesa jogará de forma independente.
+  <strong>{{T .Lang "tournament.host_info"}}</strong> {{T .Lang "tournament.host_desc"}}
 </div>
 {{end}}

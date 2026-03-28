@@ -1,17 +1,17 @@
 {{template "base" .}}
 
-{{define "title"}}Torneio — Mesas — Dominó Placar{{end}}
+{{define "title"}}{{T .Lang "tournament.tables_title"}}{{end}}
 
 {{define "content"}}
 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
   <h1 style="margin-bottom: 0;">🏆 {{.Tournament.Name}}</h1>
   <span class="tournament-badge {{.Tournament.Status}}">
-    {{if eq .Tournament.Status "registration"}}Inscrições{{else if eq .Tournament.Status "active"}}Em Andamento{{else}}Encerrado{{end}}
+    {{if eq .Tournament.Status "registration"}}{{T .Lang "tournament.status_registration"}}{{else if eq .Tournament.Status "active"}}{{T .Lang "tournament.status_active"}}{{else}}{{T .Lang "tournament.status_finished"}}{{end}}
   </span>
 </div>
 
 <a href="/tournament/{{.Tournament.ID}}/ranking" class="btn btn-tournament mb-16" style="display: block; text-align: center;">
-  🏅 Ver Ranking Geral
+  {{T .Lang "tournament.view_ranking"}}
 </a>
 
 {{if .Tables}}
@@ -20,9 +20,9 @@
     <div class="table-header">
       <div class="table-number">{{.TableNumber}}</div>
       <div>
-        <div class="table-title">Mesa {{.TableNumber}}</div>
+        <div class="table-title">{{T .Lang "tournament.table"}} {{.TableNumber}}</div>
         <span class="badge {{if eq .Match.Status "active"}}badge-active{{else if eq .Match.Status "finished"}}badge-estourou{{else}}badge-waiting{{end}}">
-          {{if eq .Match.Status "active"}}Em jogo{{else if eq .Match.Status "finished"}}Finalizada{{else}}Aguardando{{end}}
+          {{if eq .Match.Status "active"}}{{T $.Lang "tournament.table_in_game"}}{{else if eq .Match.Status "finished"}}{{T $.Lang "tournament.table_finished"}}{{else}}{{T $.Lang "tournament.table_waiting"}}{{end}}
         </span>
       </div>
     </div>
@@ -40,7 +40,7 @@
 
     <div style="margin-top: 12px;">
       <a href="/match/{{.MatchID}}/ranking" class="btn btn-secondary btn-sm">
-        📊 Ver Ranking da Mesa
+        {{T $.Lang "tournament.view_table_ranking"}}
       </a>
     </div>
   </div>
@@ -48,7 +48,7 @@
 {{else}}
   <div class="empty-state">
     <span class="icon">⏳</span>
-    <p>Nenhuma mesa criada ainda.</p>
+    <p>{{T .Lang "tournament.no_tables"}}</p>
   </div>
 {{end}}
 

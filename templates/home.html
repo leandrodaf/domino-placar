@@ -1,12 +1,12 @@
 {{template "base" .}}
 
-{{define "title"}}Dominó Placar — Início{{end}}
+{{define "title"}}{{T .Lang "home.title"}}{{end}}
 
 {{define "content"}}
 <div id="cancelled-msg" style="display:none; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:14px 16px; margin-bottom:16px; text-align:center;">
   <div style="font-size:1.4rem; margin-bottom:4px;">🗑️</div>
-  <div style="font-weight:600; color:var(--red);">Partida cancelada pelo anfitrião</div>
-  <div style="font-size:0.85rem; color:var(--text-2); margin-top:4px;">Crie uma nova partida para jogar novamente.</div>
+  <div style="font-weight:600; color:var(--red);">{{T .Lang "home.cancelled_title"}}</div>
+  <div style="font-size:0.85rem; color:var(--text-2); margin-top:4px;">{{T .Lang "home.cancelled_subtitle"}}</div>
 </div>
 
 <div class="hero">
@@ -45,22 +45,22 @@
   </div>
 
   <h1 class="hero-title">
-    Dominó<br><span class="accent">Placar</span>
+    {{T .Lang "nav.brand_domino"}}<br><span class="accent">{{T .Lang "nav.brand_placar"}}</span>
   </h1>
   <p class="hero-subtitle">
-    Pontuação automática com IA para suas partidas.<br>
-    Jogue em grupo ou organize um torneio.
+    {{T .Lang "home.hero_subtitle_1"}}<br>
+    {{T .Lang "home.hero_subtitle_2"}}
   </p>
 
   <div class="hero-actions">
     <form method="POST" action="/match" style="width:100%; max-width:260px;">
       <button type="submit" class="btn btn-primary" style="font-size:1.05rem; min-height:54px;">
-        🎮 Nova Partida
+        {{T .Lang "home.new_match"}}
       </button>
     </form>
     <form method="POST" action="/tournament" style="width:100%; max-width:260px;">
       <button type="submit" class="btn btn-tournament" style="font-size:1.05rem; min-height:54px;">
-        🏆 Criar Torneio
+        {{T .Lang "home.create_tournament"}}
       </button>
     </form>
   </div>
@@ -69,18 +69,18 @@
 <!-- Partidas recentes (localStorage) -->
 <div id="recent-section" style="display:none;">
   <div class="card" style="border-color:rgba(245,197,24,0.25); background:rgba(245,197,24,0.03); padding-bottom:8px;">
-    <div class="card-title" style="color:var(--gold);">🕹️ Partidas Recentes</div>
+    <div class="card-title" style="color:var(--gold);">{{T .Lang "home.recent_matches"}}</div>
     <div id="recent-active"></div>
     <div id="recent-history" style="display:none;">
-      <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin:10px 0 6px; padding-top:10px; border-top:1px solid var(--border);">Histórico</div>
+      <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin:10px 0 6px; padding-top:10px; border-top:1px solid var(--border);">{{T .Lang "home.history"}}</div>
       <div id="recent-history-list"></div>
     </div>
     <div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--border);">
       <div style="display:flex; gap:8px;">
-        <input type="text" id="recover-id" placeholder="Código da partida"
+        <input type="text" id="recover-id" placeholder="{{T .Lang "home.match_code"}}"
                style="flex:1; min-height:40px; font-size:0.9rem;"
                onkeydown="if(event.key==='Enter') recoverMatch()">
-        <button onclick="recoverMatch()" class="btn btn-ghost btn-sm" style="white-space:nowrap; min-height:40px;">Entrar →</button>
+        <button onclick="recoverMatch()" class="btn btn-ghost btn-sm" style="white-space:nowrap; min-height:40px;">{{T .Lang "home.enter"}}</button>
       </div>
     </div>
   </div>
@@ -89,46 +89,46 @@
 <!-- Formulário de recuperação rápida (sem histórico) -->
 <div id="recover-only-section" style="display:none;">
   <div class="card">
-    <div class="card-title">🔍 Entrar em uma Partida</div>
+    <div class="card-title">{{T .Lang "home.join_match"}}</div>
     <div style="display:flex; gap:8px;">
-      <input type="text" id="recover-id-2" placeholder="Código da partida"
+      <input type="text" id="recover-id-2" placeholder="{{T .Lang "home.match_code"}}"
              style="flex:1; min-height:44px; font-size:0.9rem;"
              onkeydown="if(event.key==='Enter') recoverMatch2()">
-      <button onclick="recoverMatch2()" class="btn btn-ghost btn-sm" style="white-space:nowrap; min-height:44px;">Ir →</button>
+      <button onclick="recoverMatch2()" class="btn btn-ghost btn-sm" style="white-space:nowrap; min-height:44px;">{{T .Lang "home.go"}}</button>
     </div>
   </div>
 </div>
 
 <div class="card">
-  <div class="card-title">📖 Como Jogar</div>
+  <div class="card-title">{{T .Lang "home.how_to_play"}}</div>
   <ol style="padding-left: 20px; line-height: 2.2; color: var(--text-2);">
-    <li>Crie uma partida e compartilhe o QR code</li>
-    <li>Cada jogador escaneia e entra com seu nome</li>
-    <li>O anfitrião pode entrar como jogador também</li>
-    <li>A cada rodada, quem perdeu registra seus pontos</li>
-    <li>Fotografe suas peças ou informe manualmente</li>
-    <li>Quem passar de <strong style="color:var(--accent);">51 pontos</strong> está eliminado!</li>
+    <li>{{T .Lang "home.step1"}}</li>
+    <li>{{T .Lang "home.step2"}}</li>
+    <li>{{T .Lang "home.step3"}}</li>
+    <li>{{T .Lang "home.step4"}}</li>
+    <li>{{T .Lang "home.step5"}}</li>
+    <li>{{T .Lang "home.step6_prefix"}} <strong style="color:var(--accent);">{{T .Lang "home.step6_limit"}}</strong> {{T .Lang "home.step6_suffix"}}</li>
   </ol>
 </div>
 
 <div class="card">
-  <div class="card-title">⚡ Regras Rápidas</div>
+  <div class="card-title">{{T .Lang "home.quick_rules"}}</div>
   <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
     <div style="background:var(--green-dim); border:1px solid rgba(34,197,94,0.3); border-radius:10px; padding:12px; text-align:center;">
       <div style="font-family:'Rajdhani',sans-serif; font-size:1.8rem; font-weight:700; color:var(--green);">0</div>
-      <div style="font-size:0.78rem; color:var(--text-2);">pts — vencedor da rodada</div>
+      <div style="font-size:0.78rem; color:var(--text-2);">{{T .Lang "home.rule_winner"}}</div>
     </div>
     <div style="background:var(--red-dim); border:1px solid rgba(239,68,68,0.3); border-radius:10px; padding:12px; text-align:center;">
       <div style="font-family:'Rajdhani',sans-serif; font-size:1.8rem; font-weight:700; color:var(--red);">51+</div>
-      <div style="font-size:0.78rem; color:var(--text-2);">pts — estourou, eliminado!</div>
+      <div style="font-size:0.78rem; color:var(--text-2);">{{T .Lang "home.rule_bust"}}</div>
     </div>
     <div style="background:var(--gold-dim); border:1px solid rgba(245,197,24,0.3); border-radius:10px; padding:12px; text-align:center;">
       <div style="font-family:'Rajdhani',sans-serif; font-size:1.8rem; font-weight:700; color:var(--gold);">12</div>
-      <div style="font-size:0.78rem; color:var(--text-2);">pts — pedra branca sozinha</div>
+      <div style="font-size:0.78rem; color:var(--text-2);">{{T .Lang "home.rule_white"}}</div>
     </div>
     <div style="background:var(--blue-dim); border:1px solid rgba(59,130,246,0.3); border-radius:10px; padding:12px; text-align:center;">
       <div style="font-family:'Rajdhani',sans-serif; font-size:1.8rem; font-weight:700; color:var(--blue);">2-10</div>
-      <div style="font-size:0.78rem; color:var(--text-2);">jogadores por partida</div>
+      <div style="font-size:0.78rem; color:var(--text-2);">{{T .Lang "home.rule_players"}}</div>
     </div>
   </div>
 </div>
@@ -142,7 +142,7 @@ function matchCard(m, compact) {
   var isActive  = m.status === 'active' || m.status === 'waiting';
   var isFinished = m.status === 'finished' || m.status === 'cancelled';
   var statusIcon  = { waiting:'⏳', active:'🎮', finished:'🏁', cancelled:'🗑️' }[m.status] || '🎲';
-  var statusLabel = { waiting:'Aguardando', active:'Em andamento', finished:'Encerrada', cancelled:'Cancelada' }[m.status] || m.status;
+  var statusLabel = { waiting:'{{T .Lang "common.status_waiting"}}', active:'{{T .Lang "common.status_active"}}', finished:'{{T .Lang "common.status_finished"}}', cancelled:'{{T .Lang "common.status_cancelled"}}' }[m.status] || m.status;
   var statusColor = isActive ? 'var(--green)' : isFinished ? 'var(--muted)' : 'var(--muted)';
   var code = m.id.replace(/-/g,'').substring(0,8).toUpperCase();
   var playersText = '';
@@ -151,8 +151,8 @@ function matchCard(m, compact) {
     if (m.players.length > 3) shown += ' +' + (m.players.length - 3);
     playersText = shown;
   }
-  var roundText = m.round > 0 ? 'Rodada ' + m.round : '';
-  var date = m.ts ? new Date(m.ts).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : '';
+  var roundText = m.round > 0 ? '{{T .Lang "common.round"}} ' + m.round : '';
+  var date = m.ts ? new Date(m.ts).toLocaleDateString('{{LangAttr .Lang}}', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }) : '';
 
   return '<div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">' +
     '<a href="/match/' + m.id + '" style="flex:1; display:flex; align-items:center; justify-content:space-between; gap:10px;' +
@@ -168,7 +168,7 @@ function matchCard(m, compact) {
       '</div>' +
       '<span style="font-size:0.75rem; color:var(--muted); flex-shrink:0;">→</span>' +
     '</a>' +
-    '<button onclick="deleteMatch(\'' + m.id + '\')" style="flex-shrink:0; width:30px; height:30px; border:none; background:transparent; color:var(--muted); border-radius:8px; cursor:pointer; font-size:1rem;" title="Remover">×</button>' +
+    '<button onclick=\"deleteMatch(\'' + m.id + '\')" style="flex-shrink:0; width:30px; height:30px; border:none; background:transparent; color:var(--muted); border-radius:8px; cursor:pointer; font-size:1rem;" title="{{T .Lang "common.remove"}}">×</button>' +
   '</div>';
 }
 

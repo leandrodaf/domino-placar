@@ -1,15 +1,15 @@
 {{template "base" .}}
 
-{{define "title"}}Apelidos — {{.Match.ID}}{{end}}
+{{define "title"}}{{T .Lang "nicknames.title_prefix"}} — {{.Match.ID}}{{end}}
 
 {{define "content"}}
 <div class="flex items-center justify-between mb-16">
-  <h1 style="margin-bottom: 0;">🏷️ Apelidos</h1>
-  <a href="/match/{{.Match.ID}}/ranking{{if .VoterID}}?voter_id={{.VoterID}}{{end}}" class="btn btn-outline" style="padding:6px 14px; font-size:0.85rem;">← Ranking</a>
+  <h1 style="margin-bottom: 0;">{{T .Lang "nicknames.heading"}}</h1>
+  <a href="/match/{{.Match.ID}}/ranking{{if .VoterID}}?voter_id={{.VoterID}}{{end}}" class="btn btn-outline" style="padding:6px 14px; font-size:0.85rem;">{{T .Lang "nicknames.back_ranking"}}</a>
 </div>
 
 <p style="font-size:0.9rem; color:var(--muted); margin-bottom:20px;">
-  Proponha e vote nos apelidos dos jogadores desta partida.
+  {{T .Lang "nicknames.subtitle"}}
 </p>
 
 {{range .PlayerRows}}
@@ -33,12 +33,12 @@
     <div class="flex items-center justify-between" style="padding:8px 0; border-bottom:1px solid var(--border);">
       <div>
         <span style="font-weight:600;">"{{.Nickname}}"</span>
-        <span style="font-size:0.78rem; color:var(--muted); margin-left:8px;">{{.VoteCount}} voto{{if ne .VoteCount 1}}s{{end}}</span>
+        <span style="font-size:0.78rem; color:var(--muted); margin-left:8px;">{{.VoteCount}} {{if ne .VoteCount 1}}{{T $.Lang "nicknames.vote_other"}}{{else}}{{T $.Lang "nicknames.vote_one"}}{{end}}</span>
       </div>
       {{if $.VoterID}}
       <form method="POST" action="/match/{{$.Match.ID}}/nickname/{{.ID}}/vote" style="display:inline;">
         <input type="hidden" name="voter_id" value="{{$.VoterID}}">
-        <button type="submit" class="btn btn-outline" style="padding:4px 10px; font-size:0.8rem;">👍 Votar</button>
+        <button type="submit" class="btn btn-outline" style="padding:4px 10px; font-size:0.8rem;">{{T $.Lang "nicknames.vote_btn"}}</button>
       </form>
       {{end}}
     </div>
@@ -49,17 +49,17 @@
   <!-- Propor novo apelido -->
   {{if $.VoterID}}
   <details style="margin-top:8px;">
-    <summary style="cursor:pointer; font-size:0.85rem; color:var(--accent); user-select:none;">+ Propor apelido</summary>
+    <summary style="cursor:pointer; font-size:0.85rem; color:var(--accent); user-select:none;">{{T $.Lang "nicknames.propose"}}</summary>
     <form method="POST" action="/match/{{$.Match.ID}}/player/{{.ID}}/nominate" style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
       <input type="hidden" name="voter_id" value="{{$.VoterID}}">
-      <input type="text" name="nickname" placeholder="Apelido (máx. 30 chars)" maxlength="30" required
+      <input type="text" name="nickname" placeholder="{{T $.Lang "nicknames.placeholder"}}" maxlength="30" required
              style="flex:1; min-width:0; padding:8px 10px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text); font-size:0.9rem;">
-      <button type="submit" class="btn btn-primary" style="padding:8px 14px; font-size:0.85rem; white-space:nowrap;">Enviar</button>
+      <button type="submit" class="btn btn-primary" style="padding:8px 14px; font-size:0.85rem; white-space:nowrap;">{{T $.Lang "nicknames.submit"}}</button>
     </form>
   </details>
   {{else}}
   <p style="font-size:0.8rem; color:var(--muted); margin-top:8px;">
-    Acesse via link pessoal para votar ou propor apelidos.
+    {{T .Lang "nicknames.login_hint"}}
   </p>
   {{end}}
 </div>
@@ -69,7 +69,7 @@
 <div class="card">
   <div class="empty-state">
     <span class="icon">🏷️</span>
-    <p>Nenhum jogador nesta partida ainda.</p>
+    <p>{{T .Lang "nicknames.no_players"}}</p>
   </div>
 </div>
 {{end}}

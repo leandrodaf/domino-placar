@@ -1,6 +1,6 @@
 {{template "base" .}}
 
-{{define "title"}}Rodada {{.Round.RoundNumber}} — Dominó Placar{{end}}
+{{define "title"}}{{T .Lang "game.title_prefix"}} {{.Round.RoundNumber}} {{T .Lang "game.title_suffix"}}{{end}}
 {{define "head-extra"}}
 <script>window._matchMeta={id:'{{.Match.ID}}',status:'{{.Match.Status}}',players:[{{range $i,$p:=.PlayerRows}}{{if $i}},{{end}}'{{$p.Player.Name}}'{{end}}],round:{{.Round.RoundNumber}}};
 </script>
@@ -9,8 +9,8 @@
 
 {{define "content"}}
 <div class="flex items-center justify-between mb-16">
-  <h1 style="margin-bottom:0;">Rodada {{.Round.RoundNumber}}</h1>
-  <span class="badge badge-active">Em Andamento</span>
+  <h1 style="margin-bottom:0;">{{T .Lang "common.round"}} {{.Round.RoundNumber}}</h1>
+  <span class="badge badge-active">{{T .Lang "game.in_progress"}}</span>
 </div>
 
 {{if .ErrorMsg}}
@@ -24,15 +24,15 @@
 <div class="game-mesa-wrap">
 
   <div class="mesa-surface {{if eq .MesaType "rect"}}mesa-rect{{else}}mesa-round players-{{len .SeatRows}}{{end}}{{if .IsHost}} mesa-tappable{{end}}"
-       {{if .IsHost}}onclick="openMesaPopup(this)" title="Gerenciar rodada"{{end}}>
+       {{if .IsHost}}onclick="openMesaPopup(this)" title="{{T .Lang "game.manage"}}"{{end}}>
     {{if .Round.WinnerPlayerID}}
       <div class="mesa-info">🏆</div>
-      <div class="mesa-label">toque para<br>gerenciar</div>
+      <div class="mesa-label">{{TH .Lang "game.touch_manage"}}</div>
     {{else}}
       {{$pending := 0}}
       {{range .SeatRows}}{{if and (ne .Player.ID $.Round.WinnerPlayerID) (not .Confirmed) (eq .Player.Status "active")}}{{$pending = add $pending 1}}{{end}}{{end}}
       <div class="mesa-info">{{$pending}}</div>
-      <div class="mesa-label">toque para<br>gerenciar</div>
+      <div class="mesa-label">{{TH .Lang "game.touch_manage"}}</div>
     {{end}}
   </div>
 
@@ -64,7 +64,7 @@
       {{end}}
     </div>
     <div class="seat-name">{{.Player.Name}}</div>
-    {{if eq .Player.ID $.Round.StarterPlayerID}}<div class="seat-starter-badge">🎯 inicia</div>{{end}}
+    {{if eq .Player.ID $.Round.StarterPlayerID}}<div class="seat-starter-badge">🎯 {{T $.Lang "game.seat_starts"}}</div>{{end}}
     <div class="seat-score" style="font-family:'Rajdhani',sans-serif; font-size:0.8rem; font-weight:700; line-height:1; margin-top:1px;
       {{if eq .Player.Status "estourou"}}color:var(--red);
       {{else if gt .Player.TotalScore 40}}color:var(--red);
@@ -73,12 +73,12 @@
       {{else}}color:var(--text-2);
       {{end}}">{{.Player.TotalScore}}</div>
     <div class="seat-status">
-      {{if .IsLeader}}lidera
-      {{else if eq $status "winner"}}venceu
-      {{else if eq $status "confirmed"}}ok
-      {{else if eq $status "submitted"}}enviado
-      {{else if eq $status "eliminated"}}estourou
-      {{else}}pendente
+      {{if .IsLeader}}{{T $.Lang "game.seat_leads"}}
+      {{else if eq $status "winner"}}{{T $.Lang "game.seat_won"}}
+      {{else if eq $status "confirmed"}}{{T $.Lang "game.seat_ok"}}
+      {{else if eq $status "submitted"}}{{T $.Lang "game.seat_submitted"}}
+      {{else if eq $status "eliminated"}}{{T $.Lang "game.seat_busted"}}
+      {{else}}{{T $.Lang "game.seat_pending"}}
       {{end}}
     </div>
   </div>
@@ -86,12 +86,12 @@
 
 </div>
 <p style="text-align:center; font-size:0.72rem; color:var(--muted); margin-top:-12px; margin-bottom:16px; letter-spacing:0.03em;">
-  {{if .IsHost}}👆 Toque em um jogador para registrar ações{{else}}👆 Toque no seu nome para enviar sua foto{{end}}
+  {{if .IsHost}}{{T .Lang "game.host_tap"}}{{else}}{{T .Lang "game.player_tap"}}{{end}}
 </p>
 
 <!-- Lembretes de pedras -->
 <div class="tiles-reminder">
-  🁣 <strong>{{.Tiles.TilesEach}} pedras</strong> por jogador &bull; <strong>{{.Tiles.Reserve}}</strong> para comprar &bull; <span style="color:var(--muted);">{{.Tiles.SetType}}</span>
+  🁣 <strong>{{.Tiles.TilesEach}} {{T .Lang "game.tiles_per_player"}}</strong> por jogador &bull; <strong>{{.Tiles.Reserve}}</strong> {{T .Lang "game.tiles_to_buy"}} &bull; <span style="color:var(--muted);">{{.Tiles.SetType}}</span>
 </div>
 
 <!-- Formulário oculto para foto da mesa — disparado pelo sheet da mesa -->
@@ -104,17 +104,17 @@
 </form>
 <div id="table-photo-panel" style="display:none; margin-bottom:12px;">
   <div class="card">
-    <div class="card-title">📷 Foto da Mesa</div>
+    <div class="card-title">{{T .Lang "game.table_photo_title"}}</div>
     <img id="table-preview-img" style="width:100%; border-radius:8px; margin-bottom:12px; border:1px solid var(--border);">
     <button type="button" class="btn btn-secondary" onclick="document.getElementById('table-form').submit();" style="min-height:44px;">
-      📸 Registrar Foto da Mesa
+      {{T .Lang "game.table_photo_submit"}}
     </button>
   </div>
 </div>
 {{end}}
 
 <a href="/match/{{.Match.ID}}/round/{{.Round.ID}}/ranking{{if not .IsHost}}?pid={{.CurrentPlayerID}}{{end}}" class="btn btn-ghost" style="margin-top:4px;">
-  📊 Ver Ranking
+  {{T .Lang "game.view_ranking"}}
 </a>
 
 <!-- ── Overlay ── -->
@@ -141,7 +141,7 @@
   <div class="sheet-handle"></div>
   <div class="sheet-inner">
     <div style="padding-bottom:14px;">
-      <div class="sheet-sub">Gerenciar</div>
+      <div class="sheet-sub">{{T .Lang "game.manage"}}</div>
       <div class="sheet-name">🎮 <span id="mesa-popup-title"></span></div>
     </div>
     <div class="sheet-sep"></div>
@@ -196,12 +196,12 @@ function openPlayerSheet(el) {
 
   // Badges
   var b = '';
-  if (isWinner)         b += '<span class="badge badge-active" style="font-size:0.65rem;">🏆 Vencedor</span>';
-  else if (confirmed)   b += '<span class="badge badge-active" style="font-size:0.65rem;">✅ Confirmado</span>';
-  else if (submitted)   b += '<span class="badge badge-submitted" style="font-size:0.65rem;">⏳ Enviado</span>';
-  else if (eliminated)  b += '<span class="badge badge-estourou" style="font-size:0.65rem;">💥 Estourou</span>';
-  else                  b += '<span class="badge badge-waiting" style="font-size:0.65rem;">📸 Pendente</span>';
-  if (isStarter)        b += '<span class="badge" style="font-size:0.65rem;background:rgba(245,197,24,.15);color:var(--gold);border:1px solid rgba(245,197,24,.3);">🎯 Saiu primeiro</span>';
+  if (isWinner)         b += '<span class="badge badge-active" style="font-size:0.65rem;">{{T .Lang "game.js.badge_winner"}}</span>';
+  else if (confirmed)   b += '<span class="badge badge-active" style="font-size:0.65rem;">{{T .Lang "game.js.badge_confirmed"}}</span>';
+  else if (submitted)   b += '<span class="badge badge-submitted" style="font-size:0.65rem;">{{T .Lang "game.js.badge_submitted"}}</span>';
+  else if (eliminated)  b += '<span class="badge badge-estourou" style="font-size:0.65rem;">{{T .Lang "game.js.badge_busted"}}</span>';
+  else                  b += '<span class="badge badge-waiting" style="font-size:0.65rem;">{{T .Lang "game.js.badge_pending"}}</span>';
+  if (isStarter)        b += '<span class="badge" style="font-size:0.65rem;background:rgba(245,197,24,.15);color:var(--gold);border:1px solid rgba(245,197,24,.3);">{{T .Lang "game.js.badge_starter"}}</span>';
   document.getElementById('popup-badges').innerHTML = b;
 
   // Ações — host vê tudo; jogador vê só upload do próprio assento
@@ -214,7 +214,7 @@ function openPlayerSheet(el) {
            + '<input type="hidden" name="_csrf" value="'+CSRF_TOKEN+'">'
            + '<button type="submit" class="sheet-row'+(isStarter?' sheet-row-done':'')+'">'
            + '<span class="sheet-row-icon">🎯</span>'
-           + '<span class="sheet-row-label">Saiu primeiro nesta rodada</span>'
+           + '<span class="sheet-row-label">{{T .Lang "game.js.starter_action"}}</span>'
            + (isStarter ? '<span class="sheet-row-check">✓</span>' : '')
            + '</button></form>';
       }
@@ -223,7 +223,7 @@ function openPlayerSheet(el) {
          + '<input type="hidden" name="_csrf" value="'+CSRF_TOKEN+'">'
          + '<button type="submit" class="sheet-row'+(isWinner?' sheet-row-done':'')+'">'
          + '<span class="sheet-row-icon">🏆</span>'
-         + '<span class="sheet-row-label">Ganhou esta rodada</span>'
+         + '<span class="sheet-row-label">{{T .Lang "game.js.winner_action"}}</span>'
          + (isWinner ? '<span class="sheet-row-check">✓</span>' : '')
          + '</button></form>';
     }
@@ -232,20 +232,20 @@ function openPlayerSheet(el) {
     if ((IS_HOST || pid === MY_PID) && !isWinner && !confirmed) {
       s += '<a href="/match/'+ROUND.matchID+'/round/'+ROUND.roundID+'/upload/'+pid+'" class="sheet-row sheet-row-primary">'
          + '<span class="sheet-row-icon">'+(submitted?'📋':'📸')+'</span>'
-         + '<span class="sheet-row-label">'+(submitted?'Ver foto enviada':'Enviar foto das peças')+'</span>'
+         + '<span class="sheet-row-label">'+(submitted?'{{T .Lang "game.js.view_photo"}}':'{{T .Lang "game.js.send_photo"}}')+'</span>'
          + '</a>';
     }
 
     if (s === '') {
       s = '<div class="sheet-row sheet-row-muted" style="cursor:default;">'
         + '<span class="sheet-row-icon">ℹ️</span>'
-        + '<span class="sheet-row-label">'+(isWinner?'Vencedor desta rodada':'Sem ações disponíveis')+'</span>'
+        + '<span class="sheet-row-label">'+(isWinner?'{{T .Lang "game.js.winner_no_action"}}':'{{T .Lang "game.js.no_actions"}}')+'</span>'
         + '</div>';
     }
   } else {
     s = '<div class="sheet-row sheet-row-muted" style="cursor:default;">'
       + '<span class="sheet-row-icon">💥</span>'
-      + '<span class="sheet-row-label">Estourou — sem ações disponíveis</span>'
+      + '<span class="sheet-row-label">{{T .Lang "game.js.busted_no_actions"}}</span>'
       + '</div>';
   }
   document.getElementById('popup-actions').innerHTML = s;
@@ -277,12 +277,12 @@ function openMesaPopup(mesaEl) {
     if (!ROUND.hasTablePhoto) {
       s += '<button type="button" class="sheet-row" onclick="closePopup();document.getElementById(\'table-image-input\').click();">'
          + '<span class="sheet-row-icon">📷</span>'
-         + '<span class="sheet-row-label">Fotografar a mesa</span>'
+         + '<span class="sheet-row-label">{{T .Lang "game.js.photo_table"}}</span>'
          + '</button>';
     } else {
       s += '<div class="sheet-row sheet-row-done" style="cursor:default;">'
          + '<span class="sheet-row-icon">📷</span>'
-         + '<span class="sheet-row-label">Mesa fotografada</span>'
+         + '<span class="sheet-row-label">{{T .Lang "game.js.table_done"}}</span>'
          + '<span class="sheet-row-check">✓</span>'
          + '</div>';
     }
@@ -292,7 +292,7 @@ function openMesaPopup(mesaEl) {
   var rankURL = '/match/'+ROUND.matchID+'/round/'+ROUND.roundID+'/ranking'+(MY_PID?'?pid='+MY_PID:'');
   s += '<a href="'+rankURL+'" class="sheet-row">'
      + '<span class="sheet-row-icon">📊</span>'
-     + '<span class="sheet-row-label">Ver Ranking da Rodada</span>'
+     + '<span class="sheet-row-label">{{T .Lang "game.js.view_round_ranking"}}</span>'
      + '</a>';
 
   if (IS_HOST) {
@@ -302,13 +302,13 @@ function openMesaPopup(mesaEl) {
          + '<input type="hidden" name="_csrf" value="'+CSRF_TOKEN+'">'
          + '<button type="submit" class="sheet-row">'
          + '<span class="sheet-row-icon">⏭️</span>'
-         + '<span class="sheet-row-label">Iniciar Próxima Rodada</span>'
+         + '<span class="sheet-row-label">{{T .Lang "game.js.next_round"}}</span>'
          + '</button></form>';
     } else {
       // Fechamento: ninguém consegue mais jogar
       s += '<a href="/match/'+ROUND.matchID+'/round/'+ROUND.roundID+'/round-scores?fechamento=1" class="sheet-row">'
          + '<span class="sheet-row-icon">🔒</span>'
-         + '<span class="sheet-row-label">Jogo Fechou (ninguém joga)</span>'
+         + '<span class="sheet-row-label">{{T .Lang "game.js.game_locked"}}</span>'
          + '</a>';
     }
     // Encerrar partida
@@ -316,18 +316,18 @@ function openMesaPopup(mesaEl) {
        + '<input type="hidden" name="_csrf" value="'+CSRF_TOKEN+'">'
        + '<button type="submit" class="sheet-row sheet-row-danger">'
        + '<span class="sheet-row-icon">🏁</span>'
-       + '<span class="sheet-row-label">Encerrar Partida</span>'
+       + '<span class="sheet-row-label">{{T .Lang "game.js.finish_match"}}</span>'
        + '</button></form>';
     // Cancelar partida
     s += '<form method="POST" action="/match/'+ROUND.matchID+'/cancel">'
        + '<input type="hidden" name="_csrf" value="'+CSRF_TOKEN+'">'
        + '<button type="submit" class="sheet-row sheet-row-danger" style="opacity:0.7;">'
        + '<span class="sheet-row-icon">🗑️</span>'
-       + '<span class="sheet-row-label">Cancelar e dispensar jogadores</span>'
+       + '<span class="sheet-row-label">{{T .Lang "game.js.cancel_match"}}</span>'
        + '</button></form>';
   }
 
-  document.getElementById('mesa-popup-title').textContent = 'Rodada ' + ROUND.roundNumber;
+  document.getElementById('mesa-popup-title').textContent = '{{T .Lang "common.round"}} ' + ROUND.roundNumber;
   document.getElementById('mesa-popup-actions').innerHTML = s;
 
   popup.classList.add('open');

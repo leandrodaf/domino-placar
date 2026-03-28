@@ -1,6 +1,6 @@
 {{template "base" .}}
 
-{{define "title"}}Rodada {{.Round.RoundNumber}} — {{.Player.Name}}{{end}}
+{{define "title"}}{{T .Lang "upload.round"}} {{.Round.RoundNumber}} — {{.Player.Name}}{{end}}
 
 {{define "content"}}
 
@@ -14,7 +14,7 @@
 <!-- Cabeçalho do jogador -->
 <div style="text-align:center; padding:20px 0 24px;">
   <div style="font-size:0.78rem; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:6px;">
-    Rodada {{.Round.RoundNumber}}
+    {{T .Lang "upload.round"}} {{.Round.RoundNumber}}
   </div>
   <h1 style="margin-bottom:12px; font-size:1.8rem;">{{.Player.Name}}</h1>
 
@@ -26,23 +26,23 @@
         {{if ge .Player.TotalScore 40}}color:var(--red){{else if ge .Player.TotalScore 30}}color:var(--orange){{else}}color:var(--text){{end}};">
         {{.Player.TotalScore}}
       </div>
-      <div style="font-size:0.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em;">pontos</div>
+      <div style="font-size:0.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em;">{{T .Lang "upload.points"}}</div>
     </div>
     <div style="width:1px; height:36px; background:var(--border);"></div>
     <div>
       <div style="font-family:'Rajdhani',sans-serif; font-size:2rem; font-weight:700; line-height:1; color:var(--text-2);">{{.Tiles.TilesEach}}</div>
-      <div style="font-size:0.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em;">pedras</div>
+      <div style="font-size:0.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em;">{{T .Lang "upload.tiles"}}</div>
     </div>
   </div>
   {{if ge .Player.TotalScore 40}}
   <div style="margin-top:10px; font-size:0.82rem; color:var(--red); font-weight:600;">
-    ⚠️ Cuidado — você está próximo de estourar!
+    {{T .Lang "upload.near_bust"}}
   </div>
   {{end}}
   {{else}}
   <div style="display:inline-flex; align-items:center; gap:6px; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:10px 20px;">
     <div style="font-family:'Rajdhani',sans-serif; font-size:2rem; font-weight:700; line-height:1; color:var(--text-2);">{{.Tiles.TilesEach}}</div>
-    <div style="font-size:0.82rem; color:var(--muted);">pedras na mão</div>
+    <div style="font-size:0.82rem; color:var(--muted);">{{T .Lang "upload.tiles_in_hand"}}</div>
   </div>
   {{end}}
 </div>
@@ -51,15 +51,15 @@
 <div id="camera-gate" style="display:none;">
   <div class="card" style="text-align:center; padding:24px 20px;">
     <div style="font-size:2.8rem; margin-bottom:12px;">📷</div>
-    <div style="font-weight:700; font-size:1.05rem; margin-bottom:8px;">Permitir acesso à câmera</div>
+    <div style="font-weight:700; font-size:1.05rem; margin-bottom:8px;">{{T .Lang "upload.camera_title"}}</div>
     <p style="font-size:0.85rem; color:var(--text-2); margin-bottom:18px;">
-      Para fotografar suas peças, o aplicativo precisa acessar a câmera do seu dispositivo.
+      {{T .Lang "upload.camera_desc"}}
     </p>
     <button type="button" id="request-camera-btn" class="btn btn-primary" style="min-height:52px; font-size:1rem;">
-      📷 Liberar Câmera
+      {{T .Lang "upload.camera_btn"}}
     </button>
     <p id="camera-denied-msg" style="display:none; margin-top:14px; font-size:0.83rem; color:var(--red);">
-      Câmera bloqueada. Vá em <strong>Configurações &rsaquo; Privacidade &rsaquo; Câmera</strong> e permita o acesso ao navegador. Ou use a entrada manual abaixo.
+      {{TH .Lang "upload.camera_denied"}}
     </p>
   </div>
 </div>
@@ -71,7 +71,7 @@
 
     <div class="upload-area" id="upload-area" onclick="triggerCamera()">
       <span class="upload-icon" id="upload-icon">📷</span>
-      <p class="upload-hint" id="upload-hint">Coloque as pedras em linha e fotografe</p>
+      <p class="upload-hint" id="upload-hint">{{T .Lang "upload.photo_hint"}}</p>
       <input type="file" name="image" id="image-input"
              accept="image/*" capture="environment"
              style="display:none;" onchange="handleImageSelect(this)">
@@ -82,7 +82,7 @@
     </div>
 
     <button type="submit" class="btn btn-primary mt-16" id="submit-btn" style="display:none; min-height:56px; font-size:1rem;">
-      ✅ Enviar foto
+      {{T .Lang "upload.submit_photo"}}
     </button>
   </form>
 </div>
@@ -90,7 +90,7 @@
 <!-- Divisor -->
 <div style="display:flex; align-items:center; gap:10px; margin:20px 0;">
   <div style="flex:1; height:1px; background:var(--border);"></div>
-  <span style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em;">ou digitar</span>
+  <span style="font-size:0.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em;">{{T .Lang "upload.or_type"}}</span>
   <div style="flex:1; height:1px; background:var(--border);"></div>
 </div>
 
@@ -98,18 +98,18 @@
 <form method="POST" action="/match/{{.Match.ID}}/round/{{.Round.ID}}/upload/{{.Player.ID}}">
   <input type="hidden" name="_csrf" value="{{.CSRFToken}}">
   <div class="form-group">
-    <label for="manual_points" style="font-size:0.82rem;">Some os pontos de todas as peças restantes</label>
+    <label for="manual_points" style="font-size:0.82rem;">{{T .Lang "upload.manual_label"}}</label>
     <input type="number" id="manual_points" name="manual_points"
            placeholder="0" min="0" max="200"
            style="font-family:'Rajdhani',sans-serif; font-size:2rem; font-weight:700; text-align:center; letter-spacing:0.05em;">
   </div>
   <button type="submit" class="btn btn-secondary" style="min-height:52px;">
-    📝 Confirmar pontos
+    {{T .Lang "upload.manual_submit"}}
   </button>
 </form>
 
 <a href="/match/{{.Match.ID}}/round/{{.Round.ID}}/game" class="btn btn-ghost" style="margin-top:8px; font-size:0.85rem;">
-  ← Voltar
+  {{T .Lang "common.back"}}
 </a>
 
 <script>

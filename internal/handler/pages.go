@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/leandrodaf/domino-placar/internal/db"
+	"github.com/leandrodaf/domino-placar/internal/i18n"
 	"github.com/leandrodaf/domino-placar/internal/models"
 )
 
@@ -21,9 +22,12 @@ type Templates struct {
 
 func NewTemplates() (*Templates, error) {
 	funcMap := template.FuncMap{
-		"add": func(a, b int) int { return a + b },
-		"mul": func(a, b int) int { return a * b },
-		"sub": func(a, b int) int { return a - b },
+		"add":      func(a, b int) int { return a + b },
+		"mul":      func(a, b int) int { return a * b },
+		"sub":      func(a, b int) int { return a - b },
+		"T":        i18n.T,
+		"TH":       i18n.TH,
+		"LangAttr": i18n.LangHTMLAttr,
 	}
 
 	pages := make(map[string]*template.Template)
@@ -63,7 +67,7 @@ func NewTemplates() (*Templates, error) {
 	return &Templates{pages: pages, partials: partials}, nil
 }
 
-func (tmpl *Templates) Render(w http.ResponseWriter, name string, data any) {
+func (tmpl *Templates) Render(w http.ResponseWriter, r *http.Request, name string, data any) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	t, ok := tmpl.pages[name]
 	if !ok {
@@ -71,12 +75,13 @@ func (tmpl *Templates) Render(w http.ResponseWriter, name string, data any) {
 		http.Error(w, "template error", http.StatusInternalServerError)
 		return
 	}
+	data = injectLang(data, i18n.DetectLang(r))
 	if err := t.ExecuteTemplate(w, "base", data); err != nil {
 		log.Printf("template exec %s error: %v", name, err)
 	}
 }
 
-func (tmpl *Templates) RenderPartial(w http.ResponseWriter, name string, data any) {
+func (tmpl *Templates) RenderPartial(w http.ResponseWriter, r *http.Request, name string, data any) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	t, ok := tmpl.partials[name]
 	if !ok {
@@ -84,9 +89,22 @@ func (tmpl *Templates) RenderPartial(w http.ResponseWriter, name string, data an
 		http.Error(w, "template error", http.StatusInternalServerError)
 		return
 	}
+	data = injectLang(data, i18n.DetectLang(r))
 	if err := t.ExecuteTemplate(w, name, data); err != nil {
 		log.Printf("partial exec %s error: %v", name, err)
 	}
+}
+
+// injectLang adds the Lang key to the template data map.
+func injectLang(data any, lang string) any {
+	if data == nil {
+		return map[string]any{"Lang": lang}
+	}
+	if m, ok := data.(map[string]any); ok {
+		m["Lang"] = lang
+		return m
+	}
+	return data
 }
 
 func uploadErrorMsg(code string) string {
@@ -113,7 +131,7 @@ func HomeHandler(tmpl *Templates) http.HandlerFunc {
 			http.NotFound(w, r)
 			return
 		}
-		tmpl.Render(w, "home.html", nil)
+		tmpl.Render(w, r, "home.html", nil)
 	}
 }
 
@@ -156,7 +174,7 @@ func LobbyHandler(database db.Store, tmpl *Templates) http.HandlerFunc {
 		}
 
 		tiles := CalcTiles(len(players))
-		tmpl.Render(w, "lobby.html", map[string]any{
+		tmpl.Render(w, r, "lobby.html", map[string]any{
 			"Match":     match,
 			"Players":   players,
 			"Count":     len(players),
@@ -174,7 +192,7 @@ func PlayersPartialHandler(database db.Store, tmpl *Templates) http.HandlerFunc 
 			players = []models.Player{}
 		}
 		tiles := CalcTiles(len(players))
-		tmpl.RenderPartial(w, "players-partial.html", map[string]any{
+		tmpl.RenderPartial(w, r, "players-partial.html", map[string]any{
 			"Players":   players,
 			"Count":     len(players),
 			"MatchID":   matchID,
@@ -193,7 +211,7 @@ func JoinPageHandler(database db.Store, tmpl *Templates) http.HandlerFunc {
 			return
 		}
 		if match.Status != "waiting" {
-			tmpl.Render(w, "join.html", map[string]any{
+			tmpl.Render(w, r, "join.html", map[string]any{
 				"Match": match,
 				"Error": "This match has already started.",
 			})
@@ -208,7 +226,7 @@ func JoinPageHandler(database db.Store, tmpl *Templates) http.HandlerFunc {
 			errMsg = "This name is already taken by another player. Choose a different name."
 		}
 
-		tmpl.Render(w, "join.html", map[string]any{"Match": match, "Error": errMsg})
+		tmpl.Render(w, r, "join.html", map[string]any{"Match": match, "Error": errMsg})
 	}
 }
 
@@ -249,7 +267,7 @@ func WaitingHandler(database db.Store, tmpl *Templates) http.HandlerFunc {
 			player, _ = database.GetPlayer(playerID)
 		}
 
-		tmpl.Render(w, "waiting.html", map[string]any{
+		tmpl.Render(w, r, "waiting.html", map[string]any{
 			"Match":  match,
 			"Player": player,
 		})
@@ -389,7 +407,7 @@ func GameHandler(database db.Store, tmpl *Templates) http.HandlerFunc {
 			}
 		}
 
-		tmpl.Render(w, "game.html", map[string]any{
+		tmpl.Render(w, r, "game.html", map[string]any{
 			"Match":           match,
 			"Round":           round,
 			"PlayerRows":      playerRows,
@@ -444,7 +462,7 @@ func UploadPageHandler(database db.Store, tmpl *Templates) http.HandlerFunc {
 		players, _ := database.GetPlayers(matchID)
 		tiles := CalcTiles(len(players))
 
-		tmpl.Render(w, "upload.html", map[string]any{
+		tmpl.Render(w, r, "upload.html", map[string]any{
 			"Match":     match,
 			"Round":     round,
 			"Player":    player,
@@ -494,7 +512,7 @@ func ConfirmPageHandler(database db.Store, tmpl *Templates) http.HandlerFunc {
 		cvDetected := handImage.PointsCalculated >= 0
 		manualMode := handImage.PointsCalculated == -1
 
-		tmpl.Render(w, "confirm.html", map[string]any{
+		tmpl.Render(w, r, "confirm.html", map[string]any{
 			"Match":      match,
 			"Round":      round,
 			"Player":     player,
@@ -520,7 +538,7 @@ func GlobalRankingHandler(database db.Store, tmpl *Templates) http.HandlerFunc {
 		closeCallKings, _ := database.GetCloseCallKings()
 		allTimeNicks, _ := database.GetAllTimeNicknames()
 
-		tmpl.Render(w, "global-ranking.html", map[string]any{
+		tmpl.Render(w, r, "global-ranking.html", map[string]any{
 			"Stats":          stats,
 			"MostLost":       mostLost,
 			"PintoKings":     pintoKings,
@@ -585,7 +603,7 @@ func RankingHandler(database db.Store, tmpl *Templates) http.HandlerFunc {
 			}
 		}
 
-		tmpl.Render(w, "ranking.html", map[string]any{
+		tmpl.Render(w, r, "ranking.html", map[string]any{
 			"Match":           match,
 			"Players":         players,
 			"Round":           round,

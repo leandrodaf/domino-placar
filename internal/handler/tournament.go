@@ -257,7 +257,7 @@ func TournamentPlayersPartialHandler(database db.Store, tmpl *Templates) http.Ha
 
 		groups := allocateGroups(len(players))
 
-		tmpl.RenderPartial(w, "tournament-players-partial.html", map[string]any{
+		tmpl.RenderPartial(w, r, "tournament-players-partial.html", map[string]any{
 			"Players":      players,
 			"Count":        len(players),
 			"TournamentID": tournamentID,

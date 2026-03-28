@@ -447,7 +447,7 @@ func RoundScoresPageHandler(database db.Store, tmpl *Templates) http.HandlerFunc
 		}
 		fechamento := r.URL.Query().Get("fechamento") == "1" || round.WinnerPlayerID == ""
 
-		tmpl.Render(w, "round-scores.html", map[string]any{
+		tmpl.Render(w, r, "round-scores.html", map[string]any{
 			"Match":      match,
 			"Round":      round,
 			"Players":    players,

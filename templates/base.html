@@ -1,5 +1,5 @@
 {{define "base"}}<!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="{{LangAttr .Lang}}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -43,9 +43,9 @@
     <div class="nav-inner">
       <a href="/" class="nav-logo">
         <span class="logo-tile">🁣</span>
-        <span class="logo-text">Dominó<span class="logo-accent"> Placar</span></span>
+        <span class="logo-text">{{T .Lang "nav.brand_domino"}}<span class="logo-accent"> {{T .Lang "nav.brand_placar"}}</span></span>
       </a>
-      <a href="/global-ranking" class="nav-link" title="Hall da Fama">🏆 <span class="nav-link-text">Hall da Fama</span></a>
+      <a href="/global-ranking" class="nav-link" title="{{T .Lang "nav.hall_of_fame"}}">🏆 <span class="nav-link-text">{{T .Lang "nav.hall_of_fame"}}</span></a>
     </div>
   </nav>
 
@@ -56,10 +56,10 @@
   </main>
 
   <footer>
-    <p>Dominó Placar &mdash; Pontuação inteligente para o seu jogo</p>
+    <p>{{TH .Lang "footer.tagline"}}</p>
     <p style="margin-top:6px; font-size:0.75rem; opacity:0.6;">
-      Feito com 🤍 no Brasil, em Diadema &mdash;
-      por <a href="https://github.com/leandrodaf" target="_blank" rel="noopener" style="color:inherit; text-decoration:underline;">leandrodaf</a>
+      {{TH .Lang "footer.made_with"}}
+      <a href="https://github.com/leandrodaf" target="_blank" rel="noopener" style="color:inherit; text-decoration:underline;">leandrodaf</a>
     </p>
   </footer>
 </body>

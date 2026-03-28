@@ -5,14 +5,14 @@
     {{range .Players}}
     <li class="player-item">
       <span class="player-name">{{.Name}}</span>
-      <span class="badge badge-active">Entrou</span>
+      <span class="badge badge-active">{{T .Lang "common.player_joined"}}</span>
     </li>
     {{end}}
   </ul>
 {{else}}
   <div class="empty-state">
     <span class="icon">⏳</span>
-    <p>Aguardando jogadores entrarem...</p>
+    <p>{{T .Lang "common.waiting_players"}}</p>
   </div>
 {{end}}
 {{end}}

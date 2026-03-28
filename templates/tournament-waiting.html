@@ -1,33 +1,33 @@
 {{template "base" .}}
 
-{{define "title"}}Aguardando Torneio — Dominó Placar{{end}}
+{{define "title"}}{{T .Lang "tournament.waiting_title"}}{{end}}
 
 {{define "content"}}
 <div class="text-center" style="padding: 40px 0;">
   <span style="font-size: 4rem; display: block; margin-bottom: 16px;">🏆</span>
 
   {{if .Player}}
-    <h1>Olá, {{.Player.Name}}!</h1>
-    <p class="text-muted mt-8">Você está inscrito no torneio.</p>
+    <h1>{{T .Lang "tournament.waiting_hello"}} {{.Player.Name}}!</h1>
+    <p class="text-muted mt-8">{{T .Lang "tournament.waiting_enrolled"}}</p>
   {{else}}
-    <h1>Aguardando...</h1>
+    <h1>{{T .Lang "tournament.waiting_heading"}}</h1>
   {{end}}
 
   <p class="text-muted mt-16">
-    O torneio ainda não começou.<br>
-    Aguarde o anfitrião iniciar.
+    {{T .Lang "tournament.waiting_not_started"}}<br>
+    {{T .Lang "tournament.waiting_host_start"}}
   </p>
 
   <div class="card mt-24">
     <div class="spinner"></div>
     <p class="text-muted mt-16" style="font-size: 0.875rem;">
-      Esta página vai atualizar automaticamente quando o torneio começar.
+      {{T .Lang "tournament.auto_refresh"}}
     </p>
   </div>
 
   <div class="alert alert-info mt-16">
     <strong>{{.Tournament.Name}}</strong><br>
-    Você será automaticamente alocado a uma mesa quando o torneio iniciar.
+    {{T .Lang "tournament.auto_allocate"}}
   </div>
 </div>
 

@@ -1,6 +1,6 @@
 {{template "base" .}}
 
-{{define "title"}}Ranking — Dominó Placar{{end}}
+{{define "title"}}{{T .Lang "ranking.title"}}{{end}}
 {{define "head-extra"}}
 <script>window._matchMeta={id:'{{.Match.ID}}',status:'{{.Match.Status}}',players:[{{range $i,$p:=.Players}}{{if $i}},{{end}}'{{$p.Name}}'{{end}}],round:{{if .Round}}{{.Round.RoundNumber}}{{else}}0{{end}}};</script>
 <script src="https://unpkg.com/canvas-confetti@1/dist/confetti.browser.min.js"></script>
@@ -8,18 +8,18 @@
 
 {{define "content"}}
 <div class="flex items-center justify-between mb-16">
-  <h1 style="margin-bottom: 0;">📊 Ranking</h1>
+  <h1 style="margin-bottom: 0;">{{T .Lang "ranking.heading"}}</h1>
   <div style="display:flex; gap:8px; align-items:center;">
     {{if .Round}}
-    <span class="round-badge">Rodada {{.Round.RoundNumber}}</span>
+    <span class="round-badge">{{T .Lang "common.round"}} {{.Round.RoundNumber}}</span>
     {{end}}
-    <button onclick="shareScore()" class="btn btn-outline" style="padding:4px 10px; font-size:0.8rem;" title="Compartilhar placar">📤</button>
+    <button onclick="shareScore()" class="btn btn-outline" style="padding:4px 10px; font-size:0.8rem;" title="{{T .Lang "ranking.share_title"}}">{{T .Lang "ranking.share_btn"}}</button>
   </div>
 </div>
 
 {{if .StarterName}}
 <div class="alert alert-info" style="margin-bottom:12px; padding:8px 12px; font-size:0.88rem;">
-  🎯 <strong>{{.StarterName}}</strong> inicia esta rodada
+  🎯 <strong>{{.StarterName}}</strong> {{T .Lang "ranking.starter_starts"}}
 </div>
 {{end}}
 
@@ -28,18 +28,18 @@
   <div style="font-size:3rem; line-height:1; margin-bottom:8px;">🐂</div>
   {{range $i, $p := .Players}}{{if eq $i 0}}
   <div style="font-family:'Rajdhani',sans-serif; font-size:1.6rem; font-weight:700; color:var(--gold); letter-spacing:0.05em; line-height:1.1;">
-    {{$p.Name}} GANHOU O BOI!
+    {{$p.Name}} {{T $.Lang "ranking.won_the_ox"}}
   </div>
   <div style="font-size:0.85rem; color:var(--text-2); margin-top:6px; line-height:1.4;">
-    Todos os outros estouraram.<br>
-    <em>O boi é seu, campeão. 🎉</em>
+    {{T $.Lang "ranking.all_busted"}}<br>
+    <em>{{T $.Lang "ranking.ox_champion"}}</em>
   </div>
   {{end}}{{end}}
 </div>
 {{end}}
 
 <div class="card" id="ranking-container">
-  <div class="card-title">{{if eq .Match.Status "finished"}}🐂 Resultado Final{{else}}🏆 Briga pelo BOI{{end}}</div>
+  <div class="card-title">{{if eq .Match.Status "finished"}}{{T .Lang "ranking.final_result"}}{{else}}{{T .Lang "ranking.fight_for_ox"}}{{end}}</div>
   <ol class="ranking-list">
     {{range $i, $p := .Players}}
     <li class="ranking-item {{if eq $i 0}}rank-1{{end}} {{if eq $p.Status "estourou"}}estourou{{end}}"
@@ -60,11 +60,11 @@
         </div>
         <div style="margin-top: 4px;">
           {{if eq $p.Status "estourou"}}
-            <span class="badge badge-estourou">💥 Estourou</span>
+            <span class="badge badge-estourou">{{T $.Lang "ranking.busted_badge"}}</span>
           {{else if and (eq $i 0) (eq $.Match.Status "finished")}}
-            <span class="badge" style="background:rgba(245,197,24,0.2); color:var(--gold); border-color:rgba(245,197,24,0.4);">🐂 Ganhou o BOI</span>
+            <span class="badge" style="background:rgba(245,197,24,0.2); color:var(--gold); border-color:rgba(245,197,24,0.4);">{{T $.Lang "ranking.won_ox_badge"}}</span>
           {{else}}
-            <span class="badge badge-active">✅ Na briga pelo BOI</span>
+            <span class="badge badge-active">{{T $.Lang "ranking.in_fight_badge"}}</span>
           {{end}}
         </div>
         {{if ne $p.Status "estourou"}}
@@ -91,13 +91,13 @@
     {{else}}
     <li class="empty-state">
       <span class="icon">🎲</span>
-      <p>Nenhum jogador ainda</p>
+      <p>{{T .Lang "ranking.no_players"}}</p>
     </li>
     {{end}}
   </ol>
   {{if .IsHost}}
   <p style="font-size:0.75rem; color:var(--muted); text-align:center; margin-top:10px; margin-bottom:0;">
-    Toque em um jogador para editar a pontuação
+    {{T .Lang "ranking.tap_to_edit"}}
   </p>
   {{end}}
 </div>
@@ -105,33 +105,33 @@
 {{if eq .Match.Status "active"}}
 {{if .Round}}
 <a href="/match/{{.Match.ID}}/round/{{.Round.ID}}/game{{if and (not .IsHost) .CurrentPlayerID}}?pid={{.CurrentPlayerID}}{{end}}" class="btn btn-secondary mb-8">
-  🎮 Ver Rodada Atual ({{.Round.RoundNumber}})
+  {{T .Lang "ranking.view_round"}} ({{.Round.RoundNumber}})
 </a>
 {{end}}
 
 {{if .IsHost}}
 <div class="card">
-  <div class="card-title">🎮 Anfitrião</div>
+  <div class="card-title">{{T .Lang "ranking.host_title"}}</div>
 
   <form method="POST" action="/match/{{.Match.ID}}/round" style="margin-bottom:8px;">
     <input type="hidden" name="_csrf" value="{{.CSRFToken}}">
     {{if or .Round (gt .RoundCount 0)}}
-    <button type="submit" class="btn btn-outline" style="min-height:48px;">⏭️ Iniciar Próxima Rodada</button>
+    <button type="submit" class="btn btn-outline" style="min-height:48px;">{{T .Lang "ranking.next_round"}}</button>
     {{else}}
-    <button type="submit" class="btn btn-secondary" style="min-height:48px;">▶️ Iniciar Primeira Rodada</button>
+    <button type="submit" class="btn btn-secondary" style="min-height:48px;">{{T .Lang "ranking.first_round"}}</button>
     {{end}}
   </form>
 
   <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:4px;">
-    <button type="button" onclick="openFinishSheet()" class="btn btn-danger" style="min-height:44px; font-size:0.88rem;">🏁 Encerrar</button>
-    <a href="/match/{{.Match.ID}}/nicknames" class="btn btn-outline" style="min-height:44px; font-size:0.88rem; text-align:center; display:flex; align-items:center; justify-content:center;">🏷️ Apelidos</a>
+    <button type="button" onclick="openFinishSheet()" class="btn btn-danger" style="min-height:44px; font-size:0.88rem;">{{T .Lang "ranking.finish"}}</button>
+    <a href="/match/{{.Match.ID}}/nicknames" class="btn btn-outline" style="min-height:44px; font-size:0.88rem; text-align:center; display:flex; align-items:center; justify-content:center;">{{T .Lang "ranking.nicknames"}}</a>
   </div>
   <form method="POST" action="/match/{{.Match.ID}}/cancel" style="margin-top:8px;">
     <input type="hidden" name="_csrf" value="{{.CSRFToken}}">
-    <button type="submit" class="btn btn-ghost" style="width:100%; font-size:0.82rem; color:var(--muted);">🗑️ Cancelar e dispensar jogadores</button>
+    <button type="submit" class="btn btn-ghost" style="width:100%; font-size:0.82rem; color:var(--muted);">{{T .Lang "ranking.cancel_dismiss"}}</button>
   </form>
   <button onclick="shareControlLink()" class="btn btn-ghost" style="font-size:0.82rem; margin-top:8px;">
-    🔑 Transferir Controle
+    {{T .Lang "ranking.transfer_control"}}
   </button>
 </div>
 {{end}}
@@ -140,7 +140,7 @@
 {{if eq .Match.Status "finished"}}
 {{if .IsHost}}
 <form method="POST" action="/match">
-  <button type="submit" class="btn btn-primary mt-8">🎮 Criar Nova Partida</button>
+  <button type="submit" class="btn btn-primary mt-8">{{T .Lang "ranking.new_match"}}</button>
 </form>
 {{end}}
 {{end}}
@@ -154,9 +154,9 @@
   <div class="sheet-inner">
     <div style="padding:6px 0 18px; text-align:center;">
       <div style="font-size:2.4rem; line-height:1; margin-bottom:10px;">🏁</div>
-      <div class="sheet-name">Encerrar Partida?</div>
+      <div class="sheet-name">{{T .Lang "ranking.finish_confirm_title"}}</div>
       <p style="color:var(--text-2); font-size:0.88rem; margin-top:6px; padding:0 4px;">
-        A partida será encerrada para todos os jogadores.
+        {{T .Lang "ranking.finish_confirm_desc"}}
       </p>
     </div>
     <div class="sheet-sep"></div>
@@ -165,12 +165,12 @@
         <input type="hidden" name="_csrf" value="{{.CSRFToken}}">
         <button type="submit" class="sheet-row sheet-row-danger">
           <span class="sheet-row-icon">🏁</span>
-          <span class="sheet-row-label">Sim, encerrar agora</span>
+          <span class="sheet-row-label">{{T .Lang "ranking.finish_yes"}}</span>
         </button>
       </form>
       <button type="button" onclick="closeAllSheets()" class="sheet-row">
         <span class="sheet-row-icon" style="opacity:0.5;">✕</span>
-        <span class="sheet-row-label">Cancelar</span>
+        <span class="sheet-row-label">{{T .Lang "ranking.cancel"}}</span>
       </button>
     </div>
   </div>
@@ -242,26 +242,26 @@ function openPlayerSheet(el) {
 
   var matchFinished = '{{.Match.Status}}' === 'finished';
   document.getElementById('ps-badge').innerHTML = bust
-    ? '<span class="badge badge-estourou">💥 Estourou</span>'
+    ? '<span class="badge badge-estourou">{{T .Lang "ranking.js.busted"}}</span>'
     : matchFinished
-      ? '<span class="badge" style="background:rgba(245,197,24,0.2);color:var(--gold);border-color:rgba(245,197,24,0.4);">🐂 Ganhou o BOI</span>'
-      : '<span class="badge badge-active">✅ Na briga pelo BOI</span>';
+      ? '<span class="badge" style="background:rgba(245,197,24,0.2);color:var(--gold);border-color:rgba(245,197,24,0.4);">{{T .Lang "ranking.js.won_ox"}}</span>'
+      : '<span class="badge badge-active">{{T .Lang "ranking.js.in_fight"}}</span>';
 
   var s = '';
   if (IS_HOST) {
     s = '<form method="POST" action="/match/'+MATCH_ID+'/player/'+pid+'/score" style="padding:4px 0;">'
       + '<input type="hidden" name="_csrf" value="'+CSRF_TOKEN+'">'
-      + '<label style="font-size:0.78rem; color:var(--text-2); display:block; margin-bottom:10px;">Corrigir pontuação</label>'
+      + '<label style="font-size:0.78rem; color:var(--text-2); display:block; margin-bottom:10px;">{{T .Lang "ranking.js.correct_score"}}</label>'
       + '<input type="number" name="score" value="'+score+'" min="0" max="200" required inputmode="numeric"'
       + ' style="width:100%; box-sizing:border-box; font-family:Rajdhani,sans-serif; font-size:2.4rem; font-weight:700;'
       + ' text-align:center; border-radius:12px; padding:10px 12px; border:1px solid var(--border);'
       + ' background:var(--surface); color:var(--text); margin-bottom:12px; display:block;">'
-      + '<button type="submit" class="btn btn-primary" style="width:100%; min-height:48px; font-size:1rem;">Salvar</button>'
+      + '<button type="submit" class="btn btn-primary" style="width:100%; min-height:48px; font-size:1rem;">{{T .Lang "ranking.js.save"}}</button>'
       + '</form>';
   } else {
     s = '<div class="sheet-row sheet-row-muted" style="cursor:default;">'
       + '<span class="sheet-row-icon">🎯</span>'
-      + '<span class="sheet-row-label">'+score+' pontos de 51</span>'
+      + '<span class="sheet-row-label">'+score+' {{T .Lang "ranking.js.points_of_51"}}</span>'
       + '</div>';
   }
   document.getElementById('ps-actions').innerHTML = s;
@@ -273,28 +273,28 @@ function openPlayerSheet(el) {
 function shareControlLink() {
   var url = window.location.origin + '/match/{{.Match.ID}}';
   if (navigator.share) {
-    navigator.share({ title: 'Dominó — Controle', text: '🎮 Controle da partida:', url: url }).catch(function(){});
+    navigator.share({ title: '{{T .Lang "ranking.js.control_title"}}', text: '{{T .Lang "ranking.js.control_text"}}', url: url }).catch(function(){});
   } else {
     navigator.clipboard.writeText(url).then(function() {
-      alert('Link de controle copiado!\n\n' + url);
-    }).catch(function() { prompt('Copie o link de controle:', url); });
+      alert('{{T .Lang "ranking.js.control_copied"}}\n\n' + url);
+    }).catch(function() { prompt('{{T .Lang "ranking.js.copy_control"}}', url); });
   }
 }
 
 function shareScore() {
-  var lines = ['📊 Placar — Dominó'];
+  var lines = ['{{T .Lang "ranking.js.score_header"}}'];
   {{range $i, $p := .Players}}
-  lines.push('{{add $i 1}}. {{$p.Name}} — {{$p.TotalScore}} pts{{if eq $p.Status "estourou"}} (estourou){{end}}');
+  lines.push('{{add $i 1}}. {{$p.Name}} — {{$p.TotalScore}} pts{{if eq $p.Status "estourou"}} ({{T $.Lang "ranking.js.busted_label"}}){{end}}');
   {{end}}
-  {{if .Round}}lines.push('Rodada {{.Round.RoundNumber}}');{{end}}
+  {{if .Round}}lines.push('{{T .Lang "common.round"}} {{.Round.RoundNumber}}');{{end}}
   var text = lines.join('\n');
   var url = window.location.href;
   if (navigator.share) {
-    navigator.share({ title: 'Dominó Placar', text: text, url: url }).catch(function(){});
+    navigator.share({ title: '{{T .Lang "ranking.js.share_title"}}', text: text, url: url }).catch(function(){});
   } else {
     navigator.clipboard.writeText(text + '\n' + url).then(function() {
-      alert('Placar copiado!');
-    }).catch(function() { prompt('Copie o placar:', text); });
+      alert('{{T .Lang "ranking.js.score_copied"}}');
+    }).catch(function() { prompt('{{T .Lang "ranking.js.copy_score"}}', text); });
   }
 }
 

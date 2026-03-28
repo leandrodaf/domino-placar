@@ -8,6 +8,7 @@ import (
 
 	"github.com/leandrodaf/domino-placar/internal/db"
 	"github.com/leandrodaf/domino-placar/internal/handler"
+	"github.com/leandrodaf/domino-placar/internal/i18n"
 )
 
 func main() {
@@ -40,6 +41,9 @@ func main() {
 		store = db.NewSQLiteStore(sqlDB)
 		log.Println("Using SQLite database")
 	}
+
+	// Initialize i18n
+	i18n.Init()
 
 	// Initialize SSE hub
 	hub := handler.NewSSEHub()
