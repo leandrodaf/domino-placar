@@ -144,6 +144,7 @@
   "game.host_tap": "👆 Toque em um jogador para registrar ações",
   "game.player_tap": "👆 Toque no seu nome para enviar sua foto",
   "game.tiles_per_player": "pedras",
+  "game.per_player": "por jogador",
   "game.tiles_to_buy": "para comprar",
   "game.table_photo_title": "📷 Foto da Mesa",
   "game.table_photo_submit": "📸 Registrar Foto da Mesa",

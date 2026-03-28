@@ -144,6 +144,7 @@
   "game.host_tap": "👆 Tap a player to register actions",
   "game.player_tap": "👆 Tap your name to submit your photo",
   "game.tiles_per_player": "tiles",
+  "game.per_player": "per player",
   "game.tiles_to_buy": "to draw",
   "game.table_photo_title": "📷 Table Photo",
   "game.table_photo_submit": "📸 Record Table Photo",
