@@ -1,9 +1,27 @@
 # 🁣 Dominó Placar
 
+[![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white)](https://go.dev)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Deploy](https://img.shields.io/badge/Cloud%20Run-deployed-4285F4?logo=googlecloud&logoColor=white)](#deploy-no-google-cloud-cloud-run)
+
 > Placar digital em tempo real para **Pontinho** — o dominó brasileiro de 51 pontos.
 > Rodando no celular de qualquer jogador, sem instalação.
 >
 > Feito com 🤍 em Diadema, SP — por [leandrodaf](https://github.com/leandrodaf)
+
+---
+
+## Funcionalidades
+
+- **Tempo real** — placar atualiza instantaneamente para todos via Server-Sent Events (SSE)
+- **QR Code** — anfitrião compartilha QR code para jogadores entrarem na sala
+- **Detecção de pedras por foto** — fotografe as pedras restantes e o sistema reconhece automaticamente (via Roboflow)
+- **Torneios multimesa** — suporte a torneios com alocação automática de mesas
+- **Mobile-first** — interface pensada para celular, tema escuro premium
+- **Zero instalação** — funciona direto no navegador, sem app
+- **Hall da Fama** — ranking global persistente entre partidas
+- **Apelidos** — sistema de apelidos e votação entre jogadores
+- **Dual storage** — SQLite para dev local, Firebase Realtime Database para produção
 
 ---
 
@@ -68,11 +86,17 @@ Acesse [http://localhost:8080](http://localhost:8080).
 
 ### Jogar na rede Wi-Fi (outros celulares na mesma rede)
 
+Descubra o IP local da sua máquina e acesse pelo celular:
+
 ```bash
-HOST=192.168.1.100 go run main.go
+# macOS
+ipconfig getifaddr en0
+
+# Linux
+hostname -I | awk '{print $1}'
 ```
 
-Substitua `192.168.1.100` pelo IP da sua máquina na rede local. Os QR codes apontarão para esse endereço.
+Depois acesse `http://<SEU-IP>:8080` no navegador do celular. Os links de convite e QR codes usam automaticamente o endereço pelo qual você acessou.
 
 ---
 
@@ -89,7 +113,6 @@ Substitua `192.168.1.100` pelo IP da sua máquina na rede local. Os QR codes apo
 | Variável | Descrição | Padrão |
 |----------|-----------|--------|
 | `PORT` | Porta HTTP do servidor | `8080` |
-| `HOST` | Hostname/IP para QR codes e links de convite | `localhost` |
 | `TRUST_PROXY` | Se definida (qualquer valor), confia no header `X-Forwarded-For` para obter o IP real do cliente (usar apenas atrás de proxy reverso confiável) | não definida |
 
 ### Firebase Realtime Database (substituição do SQLite)
@@ -198,7 +221,6 @@ ROBOFLOW_API_KEY=sua-chave-roboflow
 # ROBOFLOW_MODEL=domino-detection
 # ROBOFLOW_VERSION=1
 
-HOST=192.168.1.100
 PORT=8080
 ```
 
@@ -286,6 +308,20 @@ domino-placar/
 
 ---
 
+## Contribuindo
+
+Contribuições são bem-vindas! Sinta-se à vontade para abrir issues e pull requests.
+
+1. Fork o projeto
+2. Crie uma branch (`git checkout -b feat/minha-feature`)
+3. Commit suas mudanças (`git commit -m 'feat: minha feature'`)
+4. Push para a branch (`git push origin feat/minha-feature`)
+5. Abra um Pull Request
+
+---
+
 ## Licença
 
-Projeto pessoal — uso livre. Feito com 🤍 em Diadema, SP.
+Este projeto está sob a licença MIT — veja o arquivo [LICENSE](LICENSE) para detalhes.
+
+Feito com 🤍 em Diadema, SP.

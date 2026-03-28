@@ -6,13 +6,17 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/leandrodaf/domino-placar/internal/db"
 	"github.com/leandrodaf/domino-placar/internal/models"
 )
 
 type Templates struct {
-	funcMap template.FuncMap
+	pages    map[string]*template.Template // page name -> base+page (pre-parsed)
+	partials map[string]*template.Template // partial name -> partial (pre-parsed)
 }
 
 func NewTemplates() (*Templates, error) {
@@ -21,18 +25,49 @@ func NewTemplates() (*Templates, error) {
 		"mul": func(a, b int) int { return a * b },
 		"sub": func(a, b int) int { return a - b },
 	}
-	_, err := template.New("").Funcs(funcMap).ParseGlob("templates/*.html")
+
+	pages := make(map[string]*template.Template)
+	partials := make(map[string]*template.Template)
+
+	files, err := filepath.Glob("templates/*.html")
 	if err != nil {
 		return nil, err
 	}
-	return &Templates{funcMap: funcMap}, nil
+
+	for _, f := range files {
+		name := filepath.Base(f)
+		if name == "base.html" {
+			continue
+		}
+
+		if strings.Contains(name, "partial") {
+			t, err := template.New("").Funcs(funcMap).ParseFiles(f)
+			if err != nil {
+				return nil, fmt.Errorf("parsing partial %s: %w", name, err)
+			}
+			partials[name] = t
+		} else {
+			t, err := template.New("").Funcs(funcMap).ParseFiles("templates/base.html", f)
+			if err != nil {
+				return nil, fmt.Errorf("parsing page %s: %w", name, err)
+			}
+			pages[name] = t
+		}
+	}
+
+	// Validate at least base.html exists
+	if _, err := os.Stat("templates/base.html"); err != nil {
+		return nil, fmt.Errorf("base.html not found: %w", err)
+	}
+
+	return &Templates{pages: pages, partials: partials}, nil
 }
 
 func (tmpl *Templates) Render(w http.ResponseWriter, name string, data any) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	t, err := template.New("").Funcs(tmpl.funcMap).ParseFiles("templates/base.html", "templates/"+name)
-	if err != nil {
-		log.Printf("template parse %s error: %v", name, err)
+	t, ok := tmpl.pages[name]
+	if !ok {
+		log.Printf("template %s not found in cache", name)
 		http.Error(w, "template error", http.StatusInternalServerError)
 		return
 	}
@@ -43,9 +78,9 @@ func (tmpl *Templates) Render(w http.ResponseWriter, name string, data any) {
 
 func (tmpl *Templates) RenderPartial(w http.ResponseWriter, name string, data any) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	t, err := template.New("").Funcs(tmpl.funcMap).ParseFiles("templates/" + name)
-	if err != nil {
-		log.Printf("partial parse %s error: %v", name, err)
+	t, ok := tmpl.partials[name]
+	if !ok {
+		log.Printf("partial %s not found in cache", name)
 		http.Error(w, "template error", http.StatusInternalServerError)
 		return
 	}
