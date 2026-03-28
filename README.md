@@ -3,11 +3,26 @@
 [![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white)](https://go.dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Deploy](https://img.shields.io/badge/Cloud%20Run-deployed-4285F4?logo=googlecloud&logoColor=white)](#deploy-on-google-cloud-cloud-run)
+[![Play Now](https://img.shields.io/badge/Play%20Now-dominoplacar.net-ff6f00?style=for-the-badge)](https://dominoplacar.net)
 
 > Real-time digital scoreboard for **Pontinho** — the Brazilian domino game with a 51-point bust limit.
 > Runs on any player's phone browser, zero installation required.
 >
+> 🌐 **Try it now → [dominoplacar.net](https://dominoplacar.net)**
+>
 > Made with 🤍 in Diadema, SP — by [leandrodaf](https://github.com/leandrodaf)
+
+---
+
+## Screenshots
+
+<p align="center">
+  <img src="images/home-page.png" width="200" alt="Home page">
+  <img src="images/loby-create.png" width="200" alt="Lobby with QR code">
+  <img src="images/loby-players.png" width="200" alt="Lobby with players">
+  <img src="images/party-players.png" width="200" alt="Game round">
+  <img src="images/ranking.png" width="200" alt="Ranking">
+</p>
 
 ---
 
@@ -21,6 +36,7 @@
 - **Zero install** — works right in the browser, no app needed
 - **Hall of Fame** — persistent global ranking across matches
 - **Nicknames** — nickname system with player voting
+- **i18n** — Portuguese and English, auto-detected from the browser
 - **Dual storage** — SQLite for local dev, Firebase Realtime Database for production
 
 ---
@@ -279,6 +295,11 @@ domino-placar/
     │   ├── sqlite_store.go      # SQLite implementation
     │   ├── firebase_store.go    # Firebase Realtime DB implementation
     │   └── db.go                # SQLite schema and helpers
+    ├── i18n/
+    │   ├── i18n.go              # Internationalization (T, TH, DetectLang)
+    │   └── locales/
+    │       ├── pt.json          # Portuguese translations
+    │       └── en.json          # English translations
     ├── models/models.go         # Domain structs
     ├── handler/
     │   ├── security.go          # HMAC cookies, CSRF, rate limiting, headers
