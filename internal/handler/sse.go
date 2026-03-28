@@ -5,18 +5,27 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	"time"
 )
 
 // SSEHub manages Server-Sent Events subscribers per match.
 type SSEHub struct {
 	mu      sync.RWMutex
 	clients map[string][]chan string
+	push    *PushManager
 }
 
 func NewSSEHub() *SSEHub {
 	return &SSEHub{
 		clients: make(map[string][]chan string),
 	}
+}
+
+// SetPushManager conecta o PushManager ao SSEHub.
+// Quando um Broadcast é feito, o push também é disparado para dispositivos
+// que estão em background.
+func (h *SSEHub) SetPushManager(pm *PushManager) {
+	h.push = pm
 }
 
 // Subscribe creates a new channel for the given matchID and returns it.
@@ -48,6 +57,7 @@ func (h *SSEHub) Unsubscribe(matchID string, ch chan string) {
 }
 
 // Broadcast sends an event to all subscribers of the given matchID.
+// Também envia push notification para dispositivos em background.
 func (h *SSEHub) Broadcast(matchID, event string) {
 	h.mu.RLock()
 	chans := make([]chan string, len(h.clients[matchID]))
@@ -60,6 +70,11 @@ func (h *SSEHub) Broadcast(matchID, event string) {
 		default:
 			log.Printf("SSE channel full for match %s, dropping event", matchID)
 		}
+	}
+
+	// Dispara push notification para dispositivos em background
+	if h.push != nil {
+		h.push.NotifyMatch(matchID, event)
 	}
 }
 
@@ -91,10 +106,19 @@ func SSEHandler(hub *SSEHub) http.HandlerFunc {
 		flusher.Flush()
 
 		ctx := r.Context()
+		// Keep-alive ticker: envia comentário vazio a cada 20s para manter
+		// conexões SSE ativas em redes móveis (4G/5G) que encerram conexões ociosas.
+		ticker := time.NewTicker(20 * time.Second)
+		defer ticker.Stop()
+
 		for {
 			select {
 			case <-ctx.Done():
 				return
+			case <-ticker.C:
+				// Comentário SSE (linhas começando com ":") não geram eventos no cliente
+				fmt.Fprintf(w, ": keep-alive\n\n")
+				flusher.Flush()
 			case event, ok := <-ch:
 				if !ok {
 					return

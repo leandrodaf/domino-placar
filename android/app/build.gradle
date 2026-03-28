@@ -1,0 +1,81 @@
+plugins {
+    id 'com.android.application'
+    id 'com.google.gms.google-services'
+}
+
+android {
+    namespace 'net.dominoplacar.app'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId "net.dominoplacar.app"
+        minSdk 24        // Android 7.0+ (~95% dos dispositivos ativos)
+        targetSdk 36
+        versionCode 1
+        versionName "1.0.0"
+
+        // Manter apenas locales usados (reduz tamanho do APK)
+        resConfigs "pt", "pt-rBR", "en", "es"
+    }
+
+    signingConfigs {
+        // Para release, configure sua keystore aqui ou via local.properties:
+        // RELEASE_STORE_FILE=path/to/keystore.jks
+        // RELEASE_STORE_PASSWORD=...
+        // RELEASE_KEY_ALIAS=...
+        // RELEASE_KEY_PASSWORD=...
+        release {
+            // Descomente e configure quando tiver a keystore:
+            // storeFile file(project.property('RELEASE_STORE_FILE') ?: 'release.jks')
+            // storePassword project.property('RELEASE_STORE_PASSWORD') ?: ''
+            // keyAlias project.property('RELEASE_KEY_ALIAS') ?: ''
+            // keyPassword project.property('RELEASE_KEY_PASSWORD') ?: ''
+        }
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            // signingConfig signingConfigs.release  // Descomente quando configurar keystore
+        }
+        debug {
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
+            isDebuggable = true
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    // Habilita compressão de recursos
+    androidResources {
+        generateLocaleConfig = true
+    }
+}
+
+dependencies {
+    // AndroidX
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'androidx.activity:activity:1.9.3'
+    implementation 'androidx.webkit:webkit:1.12.1'
+    implementation 'androidx.core:core-splashscreen:1.0.1'
+
+    // Firebase Cloud Messaging (push notifications)
+    implementation platform('com.google.firebase:firebase-bom:33.7.0')
+    implementation 'com.google.firebase:firebase-messaging'
+
+    // Resolver conflito de versões duplicadas do kotlin-stdlib
+    constraints {
+        implementation('org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22') {
+            because 'kotlin-stdlib-jdk7 é incluído no kotlin-stdlib desde 1.8+'
+        }
+        implementation('org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22') {
+            because 'kotlin-stdlib-jdk8 é incluído no kotlin-stdlib desde 1.8+'
+        }
+    }
+}

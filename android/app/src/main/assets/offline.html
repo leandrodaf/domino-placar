@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>Sem Conexão</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;overflow:hidden}
+  body{
+    background:#09090f;
+    background-image:radial-gradient(rgba(255,255,255,.032) 1px,transparent 1px);
+    background-size:26px 26px;
+    color:#ededf8;
+    font-family:'Inter','Segoe UI',system-ui,-apple-system,sans-serif;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    -webkit-user-select:none;user-select:none;
+    padding:24px;text-align:center;
+  }
+  .icon{
+    width:80px;height:80px;margin-bottom:24px;
+    background:#141420;border:2px solid #252535;border-radius:20px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:40px;
+    box-shadow:0 0 30px rgba(233,69,96,.15);
+  }
+  h1{
+    font-family:'Rajdhani',sans-serif;font-size:1.5rem;font-weight:700;
+    margin-bottom:8px;letter-spacing:.02em;
+  }
+  p{color:#9898b4;font-size:.9rem;line-height:1.5;margin-bottom:24px;max-width:300px}
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:12px 28px;border-radius:10px;
+    background:#e94560;color:#fff;
+    font-family:'Rajdhani',sans-serif;font-size:1rem;font-weight:600;
+    border:none;cursor:pointer;letter-spacing:.03em;
+    box-shadow:0 0 20px rgba(233,69,96,.35);
+    transition:transform .15s,box-shadow .15s;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .btn:active{transform:scale(.96);box-shadow:0 0 10px rgba(233,69,96,.2)}
+  .dots{display:flex;gap:6px;margin-top:32px;opacity:.4}
+  .dot{width:6px;height:6px;background:#9898b4;border-radius:50%}
+  .pulse{animation:pulse 2s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=Inter:wght@400&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="icon">🁣</div>
+  <h1>Sem Conexão</h1>
+  <p>Não foi possível conectar ao servidor. Verifique sua internet e tente novamente.</p>
+  <button class="btn" onclick="window.location.reload()">⟳ Tentar Novamente</button>
+  <div class="dots pulse">
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+  </div>
+</body>
+</html>

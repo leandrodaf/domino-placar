@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Recursos em Português (explícito) -->
+<resources>
+    <string name="app_name">Dominó Placar</string>
+    <string name="error_connection">Erro de conexão. Verifique sua internet.</string>
+    <string name="error_no_internet">Sem conexão com a internet.</string>
+    <string name="offline_title">Sem Conexão</string>
+    <string name="offline_message">Não foi possível conectar ao servidor. Verifique sua internet e tente novamente.</string>
+    <string name="retry_button">⟳ Tentar Novamente</string>
+    <string name="file_chooser_title">Escolher foto</string>
+</resources>

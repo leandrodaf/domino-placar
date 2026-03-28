@@ -1,14 +1,17 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
 	"time"
 
+	firebase "firebase.google.com/go/v4"
 	"github.com/leandrodaf/domino-placar/internal/db"
 	"github.com/leandrodaf/domino-placar/internal/handler"
 	"github.com/leandrodaf/domino-placar/internal/i18n"
+	"google.golang.org/api/option"
 )
 
 func main() {
@@ -48,6 +51,10 @@ func main() {
 	// Initialize SSE hub
 	hub := handler.NewSSEHub()
 
+	// Initialize Push Notification Manager (FCM)
+	pushMgr := initPushManager()
+	hub.SetPushManager(pushMgr)
+
 	// Initialize templates
 	tmpl, err := handler.NewTemplates()
 	if err != nil {
@@ -68,6 +75,21 @@ func main() {
 
 	// Static files
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+
+	// Android App Links — verificação de domínio para deep links
+	// O SHA256 do certificado deve ser atualizado com o fingerprint real da keystore de release.
+	// Gere com: keytool -list -v -keystore release.jks -alias key0 | grep SHA256
+	mux.HandleFunc("GET /.well-known/assetlinks.json", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "net.dominoplacar.app",
+    "sha256_cert_fingerprints": ["TODO:SUBSTITUIR_COM_SHA256_DA_KEYSTORE_DE_RELEASE"]
+  }
+}]`))
+	})
 
 	// Home
 	mux.HandleFunc("GET /", handler.HomeHandler(tmpl))
@@ -145,6 +167,9 @@ func main() {
 	// SSE
 	mux.HandleFunc("GET /match/{id}/events", handler.SSEHandler(hub))
 
+	// Push notifications (FCM token registration from Android app)
+	mux.HandleFunc("POST /api/push/register", pushMgr.RegisterHandler())
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
@@ -157,4 +182,30 @@ func main() {
 	if err := http.ListenAndServe(addr, handler.SecurityHeaders(mux)); err != nil {
 		log.Fatalf("Server failed: %v", err)
 	}
+}
+
+// initPushManager cria o FCM messaging client usando as mesmas credenciais Firebase.
+// Se não houver credenciais disponíveis, retorna um PushManager "noop" (sem envio).
+func initPushManager() *handler.PushManager {
+	fbCreds := os.Getenv("FIREBASE_CREDENTIALS")
+	if fbCreds == "" {
+		log.Println("FCM: no credentials, push notifications disabled")
+		return handler.NewPushManager(nil)
+	}
+
+	ctx := context.Background()
+	app, err := firebase.NewApp(ctx, nil, option.WithCredentialsJSON([]byte(fbCreds)))
+	if err != nil {
+		log.Printf("FCM: failed to init Firebase app: %v", err)
+		return handler.NewPushManager(nil)
+	}
+
+	msgClient, err := app.Messaging(ctx)
+	if err != nil {
+		log.Printf("FCM: failed to init messaging client: %v", err)
+		return handler.NewPushManager(nil)
+	}
+
+	log.Println("FCM: push notifications enabled")
+	return handler.NewPushManager(msgClient)
 }

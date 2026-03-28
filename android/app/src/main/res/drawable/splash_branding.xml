@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Branding do splash: ícone de dominó centralizado -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@drawable/ic_launcher_foreground"
+        android:gravity="center"
+        android:width="120dp"
+        android:height="120dp" />
+</layer-list>

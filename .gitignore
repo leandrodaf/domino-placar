@@ -36,3 +36,19 @@ firebase-debug.log
 .firebaserc
 firebase.json
 database.rules.json
+
+# Android
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/app/google-services.json
+*.apk
+*.aab
+*.keystore
+*.jks
+
+# Python / temp scripts
+__pycache__/
+*.pyc
+/tmp/

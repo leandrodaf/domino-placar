@@ -7,14 +7,35 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="description" content="{{T .Lang "meta.description"}}">
+  <meta name="keywords" content="{{T .Lang "meta.keywords"}}">
   <title>{{block "title" .}}Dominó Placar{{end}}</title>
-  <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+  <link rel="canonical" href="https://dominoplacar.net/">
+  <link rel="icon" href="/static/favicon.ico" sizes="16x16 32x32 48x48">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/static/icon-192.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="/static/icon-192.png">
+
+  <!-- Open Graph / Facebook / WhatsApp -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://dominoplacar.net/">
+  <meta property="og:title" content="{{T .Lang "meta.og_title"}}">
+  <meta property="og:description" content="{{T .Lang "meta.og_description"}}">
+  <meta property="og:image" content="https://dominoplacar.net/static/og-preview.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:locale" content="{{T .Lang "meta.og_locale"}}">
+  <meta property="og:site_name" content="Dominó Placar">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{T .Lang "meta.og_title"}}">
+  <meta name="twitter:description" content="{{T .Lang "meta.og_description"}}">
+  <meta name="twitter:image" content="https://dominoplacar.net/static/og-preview.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/style.css?v=2">
   <script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js" defer></script>
   {{block "head-extra" .}}{{end}}
   {{if .CSRFToken}}<meta name="csrf-token" content="{{.CSRFToken}}">{{end}}

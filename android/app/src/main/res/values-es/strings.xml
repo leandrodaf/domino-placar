@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Recursos em Espanhol -->
+<resources>
+    <string name="app_name">Dominó Marcador</string>
+    <string name="error_connection">Error de conexión. Verifica tu internet.</string>
+    <string name="error_no_internet">Sin conexión a internet.</string>
+    <string name="offline_title">Sin Conexión</string>
+    <string name="offline_message">No se pudo conectar al servidor. Verifica tu internet e intenta de nuevo.</string>
+    <string name="retry_button">⟳ Intentar de Nuevo</string>
+    <string name="file_chooser_title">Elegir foto</string>
+</resources>

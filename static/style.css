@@ -219,64 +219,34 @@ h3 {
 .hero-domino {
   display: flex;
   justify-content: center;
-  gap: 8px;
+  gap: 12px;
   margin-bottom: 20px;
 }
 
 .domino-tile {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-between;
-  width: 38px;
-  height: 68px;
-  background: linear-gradient(145deg, #1e1e2e, #12121a);
-  border: 1.5px solid #3a3a5c;
-  border-radius: 6px;
-  padding: 6px 4px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
-  position: relative;
+  width: 44px;
+  height: auto;
+  background: none;
+  border: none;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.5));
   animation: tileFloat 3s ease-in-out infinite;
 }
 
 .domino-tile:nth-child(2) { animation-delay: 0.5s; }
 .domino-tile:nth-child(3) { animation-delay: 1s; }
 
-.domino-tile::after {
-  content: '';
-  position: absolute;
-  top: 50%; left: 4px; right: 4px;
-  height: 1px;
-  background: rgba(255,255,255,0.15);
-  transform: translateY(-50%);
-}
-
-.tile-half {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2px;
-  width: 100%;
-  height: 28px;
-  align-items: center;
-  justify-items: center;
-}
-
-.pip {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--text);
-  box-shadow: 0 0 4px rgba(255,255,255,0.6);
-}
-
-.pip-center {
-  grid-column: 1 / -1;
-  justify-self: center;
-}
-
 @keyframes tileFloat {
   0%, 100% { transform: translateY(0px); }
   50%       { transform: translateY(-6px); }
+}
+
+.domino-tile.flip {
+  animation-name: tileFloatFlip;
+}
+
+@keyframes tileFloatFlip {
+  0%, 100% { transform: rotate(180deg) translateY(0px); }
+  50%       { transform: rotate(180deg) translateY(6px); }
 }
 
 .hero-title {
@@ -1468,4 +1438,100 @@ footer {
 }
 @keyframes alertFadeOut {
   to { opacity: 0; height: 0; padding: 0; margin: 0; overflow: hidden; }
+}
+
+/* ── Android WebView / Mobile App Optimizations ─────────────── */
+/* Regras ativadas pela classe .app-webview (injetada pelo app Android) */
+
+/* Desativa seleção de texto para evitar marcações acidentais no placar */
+.app-webview body,
+.app-webview button,
+.app-webview a,
+.app-webview input[type="button"],
+.app-webview input[type="submit"],
+.app-webview .btn,
+.app-webview .card,
+.app-webview label,
+.app-webview h1,
+.app-webview h2,
+.app-webview h3,
+.app-webview p,
+.app-webview span,
+.app-webview td,
+.app-webview th {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Mantém seleção em campos de texto onde o usuário precisa digitar */
+.app-webview input[type="text"],
+.app-webview input[type="number"],
+.app-webview input[type="email"],
+.app-webview input[type="tel"],
+.app-webview input[type="search"],
+.app-webview textarea {
+  -webkit-user-select: auto;
+  user-select: auto;
+}
+
+/* Remove highlight flash ao tocar em elementos */
+.app-webview * {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Bloqueia pull-to-refresh (puxar para baixo recarregar) */
+.app-webview body {
+  overscroll-behavior-y: contain;
+  overscroll-behavior-x: contain;
+}
+
+/* Desabilita long-press context menu em imagens/links */
+.app-webview img,
+.app-webview a {
+  -webkit-touch-callout: none;
+}
+
+/* Remove barra de navegação (footer) no app — o app É o cliente */
+.app-webview .nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+
+/* Padding seguro para notch/câmera frontal (safe area) */
+.app-webview body {
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Otimização de scroll para telas touch — momentum nativo */
+.app-webview main,
+.app-webview .container {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Previne zoom ao focar em inputs (iOS legacy, mas não custa) */
+.app-webview input,
+.app-webview select,
+.app-webview textarea {
+  font-size: 16px;
+}
+
+/* Botões com área de toque mínima de 44px (guideline de acessibilidade) */
+.app-webview .btn,
+.app-webview button,
+.app-webview [role="button"] {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Animações reduzidas se o usuário preferir (respeita config do sistema) */
+@media (prefers-reduced-motion: reduce) {
+  .app-webview *,
+  .app-webview *::before,
+  .app-webview *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

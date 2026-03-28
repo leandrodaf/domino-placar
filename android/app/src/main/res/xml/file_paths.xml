@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Caminhos para FileProvider — usado pela câmera ao tirar foto pelo WebView -->
+<paths>
+    <external-cache-path name="camera_photos" path="/" />
+    <cache-path name="internal_cache" path="/" />
+</paths>

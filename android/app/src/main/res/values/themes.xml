@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tema base — escuro, sem ActionBar, fullscreen -->
+    <style name="Theme.DominoPlacar" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:statusBarColor">#09090f</item>
+        <item name="android:navigationBarColor">#09090f</item>
+        <item name="android:windowBackground">@color/bg</item>
+        <item name="android:colorPrimary">@color/accent</item>
+        <item name="android:colorPrimaryDark">@color/bg</item>
+        <item name="android:colorAccent">@color/accent</item>
+    </style>
+
+    <!-- Tema do splash screen (Android < 12 compat) -->
+    <style name="Theme.DominoPlacar.Splash" parent="Theme.DominoPlacar">
+        <item name="android:windowBackground">@color/bg</item>
+    </style>
+</resources>

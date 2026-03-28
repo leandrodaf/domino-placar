@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- English resources -->
+<resources>
+    <string name="app_name">Domino Scoreboard</string>
+    <string name="error_connection">Connection error. Check your internet.</string>
+    <string name="error_no_internet">No internet connection.</string>
+    <string name="offline_title">No Connection</string>
+    <string name="offline_message">Could not connect to the server. Check your internet and try again.</string>
+    <string name="retry_button">⟳ Try Again</string>
+    <string name="file_chooser_title">Choose photo</string>
+</resources>

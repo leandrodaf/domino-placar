@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Cores do app — espelham as variáveis CSS -->
+<resources>
+    <color name="bg">#09090F</color>
+    <color name="surface">#0F0F1A</color>
+    <color name="card">#141420</color>
+    <color name="accent">#E94560</color>
+    <color name="accent_glow">#47E94560</color>
+    <color name="gold">#F5C518</color>
+    <color name="green">#22C55E</color>
+    <color name="text">#EDEDF8</color>
+    <color name="text_secondary">#9898B4</color>
+    <color name="muted">#60607A</color>
+    <color name="border">#252535</color>
+</resources>
