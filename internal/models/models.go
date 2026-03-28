@@ -72,20 +72,20 @@ type ZoeiraStat struct {
 
 // NicknameNomination is a nickname proposed for a player.
 type NicknameNomination struct {
-	ID                  string
-	NominatedUniqueID   string
-	NominatedName       string
-	MatchID             string
-	Nickname            string
-	VoteCount           int
-	ProposerUniqueID    string
-	CreatedAt           time.Time
+	ID                string
+	NominatedUniqueID string
+	NominatedName     string
+	MatchID           string
+	Nickname          string
+	VoteCount         int
+	ProposerUniqueID  string
+	CreatedAt         time.Time
 }
 
 // NicknameVote registra que um unique_id votou em uma nomination.
 type NicknameVote struct {
-	NominationID   string
-	VoterUniqueID  string
+	NominationID  string
+	VoterUniqueID string
 }
 
 type Tournament struct {
