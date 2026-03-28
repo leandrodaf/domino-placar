@@ -9,7 +9,7 @@ FROM alpine:latest
 RUN apk add --no-cache ca-certificates
 WORKDIR /app
 COPY --from=builder /app/domino-placar .
-COPY static/ static/
-COPY templates/ templates/
+COPY --from=builder /app/static/ static/
+COPY --from=builder /app/templates/ templates/
 EXPOSE 8080
 CMD ["./domino-placar"]
