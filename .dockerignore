@@ -14,8 +14,6 @@ domino-placar
 domino-teste
 domino-game
 android/
-static/tiles/
 static/icon-preview.png
-static/og-preview.png
 *.apk
 *.aab
