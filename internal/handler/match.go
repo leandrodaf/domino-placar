@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/leandrodaf/domino-placar/internal/db"
 	"github.com/leandrodaf/domino-placar/internal/service"
@@ -20,17 +19,13 @@ func CreateMatchHandler(database db.Store) http.HandlerFunc {
 			return
 		}
 
-		host := os.Getenv("HOST")
-		if host == "" {
-			host = "localhost"
+		scheme := "https"
+		if r.TLS == nil && r.Header.Get("X-Forwarded-Proto") != "https" {
+			scheme = "http"
 		}
-		port := os.Getenv("PORT")
-		if port == "" {
-			port = "8080"
-		}
+		baseURL := fmt.Sprintf("%s://%s", scheme, r.Host)
 
 		matchID := uuid.New().String()
-		baseURL := fmt.Sprintf("http://%s:%s", host, port)
 
 		if err := database.CreateMatch(matchID, baseURL); err != nil {
 			log.Printf("CreateMatch error: %v", err)
