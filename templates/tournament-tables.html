@@ -20,7 +20,7 @@
     <div class="table-header">
       <div class="table-number">{{.TableNumber}}</div>
       <div>
-        <div class="table-title">{{T .Lang "tournament.table"}} {{.TableNumber}}</div>
+        <div class="table-title">{{T $.Lang "tournament.table"}} {{.TableNumber}}</div>
         <span class="badge {{if eq .Match.Status "active"}}badge-active{{else if eq .Match.Status "finished"}}badge-estourou{{else}}badge-waiting{{end}}">
           {{if eq .Match.Status "active"}}{{T $.Lang "tournament.table_in_game"}}{{else if eq .Match.Status "finished"}}{{T $.Lang "tournament.table_finished"}}{{else}}{{T $.Lang "tournament.table_waiting"}}{{end}}
         </span>
@@ -32,7 +32,7 @@
       {{range .Players}}
       <li class="table-player-item">
         <span class="player-name {{if eq .Status "estourou"}}eliminated{{end}}">{{.Name}}</span>
-        <span style="font-size: 0.85rem; color: var(--accent); font-weight: 700;">{{.TotalScore}} pts</span>
+        <span style="font-size: 0.85rem; color: var(--accent); font-weight: 700;">{{.TotalScore}} {{T $.Lang "common.pts"}}</span>
       </li>
       {{end}}
     </ul>

@@ -8,7 +8,7 @@
 <div class="card">
   <div class="card-title">{{T .Lang "tournament.qr_title"}}</div>
   <div class="qr-container">
-    <img src="/tournament/{{.Tournament.ID}}/qrcode" alt="QR Code para entrar no torneio">
+    <img src="/tournament/{{.Tournament.ID}}/qrcode" alt="{{T .Lang "tournament.qr_alt"}}">
     <p class="qr-url">{{.Tournament.BaseURL}}/tournament/{{.Tournament.ID}}/join</p>
   </div>
   <div class="alert alert-info mt-8">
@@ -21,13 +21,13 @@
      hx-trigger="every 3s"
      hx-target="this"
      hx-swap="innerHTML">
-  <div class="card-title">👥 Jogadores (<span id="player-count">{{.Count}}</span>/60)</div>
+  <div class="card-title">👥 {{T .Lang "tournament.players_title"}} (<span id="player-count">{{.Count}}</span>/60)</div>
   {{if .Players}}
     <ul class="player-list">
       {{range .Players}}
       <li class="player-item">
         <span class="player-name">{{.Name}}</span>
-        <span class="badge badge-active">{{T .Lang "common.player_joined"}}</span>
+        <span class="badge badge-active">{{T $.Lang "common.player_joined"}}</span>
       </li>
       {{end}}
     </ul>
