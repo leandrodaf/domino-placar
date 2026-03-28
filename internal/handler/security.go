@@ -22,11 +22,11 @@ func initSecret() []byte {
 		h := sha256.Sum256([]byte(s))
 		return h[:]
 	}
-	// Gera segredo aleatório se SESSION_SECRET não estiver definido.
-	// Sessões expiram ao reiniciar o servidor — defina SESSION_SECRET em produção.
+	// Generate random secret if SESSION_SECRET is not defined.
+	// Sessions expire on server restart — set SESSION_SECRET in production.
 	b := make([]byte, 32)
 	if _, err := rand.Read(b); err != nil {
-		panic("falha ao gerar segredo da aplicação: " + err.Error())
+		panic("failed to generate app secret: " + err.Error())
 	}
 	return b
 }
@@ -43,7 +43,7 @@ func macEqual(a, b string) bool {
 
 // ─── Host Cookie ─────────────────────────────────────────────────────────────
 
-// SetHostCookie grava o cookie de autenticação do anfitrião para uma partida ou torneio.
+// SetHostCookie stores the host authentication cookie for a match or tournament.
 func SetHostCookie(w http.ResponseWriter, entityID string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "domino_h_" + entityID,
@@ -55,7 +55,7 @@ func SetHostCookie(w http.ResponseWriter, entityID string) {
 	})
 }
 
-// IsHost verifica se a requisição possui credenciais válidas de anfitrião.
+// IsHost checks if the request has valid host credentials.
 func IsHost(r *http.Request, entityID string) bool {
 	c, err := r.Cookie("domino_h_" + entityID)
 	if err != nil {
@@ -66,7 +66,7 @@ func IsHost(r *http.Request, entityID string) bool {
 
 // ─── Player Cookie ────────────────────────────────────────────────────────────
 
-// SetPlayerCookie grava o cookie de autenticação do jogador para uma partida.
+// SetPlayerCookie stores the player authentication cookie for a match.
 func SetPlayerCookie(w http.ResponseWriter, matchID, playerID string) {
 	tok := playerID + "." + macSign("pid:"+matchID+":"+playerID)
 	http.SetCookie(w, &http.Cookie{
@@ -79,7 +79,7 @@ func SetPlayerCookie(w http.ResponseWriter, matchID, playerID string) {
 	})
 }
 
-// GetAuthPlayerID retorna o playerID autenticado via cookie, ou "" se inválido/ausente.
+// GetAuthPlayerID returns the authenticated playerID from cookie, or "" if invalid/missing.
 func GetAuthPlayerID(r *http.Request, matchID string) string {
 	c, err := r.Cookie("domino_p_" + matchID)
 	if err != nil {
@@ -98,13 +98,13 @@ func GetAuthPlayerID(r *http.Request, matchID string) string {
 
 // ─── CSRF Token ───────────────────────────────────────────────────────────────
 
-// GenerateCSRFToken cria um token CSRF baseado em tempo (válido 2 horas, rotação por hora).
+// GenerateCSRFToken creates a time-based CSRF token (valid 2 hours, rotated hourly).
 func GenerateCSRFToken(entityID string) string {
 	hour := time.Now().UTC().Format("2006010215")
 	return macSign("csrf:" + entityID + ":" + hour)
 }
 
-// ValidateCSRFToken verifica se o token CSRF enviado é válido (hora atual ou anterior).
+// ValidateCSRFToken checks if the submitted CSRF token is valid (current or previous hour).
 func ValidateCSRFToken(token, entityID string) bool {
 	if token == "" {
 		return false
@@ -143,21 +143,21 @@ func checkRate(m map[string]*rateRecord, key string, window time.Duration, max i
 	return true
 }
 
-// CheckUploadRateLimit — máx. 5 uploads por IP em 5 minutos.
+// CheckUploadRateLimit — max 5 uploads per IP in 5 minutes.
 func CheckUploadRateLimit(r *http.Request) bool {
 	rateMu.Lock()
 	defer rateMu.Unlock()
 	return checkRate(uploadRateMap, clientIP(r), 5*time.Minute, 5)
 }
 
-// CheckActionRateLimit — máx. 60 ações POST por IP por minuto.
+// CheckActionRateLimit — max 60 POST actions per IP per minute.
 func CheckActionRateLimit(r *http.Request) bool {
 	rateMu.Lock()
 	defer rateMu.Unlock()
 	return checkRate(actionRateMap, clientIP(r), time.Minute, 60)
 }
 
-// CleanRateMap remove entradas expiradas (chame periodicamente).
+// CleanRateMap removes expired entries (call periodically).
 func CleanRateMap() {
 	rateMu.Lock()
 	defer rateMu.Unlock()
@@ -176,7 +176,7 @@ func CleanRateMap() {
 
 // ─── Security Headers ─────────────────────────────────────────────────────────
 
-// SecurityHeaders adiciona headers de segurança e bloqueia acesso direto a /uploads/.
+// SecurityHeaders adds security headers and blocks direct access to /uploads/.
 func SecurityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		h := w.Header()
@@ -201,7 +201,7 @@ func SecurityHeaders(next http.Handler) http.Handler {
 
 // ─── Input Sanitization ───────────────────────────────────────────────────────
 
-// SanitizeInput remove caracteres de controle, limita comprimento e corta espaços.
+// SanitizeInput removes control characters, limits length, and trims whitespace.
 func SanitizeInput(s string, maxLen int) string {
 	s = strings.TrimSpace(s)
 	var b strings.Builder
@@ -220,8 +220,8 @@ func SanitizeInput(s string, maxLen int) string {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-// clientIP extrai o IP real do cliente.
-// Só confia em X-Forwarded-For quando TRUST_PROXY=true está definido (proxy reverso).
+// clientIP extracts the real client IP.
+// Only trusts X-Forwarded-For when TRUST_PROXY=true is set (reverse proxy).
 func clientIP(r *http.Request) string {
 	if os.Getenv("TRUST_PROXY") != "" {
 		if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" {

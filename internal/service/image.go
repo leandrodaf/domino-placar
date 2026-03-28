@@ -14,9 +14,9 @@ const (
 	JPEGQuality       = 72   // 0-100
 )
 
-// CompressImage recebe bytes de uma imagem (JPEG ou PNG), redimensiona se maior que
-// MaxImageDimension em qualquer dimensão e recodifica como JPEG com qualidade reduzida.
-// Retorna os bytes comprimidos e a extensão ".jpg".
+// CompressImage receives image bytes (JPEG or PNG), resizes if larger than
+// MaxImageDimension in any dimension and re-encodes as JPEG with reduced quality.
+// Returns the compressed bytes and the extension ".jpg".
 func CompressImage(data []byte) ([]byte, error) {
 	mime, err := detectImageMIME(data)
 	if err != nil {
@@ -30,22 +30,22 @@ func CompressImage(data []byte) ([]byte, error) {
 	case "image/png":
 		src, err = png.Decode(bytes.NewReader(data))
 	default:
-		return nil, fmt.Errorf("formato não suportado: %s", mime)
+		return nil, fmt.Errorf("unsupported format: %s", mime)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("decodificando imagem: %w", err)
+		return nil, fmt.Errorf("decoding image: %w", err)
 	}
 
 	resized := downsample(src, MaxImageDimension, MaxImageDimension)
 
 	var buf bytes.Buffer
 	if err := jpeg.Encode(&buf, resized, &jpeg.Options{Quality: JPEGQuality}); err != nil {
-		return nil, fmt.Errorf("codificando JPEG: %w", err)
+		return nil, fmt.Errorf("encoding JPEG: %w", err)
 	}
 	return buf.Bytes(), nil
 }
 
-// ValidateImageMIME verifica pelos magic bytes se o arquivo é uma imagem suportada.
+// ValidateImageMIME checks the magic bytes to determine if the file is a supported image.
 func ValidateImageMIME(data []byte) error {
 	_, err := detectImageMIME(data)
 	return err
@@ -53,7 +53,7 @@ func ValidateImageMIME(data []byte) error {
 
 func detectImageMIME(data []byte) (string, error) {
 	if len(data) < 4 {
-		return "", fmt.Errorf("arquivo muito pequeno para ser uma imagem")
+		return "", fmt.Errorf("file too small to be an image")
 	}
 	// JPEG: FF D8 FF
 	if data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF {
@@ -67,13 +67,13 @@ func detectImageMIME(data []byte) (string, error) {
 	if len(data) >= 12 &&
 		string(data[0:4]) == "RIFF" &&
 		strings.EqualFold(string(data[8:12]), "WEBP") {
-		return "image/webp", nil // aceito mas convertido via fallback
+		return "image/webp", nil // accepted but converted via fallback
 	}
-	return "", fmt.Errorf("tipo de arquivo não suportado: envie uma imagem JPEG ou PNG")
+	return "", fmt.Errorf("unsupported file type: please upload a JPEG or PNG image")
 }
 
-// downsample reduz a imagem para caber em maxW x maxH preservando proporção.
-// Usa nearest-neighbor — suficiente para fotos de dominó para CV.
+// downsample resizes an image to fit in maxW x maxH preserving aspect ratio.
+// Uses nearest-neighbor — sufficient for domino photos for CV.
 func downsample(src image.Image, maxW, maxH int) image.Image {
 	b := src.Bounds()
 	w, h := b.Max.X-b.Min.X, b.Max.Y-b.Min.Y

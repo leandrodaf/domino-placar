@@ -16,7 +16,7 @@ func main() {
 		log.Fatalf("Failed to create uploads dir: %v", err)
 	}
 
-	// Initialize store (Firebase se FIREBASE_DATABASE_URL estiver definido, caso contrário SQLite)
+	// Initialize store (Firebase if FIREBASE_DATABASE_URL is set, otherwise SQLite)
 	var store db.Store
 
 	if fbURL := os.Getenv("FIREBASE_DATABASE_URL"); fbURL != "" {
@@ -50,7 +50,7 @@ func main() {
 		log.Fatalf("Failed to parse templates: %v", err)
 	}
 
-	// Limpeza periódica do rate limiter (a cada 10 min)
+	// Periodic rate limiter cleanup (every 10 min)
 	go func() {
 		t := time.NewTicker(10 * time.Minute)
 		defer t.Stop()
@@ -71,7 +71,7 @@ func main() {
 	// Match creation
 	mux.HandleFunc("POST /match", handler.CreateMatchHandler(store))
 
-	// Retomar partida pelo ID — redireciona para o estado atual
+	// Resume match by ID — redirects to current state
 	mux.HandleFunc("GET /match/{id}", handler.MatchResumeHandler(store))
 
 	// Lobby
@@ -111,10 +111,10 @@ func main() {
 	mux.HandleFunc("POST /match/{id}/finish", handler.FinishMatchHandler(store, hub))
 	mux.HandleFunc("POST /match/{id}/cancel", handler.CancelMatchHandler(store, hub))
 
-	// Foto da mesa
+	// Table photo
 	mux.HandleFunc("POST /match/{id}/round/{rid}/table-image", handler.TableImageHandler(store, hub))
 
-	// Correção manual de pontuação
+	// Manual score correction
 	mux.HandleFunc("POST /match/{id}/player/{pid}/score", handler.ManualScoreHandler(store, hub))
 
 	// Ranking global
@@ -133,7 +133,7 @@ func main() {
 	mux.HandleFunc("GET /tournament/{id}/ranking", handler.TournamentRankingHandler(store, tmpl))
 	mux.HandleFunc("GET /tournament/{id}/events", handler.SSEHandler(hub))
 
-	// Nicknames / apelidos
+	// Nicknames
 	mux.HandleFunc("GET /match/{id}/nicknames", handler.NicknamePageHandler(store, tmpl))
 	mux.HandleFunc("POST /match/{id}/player/{pid}/nominate", handler.NominateHandler(store, hub))
 	mux.HandleFunc("POST /match/{id}/nickname/{nid}/vote", handler.VoteNicknameHandler(store, hub))
@@ -149,7 +149,7 @@ func main() {
 	addr := ":" + port
 	log.Printf("Domino scorekeeping server starting on %s", addr)
 
-	// Aplica middleware de segurança em todas as rotas
+	// Apply security middleware to all routes
 	if err := http.ListenAndServe(addr, handler.SecurityHeaders(mux)); err != nil {
 		log.Fatalf("Server failed: %v", err)
 	}

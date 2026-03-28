@@ -18,8 +18,8 @@ import (
 	"github.com/google/uuid"
 )
 
-// saveImage salva imageBytes: tenta GCS, cai para disco local se GCS_BUCKET não configurado.
-// Retorna o caminho/URL do arquivo salvo.
+// saveImage saves imageBytes: tries GCS, falls back to local disk if GCS_BUCKET is not configured.
+// Returns the path/URL of the saved file.
 func saveImage(imageBytes []byte, objectName string) (string, error) {
 	if url, err := service.UploadImageToGCS(imageBytes, objectName); err != nil {
 		return "", fmt.Errorf("GCS upload: %w", err)
@@ -29,14 +29,14 @@ func saveImage(imageBytes []byte, objectName string) (string, error) {
 	// Fallback local
 	localPath := filepath.Join("uploads", objectName)
 	if err := os.WriteFile(localPath, imageBytes, 0644); err != nil {
-		return "", fmt.Errorf("salvando localmente: %w", err)
+		return "", fmt.Errorf("saving locally: %w", err)
 	}
 	return localPath, nil
 }
 
 const (
 	maxUploadSize = 5 << 20 // 5 MB
-	maxScore      = 200     // pontuação máxima permitida
+	maxScore      = 200     // max allowed score
 )
 
 // UploadHandler handles POST /match/{id}/round/{rid}/upload/{pid}
@@ -48,7 +48,7 @@ func UploadHandler(database db.Store, hub *SSEHub, tmpl *Templates) http.Handler
 
 		uploadBase := "/match/" + matchID + "/round/" + roundID + "/upload/" + playerID
 
-		// Autenticação: apenas o próprio jogador ou o anfitrião
+		// Auth: only the player themselves or the host
 		authPID := GetAuthPlayerID(r, matchID)
 		if authPID != playerID && !IsHost(r, matchID) {
 			http.Redirect(w, r, "/match/"+matchID+"/join", http.StatusSeeOther)
@@ -76,7 +76,7 @@ func UploadHandler(database db.Store, hub *SSEHub, tmpl *Templates) http.Handler
 		}
 
 		if !ValidateCSRFToken(r.FormValue("_csrf"), matchID) {
-			http.Error(w, "token de segurança inválido", http.StatusForbidden)
+			http.Error(w, "invalid security token", http.StatusForbidden)
 			return
 		}
 
@@ -86,7 +86,7 @@ func UploadHandler(database db.Store, hub *SSEHub, tmpl *Templates) http.Handler
 			return
 		}
 
-		// Entrada manual de pontos (sem foto)
+		// Manual point entry (no photo)
 		manualPoints := r.FormValue("manual_points")
 		if manualPoints != "" {
 			pts, err := strconv.Atoi(manualPoints)
@@ -109,7 +109,7 @@ func UploadHandler(database db.Store, hub *SSEHub, tmpl *Templates) http.Handler
 			return
 		}
 
-		// Rate limit específico para uploads de foto
+		// Photo-specific rate limit
 		if !CheckUploadRateLimit(r) {
 			http.Redirect(w, r, uploadBase+"?error=rate_limit", http.StatusSeeOther)
 			return
@@ -136,7 +136,7 @@ func UploadHandler(database db.Store, hub *SSEHub, tmpl *Templates) http.Handler
 
 		compressed, err := service.CompressImage(imageBytes)
 		if err != nil {
-			log.Printf("CompressImage error: %v, salvando original", err)
+			log.Printf("CompressImage error: %v, saving original", err)
 			compressed = imageBytes
 		}
 
@@ -154,7 +154,7 @@ func UploadHandler(database db.Store, hub *SSEHub, tmpl *Templates) http.Handler
 			return
 		}
 
-		// Pontos serão inseridos manualmente pelo jogador na tela de confirmação
+		// Points will be entered manually by the player on the confirmation page
 		if err := database.UpdateHandImagePoints(imageID, -1, false, "[]"); err != nil {
 			log.Printf("UpdateHandImagePoints error: %v", err)
 		}
@@ -163,7 +163,7 @@ func UploadHandler(database db.Store, hub *SSEHub, tmpl *Templates) http.Handler
 	}
 }
 
-// TableImageHandler handles POST /match/{id}/round/{rid}/table-image — foto da mesa pelo anfitrião.
+// TableImageHandler handles POST /match/{id}/round/{rid}/table-image — table photo by the host.
 func TableImageHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		matchID := r.PathValue("id")
@@ -172,7 +172,7 @@ func TableImageHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 		gameBase := "/match/" + matchID + "/round/" + roundID + "/game"
 
 		if !IsHost(r, matchID) {
-			http.Error(w, "acesso negado", http.StatusForbidden)
+			http.Error(w, "access denied", http.StatusForbidden)
 			return
 		}
 		if !CheckActionRateLimit(r) {
@@ -187,7 +187,7 @@ func TableImageHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 		}
 
 		if !ValidateCSRFToken(r.FormValue("_csrf"), matchID) {
-			http.Error(w, "token de segurança inválido", http.StatusForbidden)
+			http.Error(w, "invalid security token", http.StatusForbidden)
 			return
 		}
 
@@ -229,7 +229,7 @@ func TableImageHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 			return
 		}
 
-		// Salva a foto da mesa (sem análise automática de IA)
+		// Save the table photo (no automatic AI analysis)
 		if err := database.SetTableImage(roundID, imagePath, "[]"); err != nil {
 			log.Printf("SetTableImage error: %v", err)
 		}
@@ -246,14 +246,14 @@ func ConfirmHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 		roundID := r.PathValue("rid")
 		playerID := r.PathValue("pid")
 
-		// Autenticação: apenas o próprio jogador ou o anfitrião
+		// Auth: only the player themselves or the host
 		authPID := GetAuthPlayerID(r, matchID)
 		if authPID != playerID && !IsHost(r, matchID) {
-			http.Error(w, "acesso negado", http.StatusForbidden)
+			http.Error(w, "access denied", http.StatusForbidden)
 			return
 		}
 		if !CheckActionRateLimit(r) {
-			http.Error(w, "muitas requisições, aguarde", http.StatusTooManyRequests)
+			http.Error(w, "too many requests, please wait", http.StatusTooManyRequests)
 			return
 		}
 
@@ -263,11 +263,11 @@ func ConfirmHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 		}
 
 		if !ValidateCSRFToken(r.FormValue("_csrf"), matchID) {
-			http.Error(w, "token de segurança inválido", http.StatusForbidden)
+			http.Error(w, "invalid security token", http.StatusForbidden)
 			return
 		}
 
-		// Valida que o jogador pertence à partida
+		// Validate that the player belongs to this match
 		player, err := database.GetPlayer(playerID)
 		if err != nil || player.MatchID != matchID {
 			http.Error(w, "player not found", http.StatusNotFound)
@@ -288,9 +288,9 @@ func ConfirmHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 				points = override
 			}
 		}
-		// Sem IA, pontos negativos não são válidos — override obrigatório
+		// Without AI, negative points are not valid — override required
 		if points < 0 {
-			http.Error(w, "pontuação obrigatória", http.StatusBadRequest)
+			http.Error(w, "score required", http.StatusBadRequest)
 			return
 		}
 
@@ -319,7 +319,7 @@ func JoinHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 		matchID := r.PathValue("id")
 
 		if !CheckActionRateLimit(r) {
-			http.Error(w, "muitas requisições, aguarde", http.StatusTooManyRequests)
+			http.Error(w, "too many requests, please wait", http.StatusTooManyRequests)
 			return
 		}
 
@@ -332,7 +332,7 @@ func JoinHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 		uniqueID := SanitizeInput(r.FormValue("unique_id"), 50)
 
 		if name == "" || uniqueID == "" {
-			http.Error(w, "nome e identificador são obrigatórios", http.StatusBadRequest)
+			http.Error(w, "name and identifier are required", http.StatusBadRequest)
 			return
 		}
 
@@ -360,7 +360,7 @@ func JoinHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 
 		existing, err := database.GetPlayerByUniqueID(matchID, uniqueID)
 		if err == nil && existing != nil {
-			// Jogador já existe — atualiza o nome se mudou
+			// Player already exists — update name if changed
 			if existing.Name != name {
 				if err := database.UpdatePlayerName(existing.ID, name); err != nil {
 					log.Printf("UpdatePlayerName error: %v", err)
@@ -375,7 +375,7 @@ func JoinHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 			return
 		}
 
-		// Verifica se o nome já está sendo usado por outro jogador
+		// Check if the name is already taken by another player
 		players, _ := database.GetPlayers(matchID)
 		for _, p := range players {
 			if strings.EqualFold(p.Name, name) {
@@ -391,7 +391,7 @@ func JoinHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 			return
 		}
 
-		// Grava o cookie de autenticação do jogador
+		// Set the player authentication cookie
 		SetPlayerCookie(w, matchID, playerID)
 
 		hub.Broadcast(matchID, "player_joined:"+name)
@@ -417,12 +417,12 @@ func RoundScoresPageHandler(database db.Store, tmpl *Templates) http.HandlerFunc
 
 		match, err := database.GetMatch(matchID)
 		if err != nil {
-			http.Error(w, "partida não encontrada", http.StatusNotFound)
+			http.Error(w, "match not found", http.StatusNotFound)
 			return
 		}
 		round, err := database.GetRound(roundID)
 		if err != nil {
-			http.Error(w, "rodada não encontrada", http.StatusNotFound)
+			http.Error(w, "round not found", http.StatusNotFound)
 			return
 		}
 
@@ -431,7 +431,7 @@ func RoundScoresPageHandler(database db.Store, tmpl *Templates) http.HandlerFunc
 			players = []models.Player{}
 		}
 
-		// Carrega pontos já confirmados para pré-preencher
+		// Load already confirmed scores to pre-fill
 		confirmed := map[string]int{}
 		if images, err := database.GetHandImages(roundID); err == nil {
 			for _, hi := range images {
@@ -443,7 +443,7 @@ func RoundScoresPageHandler(database db.Store, tmpl *Templates) http.HandlerFunc
 
 		var errMsg string
 		if r.URL.Query().Get("error") == "incomplete" {
-			errMsg = "Confirme os pontos de todos os jogadores antes de iniciar a próxima rodada."
+			errMsg = "Please confirm all player scores before starting the next round."
 		}
 		fechamento := r.URL.Query().Get("fechamento") == "1" || round.WinnerPlayerID == ""
 
@@ -466,27 +466,27 @@ func BulkScoreHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 		roundID := r.PathValue("rid")
 
 		if !IsHost(r, matchID) {
-			http.Error(w, "acesso negado", http.StatusForbidden)
+			http.Error(w, "access denied", http.StatusForbidden)
 			return
 		}
 		if !CheckActionRateLimit(r) {
-			http.Error(w, "muitas requisições, aguarde", http.StatusTooManyRequests)
+			http.Error(w, "too many requests, please wait", http.StatusTooManyRequests)
 			return
 		}
 		if err := r.ParseForm(); err != nil || !ValidateCSRFToken(r.FormValue("_csrf"), matchID) {
-			http.Error(w, "token de segurança inválido", http.StatusForbidden)
+			http.Error(w, "invalid security token", http.StatusForbidden)
 			return
 		}
 
 		round, err := database.GetRound(roundID)
 		if err != nil {
-			http.Error(w, "rodada não encontrada", http.StatusNotFound)
+			http.Error(w, "round not found", http.StatusNotFound)
 			return
 		}
 
 		players, err := database.GetPlayers(matchID)
 		if err != nil {
-			http.Error(w, "erro ao carregar jogadores", http.StatusInternalServerError)
+			http.Error(w, "failed to load players", http.StatusInternalServerError)
 			return
 		}
 
@@ -503,8 +503,8 @@ func BulkScoreHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 				continue
 			}
 
-			// Vencedor com score vazio no form já tratado acima (scoreStr == "")
-			// Cria ou reutiliza HandImage para este jogador
+			// Winner with empty score in form already handled above (scoreStr == "")
+			// Create or reuse HandImage for this player
 			prefix := "bulk"
 			if p.ID == round.WinnerPlayerID {
 				prefix = "winner"
@@ -525,7 +525,7 @@ func BulkScoreHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 			}
 		}
 
-		// Fechamento: se não há vencedor, elege o jogador ativo com menor score submetido
+		// Closing: if there is no winner, elect the active player with the lowest submitted score
 		if round.WinnerPlayerID == "" && r.FormValue("fechamento") == "1" {
 			bestPID := ""
 			bestScore := maxScore + 1
@@ -549,12 +549,12 @@ func BulkScoreHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 			}
 		}
 
-		// Garante que o vencedor tem HandImage confirmada.
-		// Em batida normal (não fechamento), força 0 se não foi informado pontuação.
+		// Ensure the winner has a confirmed HandImage.
+		// In a normal win (not closing), force 0 if no score was provided.
 		if round.WinnerPlayerID != "" {
 			existing, _ := database.GetHandImageByRoundAndPlayer(roundID, round.WinnerPlayerID)
 			if existing == nil {
-				// Nenhuma imagem: cria com 0 (batida normal — vencedor não pontua)
+				// No image: create with 0 (normal win — winner scores nothing)
 				imageID := uuid.New().String()
 				if err := database.CreateHandImage(imageID, roundID, round.WinnerPlayerID, "winner:"+imageID); err == nil {
 					if err2 := database.UpdateHandImagePoints(imageID, 0, true, "[]"); err2 != nil {
@@ -562,12 +562,12 @@ func BulkScoreHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 					}
 				}
 			} else if existing.Confirmed == 0 {
-				// Imagem existe mas não confirmada: confirma com 0 (batida normal)
+				// Image exists but not confirmed: confirm with 0 (normal win)
 				if err := database.UpdateHandImagePoints(existing.ID, 0, true, "[]"); err != nil {
 					log.Printf("UpdateHandImagePoints winner confirm error: %v", err)
 				}
 			}
-			// Se existing.Confirmed == 1: já processado pelo loop acima (ex: fechamento com pts > 0)
+			// If existing.Confirmed == 1: already processed by the loop above (e.g. closing with pts > 0)
 		}
 
 		if err := checkRoundComplete(database, hub, matchID, roundID); err != nil {
@@ -578,48 +578,48 @@ func BulkScoreHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 	}
 }
 
-// ManualScoreHandler handles POST /match/{id}/player/{pid}/score — corrige pontuação manual.
+// ManualScoreHandler handles POST /match/{id}/player/{pid}/score — manual score correction.
 func ManualScoreHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		matchID := r.PathValue("id")
 		playerID := r.PathValue("pid")
 
 		if !IsHost(r, matchID) {
-			http.Error(w, "acesso negado", http.StatusForbidden)
+			http.Error(w, "access denied", http.StatusForbidden)
 			return
 		}
 		if !CheckActionRateLimit(r) {
-			http.Error(w, "muitas requisições, aguarde", http.StatusTooManyRequests)
+			http.Error(w, "too many requests, please wait", http.StatusTooManyRequests)
 			return
 		}
 
 		if err := r.ParseForm(); err != nil {
-			http.Error(w, "form inválido", http.StatusBadRequest)
+			http.Error(w, "invalid form", http.StatusBadRequest)
 			return
 		}
 
 		if !ValidateCSRFToken(r.FormValue("_csrf"), matchID) {
-			http.Error(w, "token de segurança inválido", http.StatusForbidden)
+			http.Error(w, "invalid security token", http.StatusForbidden)
 			return
 		}
 
-		// Valida que o jogador pertence à partida
+		// Validate that the player belongs to this match
 		player, err := database.GetPlayer(playerID)
 		if err != nil || player.MatchID != matchID {
-			http.Error(w, "jogador não encontrado", http.StatusNotFound)
+			http.Error(w, "player not found", http.StatusNotFound)
 			return
 		}
 
 		scoreStr := r.FormValue("score")
 		score, err := strconv.Atoi(scoreStr)
 		if err != nil || score < 0 || score > maxScore {
-			http.Error(w, "pontuação inválida (0–200)", http.StatusBadRequest)
+			http.Error(w, "invalid score (0–200)", http.StatusBadRequest)
 			return
 		}
 
 		if err := database.SetPlayerScore(playerID, score); err != nil {
 			log.Printf("SetPlayerScore error: %v", err)
-			http.Error(w, "falha ao salvar pontuação", http.StatusInternalServerError)
+			http.Error(w, "failed to save score", http.StatusInternalServerError)
 			return
 		}
 
@@ -634,15 +634,15 @@ func CancelMatchHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 		matchID := r.PathValue("id")
 
 		if !IsHost(r, matchID) {
-			http.Error(w, "acesso negado", http.StatusForbidden)
+			http.Error(w, "access denied", http.StatusForbidden)
 			return
 		}
 		if !CheckActionRateLimit(r) {
-			http.Error(w, "muitas requisições, aguarde", http.StatusTooManyRequests)
+			http.Error(w, "too many requests, please wait", http.StatusTooManyRequests)
 			return
 		}
 		if err := r.ParseForm(); err != nil || !ValidateCSRFToken(r.FormValue("_csrf"), matchID) {
-			http.Error(w, "token de segurança inválido", http.StatusForbidden)
+			http.Error(w, "invalid security token", http.StatusForbidden)
 			return
 		}
 
@@ -663,15 +663,15 @@ func FinishMatchHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 		matchID := r.PathValue("id")
 
 		if !IsHost(r, matchID) {
-			http.Error(w, "acesso negado", http.StatusForbidden)
+			http.Error(w, "access denied", http.StatusForbidden)
 			return
 		}
 		if !CheckActionRateLimit(r) {
-			http.Error(w, "muitas requisições, aguarde", http.StatusTooManyRequests)
+			http.Error(w, "too many requests, please wait", http.StatusTooManyRequests)
 			return
 		}
 		if err := r.ParseForm(); err != nil || !ValidateCSRFToken(r.FormValue("_csrf"), matchID) {
-			http.Error(w, "token de segurança inválido", http.StatusForbidden)
+			http.Error(w, "invalid security token", http.StatusForbidden)
 			return
 		}
 
@@ -686,7 +686,7 @@ func FinishMatchHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 	}
 }
 
-// BuildTileStats constrói as estatísticas de pedras vistas numa rodada.
+// BuildTileStats builds statistics for tiles seen in a round.
 func BuildTileStats(handImages []models.HandImage, tableJSON string, totalTiles int) models.TileStats {
 	seen := map[string]struct{}{}
 

@@ -25,19 +25,19 @@ func getGCSClient() (*storage.Client, error) {
 		if credsJSON != "" {
 			gcsClient, gcsErr = storage.NewClient(ctx, option.WithCredentialsJSON([]byte(credsJSON)))
 		} else {
-			// Application Default Credentials (recomendado no GCP)
+			// Application Default Credentials (recommended on GCP)
 			gcsClient, gcsErr = storage.NewClient(ctx)
 		}
 	})
 	return gcsClient, gcsErr
 }
 
-// GCSEnabled retorna true se GCS_BUCKET estiver configurado.
+// GCSEnabled returns true if GCS_BUCKET is configured.
 func GCSEnabled() bool { return os.Getenv("GCS_BUCKET") != "" }
 
-// UploadImageToGCS faz upload de imageBytes para o GCS e retorna a URL pública.
-// Retorna ("", nil) se GCS_BUCKET não estiver definido (caller deve salvar localmente).
-// O objeto é criado com ContentType image/jpeg.
+// UploadImageToGCS uploads imageBytes to GCS and returns the public URL.
+// Returns ("", nil) if GCS_BUCKET is not set (caller should save locally).
+// The object is created with ContentType image/jpeg.
 func UploadImageToGCS(imageBytes []byte, objectName string) (string, error) {
 	bucket := os.Getenv("GCS_BUCKET")
 	if bucket == "" {
@@ -56,10 +56,10 @@ func UploadImageToGCS(imageBytes []byte, objectName string) (string, error) {
 
 	if _, err := io.Copy(w, bytes.NewReader(imageBytes)); err != nil {
 		_ = w.Close()
-		return "", fmt.Errorf("escrevendo no GCS: %w", err)
+		return "", fmt.Errorf("writing to GCS: %w", err)
 	}
 	if err := w.Close(); err != nil {
-		return "", fmt.Errorf("fechando writer GCS: %w", err)
+		return "", fmt.Errorf("closing GCS writer: %w", err)
 	}
 
 	return "https://storage.googleapis.com/" + bucket + "/" + objectName, nil

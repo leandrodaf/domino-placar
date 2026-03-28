@@ -48,7 +48,7 @@ func NicknamePageHandler(database db.Store, tmpl *Templates) http.HandlerFunc {
 			})
 		}
 
-		// Voter ID vem do cookie de jogador (não exposto diretamente ao usuário)
+		// Voter ID comes from the player cookie (not directly exposed to the user)
 		voterID := r.URL.Query().Get("voter_id")
 
 		tmpl.Render(w, "nicknames.html", map[string]any{
@@ -69,17 +69,17 @@ func NominateHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 		playerID := r.PathValue("pid")
 
 		if !CheckActionRateLimit(r) {
-			http.Error(w, "muitas requisições, aguarde", http.StatusTooManyRequests)
+			http.Error(w, "too many requests, please wait", http.StatusTooManyRequests)
 			return
 		}
 
 		if err := r.ParseForm(); err != nil {
-			http.Error(w, "form inválido", http.StatusBadRequest)
+			http.Error(w, "invalid form", http.StatusBadRequest)
 			return
 		}
 
 		if !ValidateCSRFToken(r.FormValue("_csrf"), matchID) {
-			http.Error(w, "token de segurança inválido", http.StatusForbidden)
+			http.Error(w, "invalid security token", http.StatusForbidden)
 			return
 		}
 
@@ -87,13 +87,13 @@ func NominateHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 		voterUID := SanitizeInput(r.FormValue("voter_id"), 50)
 
 		if nickname == "" || voterUID == "" {
-			http.Error(w, "apelido e identificador são obrigatórios", http.StatusBadRequest)
+			http.Error(w, "nickname and identifier are required", http.StatusBadRequest)
 			return
 		}
 
 		player, err := database.GetPlayer(playerID)
 		if err != nil || player.MatchID != matchID {
-			http.Error(w, "jogador não encontrado", http.StatusNotFound)
+			http.Error(w, "player not found", http.StatusNotFound)
 			return
 		}
 
@@ -110,7 +110,7 @@ func NominateHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 		nomID := uuid.New().String()
 		if err := database.CreateNomination(nomID, player.UniqueIdentifier, player.Name, matchID, nickname, voterUID); err != nil {
 			log.Printf("CreateNomination error: %v", err)
-			http.Error(w, "falha ao criar apelido", http.StatusInternalServerError)
+			http.Error(w, "failed to create nickname", http.StatusInternalServerError)
 			return
 		}
 
@@ -128,30 +128,30 @@ func VoteNicknameHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 		nominationID := r.PathValue("nid")
 
 		if !CheckActionRateLimit(r) {
-			http.Error(w, "muitas requisições, aguarde", http.StatusTooManyRequests)
+			http.Error(w, "too many requests, please wait", http.StatusTooManyRequests)
 			return
 		}
 
 		if err := r.ParseForm(); err != nil {
-			http.Error(w, "form inválido", http.StatusBadRequest)
+			http.Error(w, "invalid form", http.StatusBadRequest)
 			return
 		}
 
 		if !ValidateCSRFToken(r.FormValue("_csrf"), matchID) {
-			http.Error(w, "token de segurança inválido", http.StatusForbidden)
+			http.Error(w, "invalid security token", http.StatusForbidden)
 			return
 		}
 
 		voterUID := SanitizeInput(r.FormValue("voter_id"), 50)
 		if voterUID == "" {
-			http.Error(w, "identificador obrigatório", http.StatusBadRequest)
+			http.Error(w, "identifier required", http.StatusBadRequest)
 			return
 		}
 
 		voted, err := database.VoteForNomination(nominationID, voterUID)
 		if err != nil {
 			log.Printf("VoteForNomination error: %v", err)
-			http.Error(w, "falha ao votar", http.StatusInternalServerError)
+			http.Error(w, "failed to vote", http.StatusInternalServerError)
 			return
 		}
 		_ = voted

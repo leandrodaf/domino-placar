@@ -11,10 +11,10 @@ import (
 	"strings"
 )
 
-// CVResult contém o resultado da análise de visão computacional.
+// CVResult contains the result of a computer vision analysis.
 type CVResult struct {
-	Tiles  []string // pedras identificadas, ex: ["6-4", "2-1", "0-0"]
-	Points int      // soma dos pontos
+	Tiles  []string // detected tiles, e.g.: ["6-4", "2-1", "0-0"]
+	Points int      // sum of points
 }
 
 type roboflowResponse struct {
@@ -24,8 +24,8 @@ type roboflowResponse struct {
 	} `json:"predictions"`
 }
 
-// AnalyzeImage analisa uma imagem e retorna as pedras detectadas e a soma de pontos.
-// Retorna nil, -1, nil se ROBOFLOW_API_KEY não estiver definida (entrada manual necessária).
+// AnalyzeImage analyzes an image and returns the detected tiles and point total.
+// Returns nil, -1, nil if ROBOFLOW_API_KEY is not set (manual entry required).
 func AnalyzeImage(imageBytes []byte) (*CVResult, error) {
 	apiKey := os.Getenv("ROBOFLOW_API_KEY")
 	if apiKey == "" {
@@ -77,9 +77,9 @@ func AnalyzeImage(imageBytes []byte) (*CVResult, error) {
 	return result, nil
 }
 
-// ApplySpecialRules aplica regras especiais do Pontinho após confirmação:
-//   - Pedra branca sozinha (apenas "0-0" na mão) → vale 12 pontos.
-//   - Retorna os pontos finais a usar.
+// ApplySpecialRules applies Pontinho special rules after confirmation:
+//   - Blank tile alone (only "0-0" in hand) → worth 12 points.
+//   - Returns the final points to use.
 func ApplySpecialRules(tiles []string, points int) int {
 	if len(tiles) == 1 && tiles[0] == "0-0" {
 		return 12
@@ -87,7 +87,7 @@ func ApplySpecialRules(tiles []string, points int) int {
 	return points
 }
 
-// CountDotsFromImage mantém compatibilidade — retorna só o total de pontos.
+// CountDotsFromImage maintains compatibility — returns only the total points.
 func CountDotsFromImage(imageBytes []byte) (int, error) {
 	r, err := AnalyzeImage(imageBytes)
 	if err != nil {
@@ -113,8 +113,8 @@ func parseDominoClass(class string) (int, error) {
 	return a + b, nil
 }
 
-// normalizeTile normaliza a notação da pedra para "min-max" (ex: "4-6" → "4-6", "6-4" → "4-6").
-// Isso garante que "6-4" e "4-6" sejam tratados como a mesma pedra.
+// normalizeTile normalizes tile notation to "min-max" (e.g.: "4-6" → "4-6", "6-4" → "4-6").
+// This ensures that "6-4" and "4-6" are treated as the same tile.
 func normalizeTile(class string) string {
 	parts := strings.SplitN(class, "-", 2)
 	if len(parts) != 2 {

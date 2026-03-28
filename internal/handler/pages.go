@@ -92,17 +92,17 @@ func (tmpl *Templates) RenderPartial(w http.ResponseWriter, name string, data an
 func uploadErrorMsg(code string) string {
 	switch code {
 	case "too_large":
-		return "Arquivo muito grande. O tamanho máximo permitido é 5 MB."
+		return "File too large. Maximum allowed size is 5 MB."
 	case "invalid_type":
-		return "Tipo de arquivo não suportado. Envie uma imagem JPEG ou PNG."
+		return "Unsupported file type. Please upload a JPEG or PNG image."
 	case "rate_limit":
-		return "Muitos envios seguidos. Aguarde alguns minutos e tente novamente."
+		return "Too many uploads in a row. Please wait a few minutes and try again."
 	case "invalid_points":
-		return "Pontuação inválida. Digite um número inteiro entre 0 e 200."
+		return "Invalid score. Enter an integer between 0 and 200."
 	case "read_failed":
-		return "Não foi possível ler o arquivo. Tente novamente."
+		return "Could not read the file. Please try again."
 	case "invalid_form":
-		return "Formulário inválido. Tente novamente."
+		return "Invalid form. Please try again."
 	}
 	return ""
 }
@@ -123,7 +123,7 @@ func MatchResumeHandler(database db.Store) http.HandlerFunc {
 		matchID := r.PathValue("id")
 		match, err := database.GetMatch(matchID)
 		if err != nil {
-			http.Error(w, "partida não encontrada", http.StatusNotFound)
+			http.Error(w, "match not found", http.StatusNotFound)
 			return
 		}
 		switch match.Status {
@@ -195,7 +195,7 @@ func JoinPageHandler(database db.Store, tmpl *Templates) http.HandlerFunc {
 		if match.Status != "waiting" {
 			tmpl.Render(w, "join.html", map[string]any{
 				"Match": match,
-				"Error": "Esta partida já foi iniciada.",
+				"Error": "This match has already started.",
 			})
 			return
 		}
@@ -203,9 +203,9 @@ func JoinPageHandler(database db.Store, tmpl *Templates) http.HandlerFunc {
 		var errMsg string
 		switch r.URL.Query().Get("error") {
 		case "full":
-			errMsg = "Esta partida está cheia (máximo 10 jogadores)."
+			errMsg = "This match is full (maximum 10 players)."
 		case "name_taken":
-			errMsg = "Este nome já está sendo usado por outro jogador. Escolha um nome diferente."
+			errMsg = "This name is already taken by another player. Choose a different name."
 		}
 
 		tmpl.Render(w, "join.html", map[string]any{"Match": match, "Error": errMsg})
@@ -305,7 +305,7 @@ func GameHandler(database db.Store, tmpl *Templates) http.HandlerFunc {
 			SeatY     string
 		}
 
-		// Determina o líder: jogador ativo com menor pontuação
+		// Determine the leader: active player with lowest score
 		leaderID := ""
 		leaderScore := 999
 		for _, p := range players {
@@ -374,7 +374,7 @@ func GameHandler(database db.Store, tmpl *Templates) http.HandlerFunc {
 		_, tableJSON, _ := database.GetRoundTableTiles(roundID)
 		tileStats := BuildTileStats(handImages, tableJSON, tiles.TotalTiles)
 
-		// Determina se o visitante é host ou jogador
+		// Determine if visitor is host or player
 		isHost := IsHost(r, matchID)
 		currentPlayerID := ""
 		if !isHost {
@@ -383,7 +383,7 @@ func GameHandler(database db.Store, tmpl *Templates) http.HandlerFunc {
 					currentPlayerID = pid
 				}
 			}
-			// Fallback: verifica cookie de jogador
+			// Fallback: check player cookie
 			if currentPlayerID == "" {
 				currentPlayerID = GetAuthPlayerID(r, matchID)
 			}
@@ -412,7 +412,7 @@ func UploadPageHandler(database db.Store, tmpl *Templates) http.HandlerFunc {
 		roundID := r.PathValue("rid")
 		playerID := r.PathValue("pid")
 
-		// Autenticação: apenas o próprio jogador ou o anfitrião
+		// Auth: only the player themselves or the host
 		authPID := GetAuthPlayerID(r, matchID)
 		if authPID != playerID && !IsHost(r, matchID) {
 			http.Redirect(w, r, "/match/"+matchID+"/join", http.StatusSeeOther)
@@ -462,7 +462,7 @@ func ConfirmPageHandler(database db.Store, tmpl *Templates) http.HandlerFunc {
 		roundID := r.PathValue("rid")
 		playerID := r.PathValue("pid")
 
-		// Autenticação: apenas o próprio jogador ou o anfitrião
+		// Auth: only the player themselves or the host
 		authPID := GetAuthPlayerID(r, matchID)
 		if authPID != playerID && !IsHost(r, matchID) {
 			http.Redirect(w, r, "/match/"+matchID+"/join", http.StatusSeeOther)
@@ -571,7 +571,7 @@ func RankingHandler(database db.Store, tmpl *Templates) http.HandlerFunc {
 			}
 		}
 
-		// Determina role: host ou jogador
+		// Determine role: host or player
 		isHost := IsHost(r, matchID)
 		currentPlayerID := ""
 		if !isHost {

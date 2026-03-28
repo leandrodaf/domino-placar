@@ -15,14 +15,14 @@ import (
 
 var errNotFound = errors.New("not found")
 
-// FirebaseStore implementa Store usando Firebase Realtime Database.
+// FirebaseStore implements Store using Firebase Realtime Database.
 type FirebaseStore struct {
 	client *fbdb.Client
 }
 
-// NewFirebaseStore cria um FirebaseStore conectado ao banco de dados Firebase.
-// databaseURL: URL do banco, ex: "https://meu-projeto-default-rtdb.firebaseio.com"
-// credentialsJSON: conteúdo JSON da conta de serviço (opcional; se vazio, usa Application Default Credentials)
+// NewFirebaseStore creates a FirebaseStore connected to the Firebase database.
+// databaseURL: database URL, e.g. "https://my-project-default-rtdb.firebaseio.com"
+// credentialsJSON: service account JSON content (optional; if empty, uses Application Default Credentials)
 func NewFirebaseStore(databaseURL, credentialsJSON string) (*FirebaseStore, error) {
 	ctx := context.Background()
 	cfg := &firebase.Config{DatabaseURL: databaseURL}
@@ -182,7 +182,7 @@ func nowStr() string {
 	return time.Now().UTC().Format(time.RFC3339)
 }
 
-// safeKey converte uma string em chave Firebase válida (sem '.', '#', '$', '[', ']').
+// safeKey converts a string to a valid Firebase key (without '.', '#', '$', '[', ']').
 func safeKey(k string) string {
 	r := strings.NewReplacer(".", "_", "#", "_", "$", "_", "[", "_", "]", "_", "/", "_")
 	return r.Replace(k)
@@ -229,13 +229,13 @@ func (s *FirebaseStore) CreatePlayer(id, matchID, name, uniqueID string) error {
 	if err := s.ref("players/"+id).Set(ctx, p); err != nil {
 		return err
 	}
-	// Índice match → players
+	// Index match → players
 	return s.ref("idx_player_match/"+matchID+"/"+id).Set(ctx, true)
 }
 
 func (s *FirebaseStore) GetPlayers(matchID string) ([]models.Player, error) {
 	ctx := context.Background()
-	// Lê índice para obter IDs
+	// Read index to get IDs
 	var ids map[string]bool
 	if err := s.ref("idx_player_match/"+matchID).Get(ctx, &ids); err != nil {
 		return nil, err
@@ -379,7 +379,7 @@ func (s *FirebaseStore) GetCurrentRound(matchID string) (*models.Round, error) {
 	if err := s.ref("idx_round_match/"+matchID).Get(ctx, &idx); err != nil {
 		return nil, err
 	}
-	// Encontra rodada ativa com maior número
+	// Find active round with highest number
 	bestID := ""
 	bestNum := -1
 	for id, ri := range idx {
@@ -427,7 +427,7 @@ func (s *FirebaseStore) SetRoundWinner(roundID, playerID string) error {
 
 func (s *FirebaseStore) FinishRound(roundID string) error {
 	ctx := context.Background()
-	// Obtém o matchID para atualizar o índice
+	// Get matchID to update the index
 	var r fbRound
 	if err := s.ref("rounds/"+roundID).Get(ctx, &r); err != nil {
 		return err
@@ -473,11 +473,11 @@ func (s *FirebaseStore) CreateHandImage(id, roundID, playerID, imagePath string)
 	if err := s.ref("hand_images/"+id).Set(ctx, h); err != nil {
 		return err
 	}
-	// Índice round → hand images
+	// Index round → hand images
 	if err := s.ref("idx_hand_round/"+roundID+"/"+id).Set(ctx, true); err != nil {
 		return err
 	}
-	// Índice round+player → hand image id
+	// Index round+player → hand image id
 	return s.ref("idx_hand_round_player/"+roundID+"/"+safeKey(playerID)).Set(ctx, id)
 }
 
@@ -763,7 +763,7 @@ func (s *FirebaseStore) GetGlobalStats() ([]models.GlobalStat, error) {
 		if m.WinnerPlayerID == "" {
 			continue
 		}
-		// Precisamos do uniqueIdentifier do winner
+		// We need the uniqueIdentifier of the winner
 		for _, p := range players {
 			if p.ID == m.WinnerPlayerID {
 				matchWinByUID[p.UniqueIdentifier]++
@@ -997,14 +997,14 @@ func (s *FirebaseStore) VoteForNomination(nominationID, voterUID string) (bool, 
 	var existing bool
 	voteRef.Get(ctx, &existing)
 	if existing {
-		return false, nil // já votou
+		return false, nil // already voted
 	}
 
 	if err := voteRef.Set(ctx, true); err != nil {
 		return false, err
 	}
 
-	// Incrementa contagem de votos atomicamente
+	// Atomically increment the vote count
 	err := s.ref("nickname_nominations/"+nominationID+"/vote_count").Transaction(ctx, func(node fbdb.TransactionNode) (interface{}, error) {
 		var current int
 		node.Unmarshal(&current)

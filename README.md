@@ -2,71 +2,71 @@
 
 [![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white)](https://go.dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Deploy](https://img.shields.io/badge/Cloud%20Run-deployed-4285F4?logo=googlecloud&logoColor=white)](#deploy-no-google-cloud-cloud-run)
+[![Deploy](https://img.shields.io/badge/Cloud%20Run-deployed-4285F4?logo=googlecloud&logoColor=white)](#deploy-on-google-cloud-cloud-run)
 
-> Placar digital em tempo real para **Pontinho** — o dominó brasileiro de 51 pontos.
-> Rodando no celular de qualquer jogador, sem instalação.
+> Real-time digital scoreboard for **Pontinho** — the Brazilian domino game with a 51-point bust limit.
+> Runs on any player's phone browser, zero installation required.
 >
-> Feito com 🤍 em Diadema, SP — por [leandrodaf](https://github.com/leandrodaf)
+> Made with 🤍 in Diadema, SP — by [leandrodaf](https://github.com/leandrodaf)
 
 ---
 
-## Funcionalidades
+## Features
 
-- **Tempo real** — placar atualiza instantaneamente para todos via Server-Sent Events (SSE)
-- **QR Code** — anfitrião compartilha QR code para jogadores entrarem na sala
-- **Detecção de pedras por foto** — fotografe as pedras restantes e o sistema reconhece automaticamente (via Roboflow)
-- **Torneios multimesa** — suporte a torneios com alocação automática de mesas
-- **Mobile-first** — interface pensada para celular, tema escuro premium
-- **Zero instalação** — funciona direto no navegador, sem app
-- **Hall da Fama** — ranking global persistente entre partidas
-- **Apelidos** — sistema de apelidos e votação entre jogadores
-- **Dual storage** — SQLite para dev local, Firebase Realtime Database para produção
-
----
-
-## O que é
-
-**Dominó Placar** é uma aplicação web pensada para ser aberta no celular durante uma partida de dominó. O anfitrião cria a sala, compartilha o QR code, e cada jogador entra com o próprio nome. Quando a rodada acaba, cada um fotografa suas pedras (ou digita os pontos manualmente) e o placar atualiza em tempo real para todo mundo.
+- **Real-time** — scores update instantly for everyone via Server-Sent Events (SSE)
+- **QR Code** — host shares a QR code so players can join the room
+- **Tile detection via photo** — snap a picture of remaining tiles and the system auto-detects them (via Roboflow)
+- **Multi-table tournaments** — tournament support with automatic table allocation
+- **Mobile-first** — designed for phones, premium dark theme
+- **Zero install** — works right in the browser, no app needed
+- **Hall of Fame** — persistent global ranking across matches
+- **Nicknames** — nickname system with player voting
+- **Dual storage** — SQLite for local dev, Firebase Realtime Database for production
 
 ---
 
-## Regras do Pontinho
+## What is it
 
-### Objetivo
-Ser o último jogador sem estourar. Quem acumular **mais de 51 pontos no total** está fora.
-
-### Pontuação por rodada
-- Cada jogador soma os pontos das pedras que restaram na mão ao fim da rodada
-- Quem **ganhou a rodada** (jogou todas as pedras, ou travou com menos pontos) marca **0 pontos**
-- Demais pedras valem a **soma dos dois lados** de cada peça
-- Exceção: a peça `[0|0]` sozinha na mão vale **12 pontos**
-
-### Distribuição de pedras
-
-| Jogadores | Pedras por pessoa | Para comprar | Jogo    |
-|:---------:|:-----------------:|:------------:|:-------:|
-| 2         | 9                 | 10           | Duplo-6 |
-| 3         | 6                 | 10           | Duplo-6 |
-| 4         | 5                 | 8            | Duplo-6 |
-| 5         | 7                 | 20           | Duplo-9 |
-| 6         | 6                 | 19           | Duplo-9 |
-| 7         | 5                 | 20           | Duplo-9 |
-| 8         | 4                 | 23           | Duplo-9 |
-| 9         | 4                 | 19           | Duplo-9 |
-| 10        | 3                 | 25           | Duplo-9 |
-
-> **Duplo-6** = 28 pedras · **Duplo-9** = 55 pedras
+**Dominó Placar** is a web app designed to be opened on your phone during a domino game. The host creates a room, shares the QR code, and each player joins with their name. When the round ends, each player photographs their remaining tiles (or enters points manually) and the scoreboard updates in real time for everyone.
 
 ---
 
-## Rodando localmente
+## Pontinho Rules
 
-### Pré-requisitos
+### Goal
+Be the last player standing. Anyone who accumulates **more than 51 total points** is out (bust).
+
+### Scoring per round
+- Each player sums the points on their remaining tiles at the end of the round
+- The **round winner** (played all tiles, or locked the board with fewest points) scores **0 points**
+- Each tile is worth the **sum of its two sides**
+- Exception: the `[0|0]` tile alone in hand is worth **12 points**
+
+### Tile distribution
+
+| Players | Tiles per player | Draw pile | Set     |
+|:-------:|:----------------:|:---------:|:-------:|
+| 2       | 9                | 10        | Double-6 |
+| 3       | 6                | 10        | Double-6 |
+| 4       | 5                | 8         | Double-6 |
+| 5       | 7                | 20        | Double-9 |
+| 6       | 6                | 19        | Double-9 |
+| 7       | 5                | 20        | Double-9 |
+| 8       | 4                | 23        | Double-9 |
+| 9       | 4                | 19        | Double-9 |
+| 10      | 3                | 25        | Double-9 |
+
+> **Double-6** = 28 tiles · **Double-9** = 55 tiles
+
+---
+
+## Running locally
+
+### Prerequisites
 
 - **Go 1.26+** — [download](https://go.dev/dl/)
 
-### Instalação
+### Installation
 
 ```bash
 git clone https://github.com/leandrodaf/domino-placar
@@ -74,19 +74,19 @@ cd domino-placar
 go mod download
 ```
 
-### Executar (modo mais simples)
+### Run (simplest way)
 
 ```bash
 go run main.go
 ```
 
-Acesse [http://localhost:8080](http://localhost:8080).
+Open [http://localhost:8080](http://localhost:8080).
 
-> Por padrão usa **SQLite** local (`domino.db`). Nenhuma variável de ambiente é obrigatória para rodar localmente.
+> By default it uses a local **SQLite** database (`domino.db`). No environment variables are required to run locally.
 
-### Jogar na rede Wi-Fi (outros celulares na mesma rede)
+### Play on Wi-Fi (other phones on the same network)
 
-Descubra o IP local da sua máquina e acesse pelo celular:
+Find your machine's local IP and access it from your phone:
 
 ```bash
 # macOS
@@ -96,93 +96,95 @@ ipconfig getifaddr en0
 hostname -I | awk '{print $1}'
 ```
 
-Depois acesse `http://<SEU-IP>:8080` no navegador do celular. Os links de convite e QR codes usam automaticamente o endereço pelo qual você acessou.
+Then open `http://<YOUR-IP>:8080` in your phone's browser. Invite links and QR codes automatically use the address you accessed.
 
 ---
 
-## Variáveis de ambiente
+## Environment variables
 
-### Obrigatórias em produção
+### Required in production
 
-| Variável | Descrição | Exemplo |
-|----------|-----------|---------|
-| `SESSION_SECRET` | Segredo HMAC para assinar cookies e tokens CSRF. **Defina sempre em produção.** Sem isso, sessões são invalidadas a cada reinício do servidor. | `minha-chave-secreta-longa` |
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `SESSION_SECRET` | HMAC secret for signing cookies and CSRF tokens. **Always set in production.** Without it, sessions are invalidated on every server restart. | `my-long-secret-key` |
 
-### Opcionais
+### Optional
 
-| Variável | Descrição | Padrão |
-|----------|-----------|--------|
-| `PORT` | Porta HTTP do servidor | `8080` |
-| `TRUST_PROXY` | Se definida (qualquer valor), confia no header `X-Forwarded-For` para obter o IP real do cliente (usar apenas atrás de proxy reverso confiável) | não definida |
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `PORT` | HTTP server port | `8080` |
+| `TRUST_PROXY` | If set (any value), trusts the `X-Forwarded-For` header for real client IP (only use behind a trusted reverse proxy) | not set |
 
-### Firebase Realtime Database (substituição do SQLite)
+### Firebase Realtime Database (replaces SQLite)
 
-| Variável | Descrição |
-|----------|-----------|
-| `FIREBASE_DATABASE_URL` | URL do banco Firebase, ex: `https://meu-projeto-default-rtdb.firebaseio.com` |
-| `FIREBASE_CREDENTIALS` | JSON da Service Account (conteúdo, não caminho). Se omitido, usa Application Default Credentials (ADC) — funciona automaticamente no GCP. |
+| Variable | Description |
+|----------|-------------|
+| `FIREBASE_DATABASE_URL` | Firebase database URL, e.g. `https://my-project-default-rtdb.firebaseio.com` |
+| `FIREBASE_CREDENTIALS` | Service Account JSON (content, not path). If omitted, uses Application Default Credentials (ADC) — works automatically on GCP. |
 
-> Quando `FIREBASE_DATABASE_URL` está definido, o app usa Firebase. Caso contrário, usa SQLite.
+> When `FIREBASE_DATABASE_URL` is set, the app uses Firebase. Otherwise, it uses SQLite.
 
-### Google Cloud Storage (fotos dos jogadores)
+### Google Cloud Storage (player photos)
 
-| Variável | Descrição |
-|----------|-----------|
-| `GCS_BUCKET` | Nome do bucket GCS onde as fotos serão armazenadas, ex: `domino-placar-fotos` |
-| `GCS_CREDENTIALS` | JSON da Service Account (conteúdo, não caminho). Se omitido, usa ADC — funciona automaticamente no GCP. |
+| Variable | Description |
+|----------|-------------|
+| `GCS_BUCKET` | GCS bucket name for storing photos, e.g. `domino-placar-photos` |
+| `GCS_CREDENTIALS` | Service Account JSON (content, not path). If omitted, uses ADC — works automatically on GCP. |
 
-> Quando `GCS_BUCKET` está definido, as fotos vão para o GCS. Caso contrário, são salvas na pasta `uploads/` local.
-### Visão computacional — Roboflow (detecção automática de pedras)
+> When `GCS_BUCKET` is set, photos go to GCS. Otherwise, they're saved to the local `uploads/` folder.
 
-| Variável | Descrição | Padrão |
-|----------|-----------|--------|
-| `ROBOFLOW_API_KEY` | Chave de API do Roboflow. Sem ela, apenas entrada manual de pontos funciona. | — |
-| `ROBOFLOW_MODEL` | Nome do modelo de detecção de dominó no Roboflow | `domino-detection` |
-| `ROBOFLOW_VERSION` | Versão do modelo | `1` |
+### Computer vision — Roboflow (automatic tile detection)
 
-> Quando `ROBOFLOW_API_KEY` está definida, os jogadores podem fotografar as pedras restantes e o sistema detecta automaticamente as peças e calcula os pontos. Sem a chave, o app funciona normalmente com entrada manual.
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `ROBOFLOW_API_KEY` | Roboflow API key. Without it, only manual point entry works. | — |
+| `ROBOFLOW_MODEL` | Roboflow domino detection model name | `domino-detection` |
+| `ROBOFLOW_VERSION` | Model version | `1` |
+
+> When `ROBOFLOW_API_KEY` is set, players can photograph remaining tiles and the system automatically detects them and calculates points. Without the key, the app works normally with manual entry.
+
 ---
 
-## Deploy no Google Cloud (Cloud Run / Cloud Functions)
+## Deploy on Google Cloud (Cloud Run)
 
-### 1. Configure o Firebase
+### 1. Set up Firebase
 
-1. Acesse [console.firebase.google.com](https://console.firebase.google.com)
-2. Crie um projeto ou use um existente
-3. Ative o **Realtime Database** (plano Spark é gratuito)
-4. Anote a URL: `https://SEU-PROJETO-default-rtdb.firebaseio.com`
+1. Go to [console.firebase.google.com](https://console.firebase.google.com)
+2. Create a project or use an existing one
+3. Enable **Realtime Database** (Spark plan is free)
+4. Note the URL: `https://YOUR-PROJECT-default-rtdb.firebaseio.com`
 
-### 2. Configure o GCS (para fotos)
+### 2. Set up GCS (for photos)
 
 ```bash
-# Crie o bucket
-gsutil mb -l southamerica-east1 gs://domino-placar-fotos
+# Create the bucket
+gsutil mb -l southamerica-east1 gs://domino-placar-photos
 
-# Permissão pública de leitura (opcional, para exibir fotos na app)
-gsutil iam ch allUsers:objectViewer gs://domino-placar-fotos
+# Public read access (optional, to display photos in the app)
+gsutil iam ch allUsers:objectViewer gs://domino-placar-photos
 ```
 
-### 3. Build e deploy no Cloud Run
+### 3. Build and deploy to Cloud Run
 
 ```bash
-# Build da imagem
-docker build -t gcr.io/SEU-PROJETO/domino-placar .
+# Build the image
+docker build -t gcr.io/YOUR-PROJECT/domino-placar .
 
 # Push
-docker push gcr.io/SEU-PROJETO/domino-placar
+docker push gcr.io/YOUR-PROJECT/domino-placar
 
 # Deploy
 gcloud run deploy domino-placar \
-  --image gcr.io/SEU-PROJETO/domino-placar \
+  --image gcr.io/YOUR-PROJECT/domino-placar \
   --platform managed \
   --region southamerica-east1 \
   --allow-unauthenticated \
-  --set-env-vars "SESSION_SECRET=sua-chave-secreta,FIREBASE_DATABASE_URL=https://SEU-PROJETO-default-rtdb.firebaseio.com,GCS_BUCKET=domino-placar-fotos,TRUST_PROXY=true"
+  --set-env-vars "SESSION_SECRET=your-secret-key,FIREBASE_DATABASE_URL=https://YOUR-PROJECT-default-rtdb.firebaseio.com,GCS_BUCKET=domino-placar-photos,TRUST_PROXY=true"
 ```
 
-> No Cloud Run, as credenciais GCP são automáticas via ADC — não precisa de `FIREBASE_CREDENTIALS` ou `GCS_CREDENTIALS`.
+> On Cloud Run, GCP credentials are automatic via ADC — no need for `FIREBASE_CREDENTIALS` or `GCS_CREDENTIALS`.
 
-### Dockerfile de exemplo
+### Dockerfile
 
 ```dockerfile
 FROM golang:1.26-alpine AS builder
@@ -201,30 +203,30 @@ CMD ["./domino-placar"]
 
 ---
 
-## Rodando com todas as integrações (exemplo .env local)
+## Running with all integrations (local .env example)
 
 ```bash
-# .env (use com: export $(cat .env | xargs) && go run main.go)
+# .env (load with: export $(cat .env | xargs) && go run main.go)
 
-SESSION_SECRET=troque-por-uma-string-longa-e-aleatoria
+SESSION_SECRET=replace-with-a-long-random-string
 
-# Firebase (banco de dados)
-FIREBASE_DATABASE_URL=https://meu-projeto-default-rtdb.firebaseio.com
-# FIREBASE_CREDENTIALS={"type":"service_account",...}  # Só se não estiver no GCP
+# Firebase (database)
+FIREBASE_DATABASE_URL=https://my-project-default-rtdb.firebaseio.com
+# FIREBASE_CREDENTIALS={"type":"service_account",...}  # Only if not on GCP
 
-# GCS (fotos)
-GCS_BUCKET=domino-placar-fotos
-# GCS_CREDENTIALS={"type":"service_account",...}  # Só se não estiver no GCP
+# GCS (photos)
+GCS_BUCKET=domino-placar-photos
+# GCS_CREDENTIALS={"type":"service_account",...}  # Only if not on GCP
 
-# Roboflow (detecção automática de pedras — opcional)
-ROBOFLOW_API_KEY=sua-chave-roboflow
+# Roboflow (automatic tile detection — optional)
+ROBOFLOW_API_KEY=your-roboflow-key
 # ROBOFLOW_MODEL=domino-detection
 # ROBOFLOW_VERSION=1
 
 PORT=8080
 ```
 
-Carregue e rode:
+Load and run:
 
 ```bash
 export $(grep -v '^#' .env | xargs) && go run main.go
@@ -232,96 +234,96 @@ export $(grep -v '^#' .env | xargs) && go run main.go
 
 ---
 
-## Por que SESSION_SECRET é importante
+## Why SESSION_SECRET matters
 
-Sem `SESSION_SECRET`, o servidor gera um segredo aleatório a cada início. Isso significa:
+Without `SESSION_SECRET`, the server generates a random secret on every start. This means:
 
-- Cookies de anfitrião e jogador são invalidados a cada reinício
-- Tokens CSRF tornam-se inválidos — formulários retornam **"token de segurança inválido"**
-- Em desenvolvimento, isso acontece toda vez que você reinicia com `go run`
+- Host and player cookies are invalidated on every restart
+- CSRF tokens become invalid — forms return **"invalid security token"**
+- During development, this happens every time you restart with `go run`
 
-**Solução**: defina `SESSION_SECRET` com qualquer string longa:
+**Fix**: set `SESSION_SECRET` to any long string:
 
 ```bash
-SESSION_SECRET=qualquer-string-longa-e-dificil-de-adivinhar go run main.go
+SESSION_SECRET=any-long-hard-to-guess-string go run main.go
 ```
 
 ---
 
-## Estrutura do projeto
+## Project structure
 
 ```
 domino-placar/
-├── main.go                      # Ponto de entrada, roteamento, middleware
+├── main.go                      # Entrypoint, routing, middleware
 ├── go.mod
-├── domino.db                    # Banco SQLite (criado automaticamente, dev only)
-├── uploads/                     # Fotos locais (dev only; em prod vai para GCS)
+├── domino.db                    # SQLite database (auto-created, dev only)
+├── uploads/                     # Local photos (dev only; prod uses GCS)
 ├── static/
-│   └── style.css                # Design system — tema escuro mobile-first
+│   └── style.css                # Design system — mobile-first dark theme
 ├── templates/
-│   ├── base.html                # Layout base com nav e footer
-│   ├── home.html                # Página inicial
-│   ├── lobby.html               # Sala de espera (anfitrião)
-│   ├── join.html                # Entrar na partida (jogador)
-│   ├── waiting.html             # Aguardando início
-│   ├── game.html                # Mesa de jogo em tempo real
-│   ├── upload.html              # Fotografar pedras / entrada manual
-│   ├── confirm.html             # Confirmar pontuação da rodada
-│   ├── ranking.html             # Placar da partida
-│   ├── nicknames.html           # Apelidos e votação
-│   ├── global-ranking.html      # Hall da Fama global
-│   └── tournament-*.html        # Torneios multimesa
+│   ├── base.html                # Base layout with nav and footer
+│   ├── home.html                # Home page
+│   ├── lobby.html               # Waiting room (host)
+│   ├── join.html                # Join match (player)
+│   ├── waiting.html             # Waiting for game to start
+│   ├── game.html                # Live game table
+│   ├── upload.html              # Photograph tiles / manual entry
+│   ├── confirm.html             # Confirm round score
+│   ├── ranking.html             # Match scoreboard
+│   ├── nicknames.html           # Nicknames and voting
+│   ├── global-ranking.html      # Hall of Fame (global)
+│   └── tournament-*.html        # Multi-table tournaments
 └── internal/
     ├── db/
-    │   ├── store.go             # Interface Store (abstração de banco)
-    │   ├── sqlite_store.go      # Implementação SQLite
-    │   ├── firebase_store.go    # Implementação Firebase Realtime DB
-    │   └── db.go                # Schema e helpers SQLite
-    ├── models/models.go         # Structs de domínio
+    │   ├── store.go             # Store interface (database abstraction)
+    │   ├── sqlite_store.go      # SQLite implementation
+    │   ├── firebase_store.go    # Firebase Realtime DB implementation
+    │   └── db.go                # SQLite schema and helpers
+    ├── models/models.go         # Domain structs
     ├── handler/
     │   ├── security.go          # HMAC cookies, CSRF, rate limiting, headers
-    │   ├── pages.go             # Handlers de renderização de páginas
-    │   ├── match.go             # Criar/iniciar partida
-    │   ├── round.go             # Gestão de rodadas e vencedores
-    │   ├── upload.go            # Upload de fotos e confirmação
-    │   ├── nickname.go          # Sistema de apelidos
-    │   ├── tournament.go        # Torneios multimesa
-    │   ├── tiles.go             # Cálculo de distribuição de pedras
-    │   └── sse.go               # Server-Sent Events (tempo real)
+    │   ├── pages.go             # Page rendering handlers
+    │   ├── match.go             # Create/start match
+    │   ├── round.go             # Round management and winners
+    │   ├── upload.go            # Photo upload and confirmation
+    │   ├── nickname.go          # Nickname system
+    │   ├── tournament.go        # Multi-table tournaments
+    │   ├── tiles.go             # Tile distribution calculation
+    │   └── sse.go               # Server-Sent Events (real-time)
     └── service/
-        ├── image.go             # Compressão e validação de imagens
-        ├── storage.go           # Upload para Google Cloud Storage
-        ├── vision.go            # Detecção de pedras via Roboflow (visão computacional)
-        └── qrcode.go            # Geração de QR codes
+        ├── image.go             # Image compression and validation
+        ├── storage.go           # Google Cloud Storage upload
+        ├── vision.go            # Tile detection via Roboflow (computer vision)
+        └── qrcode.go            # QR code generation
 ```
 
 ---
 
-## Segurança
+## Security
 
-- **Cookies HMAC-signed**: anfitrião e jogadores autenticados por cookie criptografado
-- **CSRF tokens**: baseados em HMAC, rotação por hora, validados em todos os formulários POST
-- **Rate limiting**: 5 uploads/5min por IP · 60 ações POST/min por IP
-- **Sanitização de entrada**: todos os campos de usuário são sanitizados no servidor
-- **CSP**: Content-Security-Policy restritivo em todas as respostas
-- **Score máximo**: pontuações acima de 200 são rejeitadas pelo servidor
-
----
-
-## Contribuindo
-
-Contribuições são bem-vindas! Sinta-se à vontade para abrir issues e pull requests.
-
-1. Fork o projeto
-2. Crie uma branch (`git checkout -b feat/minha-feature`)
-3. Commit suas mudanças (`git commit -m 'feat: minha feature'`)
-4. Push para a branch (`git push origin feat/minha-feature`)
-5. Abra um Pull Request
+- **HMAC-signed cookies**: host and players authenticated via cryptographic cookies
+- **CSRF tokens**: HMAC-based, hourly rotation, validated on all POST forms
+- **Rate limiting**: 5 uploads/5min per IP · 60 POST actions/min per IP
+- **Input sanitization**: all user fields are sanitized server-side
+- **CSP**: restrictive Content-Security-Policy on all responses
+- **Max score**: scores above 200 are rejected by the server
 
 ---
 
-## Licença
+## Contributing
 
-Este projeto está sob a licença MIT — veja o arquivo [LICENSE](LICENSE) para detalhes.
+Contributions are welcome! Feel free to open issues and pull requests.
 
-Feito com 🤍 em Diadema, SP.
+1. Fork the project
+2. Create a branch (`git checkout -b feat/my-feature`)
+3. Commit your changes (`git commit -m 'feat: my feature'`)
+4. Push to the branch (`git push origin feat/my-feature`)
+5. Open a Pull Request
+
+---
+
+## License
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+
+Made with 🤍 in Diadema, SP, Brazil.

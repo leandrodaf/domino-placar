@@ -15,7 +15,7 @@ import (
 func CreateMatchHandler(database db.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !CheckActionRateLimit(r) {
-			http.Error(w, "muitas requisições, aguarde", http.StatusTooManyRequests)
+			http.Error(w, "too many requests, please wait", http.StatusTooManyRequests)
 			return
 		}
 
@@ -33,7 +33,7 @@ func CreateMatchHandler(database db.Store) http.HandlerFunc {
 			return
 		}
 
-		// Grava o cookie de anfitrião no dispositivo que criou a partida
+		// Set host cookie on the device that created the match
 		SetHostCookie(w, matchID)
 
 		http.Redirect(w, r, "/match/"+matchID+"/lobby", http.StatusSeeOther)
@@ -46,16 +46,16 @@ func StartMatchHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 		matchID := r.PathValue("id")
 
 		if !IsHost(r, matchID) {
-			http.Error(w, "acesso negado", http.StatusForbidden)
+			http.Error(w, "access denied", http.StatusForbidden)
 			return
 		}
 		if !CheckActionRateLimit(r) {
-			http.Error(w, "muitas requisições, aguarde", http.StatusTooManyRequests)
+			http.Error(w, "too many requests, please wait", http.StatusTooManyRequests)
 			return
 		}
 		if err := r.ParseForm(); err == nil {
 			if !ValidateCSRFToken(r.FormValue("_csrf"), matchID) {
-				http.Error(w, "token de segurança inválido", http.StatusForbidden)
+				http.Error(w, "invalid security token", http.StatusForbidden)
 				return
 			}
 		}

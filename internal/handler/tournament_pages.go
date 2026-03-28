@@ -51,11 +51,11 @@ func TournamentJoinPageHandler(database db.Store, tmpl *Templates) http.HandlerF
 		var errMsg string
 		switch r.URL.Query().Get("error") {
 		case "full":
-			errMsg = "Este torneio está cheio (máximo 60 jogadores)."
+			errMsg = "This tournament is full (max 60 players)."
 		case "started":
-			errMsg = "Este torneio já foi iniciado e não aceita novos jogadores."
+			errMsg = "This tournament has already started and is not accepting new players."
 		case "missing":
-			errMsg = "Por favor, preencha todos os campos."
+			errMsg = "Please fill in all fields."
 		}
 
 		data := map[string]any{

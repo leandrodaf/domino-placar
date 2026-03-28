@@ -16,15 +16,15 @@ func CreateRoundHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 		matchID := r.PathValue("id")
 
 		if !IsHost(r, matchID) {
-			http.Error(w, "acesso negado", http.StatusForbidden)
+			http.Error(w, "access denied", http.StatusForbidden)
 			return
 		}
 		if !CheckActionRateLimit(r) {
-			http.Error(w, "muitas requisições, aguarde", http.StatusTooManyRequests)
+			http.Error(w, "too many requests, please wait", http.StatusTooManyRequests)
 			return
 		}
 		if err := r.ParseForm(); err != nil || !ValidateCSRFToken(r.FormValue("_csrf"), matchID) {
-			http.Error(w, "token de segurança inválido", http.StatusForbidden)
+			http.Error(w, "invalid security token", http.StatusForbidden)
 			return
 		}
 
@@ -35,7 +35,7 @@ func CreateRoundHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 			return
 		}
 
-		// Bloqueia se ainda há rodada ativa não finalizada
+		// Block if there is still an active unfinished round
 		if count > 0 {
 			if prev, err := database.GetCurrentRound(matchID); err == nil && prev.Status == "active" {
 				http.Redirect(w, r, "/match/"+matchID+"/round/"+prev.ID+"/round-scores?error=incomplete", http.StatusSeeOther)
@@ -50,7 +50,7 @@ func CreateRoundHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 			return
 		}
 
-		// A partir da rodada 2, o iniciador é o jogador à esquerda do iniciador anterior
+		// From round 2 onwards, the starter is the player to the left of the previous starter
 		if count >= 1 {
 			if prev, err := database.GetLastFinishedRound(matchID); err == nil && prev.StarterPlayerID != "" {
 				if players, err := database.GetPlayers(matchID); err == nil {
@@ -86,22 +86,22 @@ func SetRoundStarterHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 		playerID := r.PathValue("pid")
 
 		if !IsHost(r, matchID) {
-			http.Error(w, "acesso negado", http.StatusForbidden)
+			http.Error(w, "access denied", http.StatusForbidden)
 			return
 		}
 		if !CheckActionRateLimit(r) {
-			http.Error(w, "muitas requisições, aguarde", http.StatusTooManyRequests)
+			http.Error(w, "too many requests, please wait", http.StatusTooManyRequests)
 			return
 		}
 		if err := r.ParseForm(); err != nil || !ValidateCSRFToken(r.FormValue("_csrf"), matchID) {
-			http.Error(w, "token de segurança inválido", http.StatusForbidden)
+			http.Error(w, "invalid security token", http.StatusForbidden)
 			return
 		}
 
-		// Valida que o jogador pertence à partida
+		// Validate that the player belongs to this match
 		player, err := database.GetPlayer(playerID)
 		if err != nil || player.MatchID != matchID {
-			http.Error(w, "jogador não encontrado", http.StatusBadRequest)
+			http.Error(w, "player not found", http.StatusBadRequest)
 			return
 		}
 
@@ -124,22 +124,22 @@ func SetRoundWinnerHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 		playerID := r.PathValue("pid")
 
 		if !IsHost(r, matchID) {
-			http.Error(w, "acesso negado", http.StatusForbidden)
+			http.Error(w, "access denied", http.StatusForbidden)
 			return
 		}
 		if !CheckActionRateLimit(r) {
-			http.Error(w, "muitas requisições, aguarde", http.StatusTooManyRequests)
+			http.Error(w, "too many requests, please wait", http.StatusTooManyRequests)
 			return
 		}
 		if err := r.ParseForm(); err != nil || !ValidateCSRFToken(r.FormValue("_csrf"), matchID) {
-			http.Error(w, "token de segurança inválido", http.StatusForbidden)
+			http.Error(w, "invalid security token", http.StatusForbidden)
 			return
 		}
 
-		// Valida que o jogador pertence à partida
+		// Validate that the player belongs to this match
 		player, err := database.GetPlayer(playerID)
 		if err != nil || player.MatchID != matchID {
-			http.Error(w, "jogador não encontrado", http.StatusBadRequest)
+			http.Error(w, "player not found", http.StatusBadRequest)
 			return
 		}
 
@@ -150,12 +150,12 @@ func SetRoundWinnerHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 		}
 
 		hub.Broadcast(matchID, "round_winner_set:"+playerID)
-		// Host vai direto para entrada de pontos em lote; jogadores atualizam via SSE
+		// Host goes straight to bulk score entry; players update via SSE
 		http.Redirect(w, r, "/match/"+matchID+"/round/"+roundID+"/round-scores", http.StatusSeeOther)
 	}
 }
 
-// findMatchWinner retorna o ID do vencedor: o único ativo restante, ou o de menor pontuação.
+// findMatchWinner returns the winner ID: the only remaining active player, or the one with the lowest score.
 func findMatchWinner(players []models.Player) string {
 	var active []models.Player
 	for _, p := range players {
@@ -166,7 +166,7 @@ func findMatchWinner(players []models.Player) string {
 	if len(active) == 1 {
 		return active[0].ID
 	}
-	// Todos estouraram — menor pontuação vence
+	// All players busted — lowest score wins
 	if len(active) == 0 && len(players) > 0 {
 		best := players[0]
 		for _, p := range players[1:] {
@@ -179,7 +179,7 @@ func findMatchWinner(players []models.Player) string {
 	return ""
 }
 
-// checkRoundComplete verifica se todos os jogadores ativos confirmaram e finaliza a rodada.
+// checkRoundComplete checks if all active players have confirmed and finalizes the round.
 func checkRoundComplete(database db.Store, hub *SSEHub, matchID, roundID string) error {
 	round, err := database.GetRound(roundID)
 	if err != nil {
@@ -236,7 +236,7 @@ func checkRoundComplete(database db.Store, hub *SSEHub, matchID, roundID string)
 		return nil
 	}
 
-	// Todos confirmaram — aplica pontos e finaliza rodada
+	// All confirmed — apply scores and finalize round
 	applyScore := func(playerID string, points int) {
 		if err := database.UpdatePlayerScore(playerID, points); err != nil {
 			log.Printf("UpdatePlayerScore error for player %s: %v", playerID, err)
@@ -259,7 +259,7 @@ func checkRoundComplete(database db.Store, hub *SSEHub, matchID, roundID string)
 			continue
 		}
 		if p.ID == round.WinnerPlayerID {
-			// Fechamento: vencedor pontuou se trouxe peças na mão
+			// Closing: winner scored if they had remaining tiles
 			if hi.PointsCalculated > 0 {
 				applyScore(p.ID, hi.PointsCalculated)
 			}

@@ -41,18 +41,18 @@ type HandImage struct {
 	CreatedAt         time.Time `db:"created_at"`
 }
 
-// TileStats resume a cobertura de pedras em uma rodada.
+// TileStats summarizes the tile coverage in a round.
 type TileStats struct {
-	HandTiles      []string // pedras nas mãos dos jogadores
-	TableTiles     []string // pedras detectadas na foto da mesa
-	SeenTiles      []string // união de hand + table (sem duplicatas)
-	TotalInSet     int      // total de pedras no jogo (28 ou 55)
+	HandTiles      []string // tiles in players' hands
+	TableTiles     []string // tiles detected on the table photo
+	SeenTiles      []string // union of hand + table (no duplicates)
+	TotalInSet     int      // total tiles in the game (28 or 55)
 	SeenCount      int
-	RemainingCount int  // pedras provavelmente no dorme
-	HasTablePhoto  bool // se a foto da mesa foi tirada
+	RemainingCount int  // tiles likely in the boneyard
+	HasTablePhoto  bool // whether the table photo was taken
 }
 
-// GlobalStat agrega estatísticas de um jogador (pelo unique_identifier) em todas as partidas.
+// GlobalStat aggregates a player's statistics (by unique_identifier) across all matches.
 type GlobalStat struct {
 	UniqueIdentifier string
 	Name             string
@@ -63,14 +63,14 @@ type GlobalStat struct {
 	TotalRoundWins   int
 }
 
-// ZoeiraStat é usado para rankings de zoeiras/conquistas no Hall da Fama.
+// ZoeiraStat is used for fun/achievement rankings in the Hall of Fame.
 type ZoeiraStat struct {
 	UniqueIdentifier string
 	Name             string
 	Count            int
 }
 
-// NicknameNomination é um apelido proposto para um jogador.
+// NicknameNomination is a nickname proposed for a player.
 type NicknameNomination struct {
 	ID                  string
 	NominatedUniqueID   string

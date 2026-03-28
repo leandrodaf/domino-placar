@@ -12,14 +12,14 @@ import (
 )
 
 func OpenDB(path string) (*sql.DB, error) {
-	// Garante que o arquivo exista com permissões de escrita antes de abrir
+	// Ensure the file exists with write permissions before opening
 	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0644)
 	if err != nil {
 		return nil, fmt.Errorf("creating db file: %w", err)
 	}
 	f.Close()
 
-	// URI format: mode=rwc cria se não existir, _journal_mode=WAL melhora concorrência
+	// URI format: mode=rwc creates if not exists, _journal_mode=WAL improves concurrency
 	dsn := fmt.Sprintf("file:%s?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)", path)
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
@@ -118,7 +118,7 @@ func CreateTables(db *sql.DB) error {
 			return fmt.Errorf("creating table: %w", err)
 		}
 	}
-	// Migrations idempotentes para colunas adicionadas após a criação inicial
+	// Idempotent migrations for columns added after initial creation
 	_, _ = db.Exec(`ALTER TABLE matches ADD COLUMN winner_player_id TEXT`)
 	_, _ = db.Exec(`ALTER TABLE rounds ADD COLUMN table_image_path TEXT NOT NULL DEFAULT ''`)
 	_, _ = db.Exec(`ALTER TABLE rounds ADD COLUMN table_detected_tiles TEXT NOT NULL DEFAULT '[]'`)
@@ -346,13 +346,13 @@ func GetHandImages(db *sql.DB, roundID string) ([]models.HandImage, error) {
 	return images, rows.Err()
 }
 
-// SetTableImage salva o caminho e as pedras detectadas na foto da mesa.
+// SetTableImage saves the path and detected tiles from the table photo.
 func SetTableImage(db *sql.DB, roundID, imagePath, tilesJSON string) error {
 	_, err := db.Exec(`UPDATE rounds SET table_image_path = ?, table_detected_tiles = ? WHERE id = ?`, imagePath, tilesJSON, roundID)
 	return err
 }
 
-// GetRoundTableTiles retorna as pedras detectadas na foto da mesa de uma rodada.
+// GetRoundTableTiles returns the detected tiles from the table photo for a round.
 func GetRoundTableTiles(db *sql.DB, roundID string) (string, string, error) {
 	var path, tilesJSON string
 	err := db.QueryRow(`SELECT table_image_path, table_detected_tiles FROM rounds WHERE id = ?`, roundID).Scan(&path, &tilesJSON)
@@ -377,13 +377,13 @@ func GetRanking(db *sql.DB, matchID string) ([]models.Player, error) {
 	return players, rows.Err()
 }
 
-// SetMatchWinner registra o vencedor da partida.
+// SetMatchWinner records the match winner.
 func SetMatchWinner(db *sql.DB, matchID, playerID string) error {
 	_, err := db.Exec(`UPDATE matches SET winner_player_id = ? WHERE id = ?`, playerID, matchID)
 	return err
 }
 
-// SetPlayerScore define a pontuação absoluta de um jogador e recalcula seu status.
+// SetPlayerScore sets the absolute score of a player and recalculates their status.
 func SetPlayerScore(db *sql.DB, playerID string, score int) error {
 	status := "active"
 	if score > 51 {
@@ -393,7 +393,7 @@ func SetPlayerScore(db *sql.DB, playerID string, score int) error {
 	return err
 }
 
-// CountPlayersByMatch retorna quantos jogadores estão em uma partida.
+// CountPlayersByMatch returns how many players are in a match.
 func CountPlayersByMatch(db *sql.DB, matchID string) (int, error) {
 	var count int
 	err := db.QueryRow(`SELECT COUNT(*) FROM players WHERE match_id = ?`, matchID).Scan(&count)
@@ -525,7 +525,7 @@ func GetTournamentRanking(db *sql.DB, tournamentID string) ([]models.TournamentR
 	return entries, rows.Err()
 }
 
-// GetGlobalStats retorna estatísticas globais agrupadas por unique_identifier.
+// GetGlobalStats returns global statistics grouped by unique_identifier.
 func GetGlobalStats(db *sql.DB) ([]models.GlobalStat, error) {
 	const q = `
 	WITH match_wins AS (
@@ -580,9 +580,9 @@ func GetGlobalStats(db *sql.DB) ([]models.GlobalStat, error) {
 	return stats, rows.Err()
 }
 
-// ─── Zoeiras / Hall da Fama ──────────────────────────────────────────────────
+// ─── Fun Stats / Hall of Fame ──────────────────────────────────────────────────────
 
-// GetMostRoundsLost retorna quem perdeu mais rodadas (não venceu, mas estava ativo).
+// GetMostRoundsLost returns who lost the most rounds (didn't win, but was active).
 func GetMostRoundsLost(db *sql.DB) ([]models.ZoeiraStat, error) {
 	const q = `
 	SELECT p.unique_identifier, MAX(p.name) as name, COUNT(*) as cnt
@@ -596,7 +596,7 @@ func GetMostRoundsLost(db *sql.DB) ([]models.ZoeiraStat, error) {
 	return queryZoeiraStats(db, q)
 }
 
-// GetPintoKings retorna quem mais terminou rodadas segurando a pedra de 1 ponto (0-1).
+// GetPintoKings returns who most frequently ended rounds holding the 1-point tile (0-1).
 func GetPintoKings(db *sql.DB) ([]models.ZoeiraStat, error) {
 	const q = `
 	SELECT p.unique_identifier, MAX(p.name) as name, COUNT(*) as cnt
@@ -609,7 +609,7 @@ func GetPintoKings(db *sql.DB) ([]models.ZoeiraStat, error) {
 	return queryZoeiraStats(db, q)
 }
 
-// GetBrancoKings retorna quem mais terminou com apenas a pedra branca (0-0) — e pagou 12 pts.
+// GetBrancoKings returns who most frequently ended with only the blank tile (0-0) — and paid 12 pts.
 func GetBrancoKings(db *sql.DB) ([]models.ZoeiraStat, error) {
 	const q = `
 	SELECT p.unique_identifier, MAX(p.name) as name, COUNT(*) as cnt
@@ -622,7 +622,7 @@ func GetBrancoKings(db *sql.DB) ([]models.ZoeiraStat, error) {
 	return queryZoeiraStats(db, q)
 }
 
-// GetCloseCallKings retorna quem mais ficou no limite (entre 45-51 pontos) sem estourar.
+// GetCloseCallKings returns who was most often on the edge (45-51 points) without busting.
 func GetCloseCallKings(db *sql.DB) ([]models.ZoeiraStat, error) {
 	const q = `
 	SELECT unique_identifier, MAX(name) as name, COUNT(*) as cnt
@@ -651,9 +651,9 @@ func queryZoeiraStats(db *sql.DB, q string) ([]models.ZoeiraStat, error) {
 	return stats, rows.Err()
 }
 
-// ─── Apelidos ────────────────────────────────────────────────────────────────
+// ─── Nicknames ─────────────────────────────────────────────────────────────────────
 
-// CreateNomination cria uma nova proposta de apelido.
+// CreateNomination creates a new nickname proposal.
 func CreateNomination(db *sql.DB, id, nominatedUID, nominatedName, matchID, nickname, proposerUID string) error {
 	_, err := db.Exec(
 		`INSERT INTO nickname_nominations (id, nominated_unique_id, nominated_name, match_id, nickname, vote_count, proposer_unique_id)
@@ -663,8 +663,8 @@ func CreateNomination(db *sql.DB, id, nominatedUID, nominatedName, matchID, nick
 	return err
 }
 
-// VoteForNomination registra um voto e incrementa o contador.
-// Retorna false (sem erro) se o votante já votou nesta nomination.
+// VoteForNomination registers a vote and increments the counter.
+// Returns false (no error) if the voter has already voted on this nomination.
 func VoteForNomination(db *sql.DB, nominationID, voterUID string) (bool, error) {
 	_, err := db.Exec(
 		`INSERT OR IGNORE INTO nickname_votes (nomination_id, voter_unique_id) VALUES (?, ?)`,
@@ -673,17 +673,17 @@ func VoteForNomination(db *sql.DB, nominationID, voterUID string) (bool, error) 
 	if err != nil {
 		return false, err
 	}
-	// Verifica se a linha foi inserida (changes > 0 = voto novo)
+	// Check if the row was inserted (changes > 0 = new vote)
 	var changes int
 	db.QueryRow(`SELECT changes()`).Scan(&changes)
 	if changes == 0 {
-		return false, nil // já votou
+		return false, nil // already voted
 	}
 	_, err = db.Exec(`UPDATE nickname_nominations SET vote_count = vote_count + 1 WHERE id = ?`, nominationID)
 	return true, err
 }
 
-// GetNominationsForMatch retorna todas as nominations de uma partida, ordenadas por votos.
+// GetNominationsForMatch returns all nominations for a match, sorted by votes.
 func GetNominationsForMatch(db *sql.DB, matchID string) ([]models.NicknameNomination, error) {
 	rows, err := db.Query(
 		`SELECT id, nominated_unique_id, nominated_name, match_id, nickname, vote_count, proposer_unique_id, created_at
@@ -705,7 +705,7 @@ func GetNominationsForMatch(db *sql.DB, matchID string) ([]models.NicknameNomina
 	return noms, rows.Err()
 }
 
-// GetNominationsForPlayer retorna nominations para um unique_id específico numa partida.
+// GetNominationsForPlayer returns nominations for a specific unique_id in a match.
 func GetNominationsForPlayer(db *sql.DB, matchID, nominatedUID string) ([]models.NicknameNomination, error) {
 	rows, err := db.Query(
 		`SELECT id, nominated_unique_id, nominated_name, match_id, nickname, vote_count, proposer_unique_id, created_at
@@ -727,7 +727,7 @@ func GetNominationsForPlayer(db *sql.DB, matchID, nominatedUID string) ([]models
 	return noms, rows.Err()
 }
 
-// GetTopNicknameForPlayer retorna o apelido mais votado para um unique_id (em qualquer partida).
+// GetTopNicknameForPlayer returns the most voted nickname for a unique_id (across all matches).
 func GetTopNicknameForPlayer(db *sql.DB, uniqueID string) string {
 	var nickname string
 	db.QueryRow(
@@ -738,7 +738,7 @@ func GetTopNicknameForPlayer(db *sql.DB, uniqueID string) string {
 	return nickname
 }
 
-// GetAllTimeNicknames retorna os apelidos mais votados por jogador (para Hall da Fama).
+// GetAllTimeNicknames returns the most voted nicknames per player (for the Hall of Fame).
 func GetAllTimeNicknames(db *sql.DB) ([]models.NicknameNomination, error) {
 	const q = `
 	SELECT id, nominated_unique_id, nominated_name, match_id, nickname, vote_count, proposer_unique_id, created_at

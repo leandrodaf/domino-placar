@@ -43,7 +43,7 @@ func allocateGroups(n int) []int {
 func CreateTournamentHandler(database db.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !CheckActionRateLimit(r) {
-			http.Error(w, "muitas requisições, aguarde", http.StatusTooManyRequests)
+			http.Error(w, "too many requests, please wait", http.StatusTooManyRequests)
 			return
 		}
 
@@ -55,13 +55,13 @@ func CreateTournamentHandler(database db.Store) http.HandlerFunc {
 
 		tournamentID := uuid.New().String()
 
-		if err := database.CreateTournament(tournamentID, "Torneio", baseURL); err != nil {
+		if err := database.CreateTournament(tournamentID, "Tournament", baseURL); err != nil {
 			log.Printf("CreateTournament error: %v", err)
 			http.Error(w, "failed to create tournament", http.StatusInternalServerError)
 			return
 		}
 
-		// Grava o cookie de anfitrião para o torneio
+		// Store the host cookie for the tournament
 		SetHostCookie(w, tournamentID)
 
 		http.Redirect(w, r, "/tournament/"+tournamentID+"/lobby", http.StatusSeeOther)
@@ -74,7 +74,7 @@ func JoinTournamentHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 		tournamentID := r.PathValue("id")
 
 		if !CheckActionRateLimit(r) {
-			http.Error(w, "muitas requisições, aguarde", http.StatusTooManyRequests)
+			http.Error(w, "too many requests, please wait", http.StatusTooManyRequests)
 			return
 		}
 
@@ -138,11 +138,11 @@ func StartTournamentHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 		tournamentID := r.PathValue("id")
 
 		if !IsHost(r, tournamentID) {
-			http.Error(w, "acesso negado", http.StatusForbidden)
+			http.Error(w, "access denied", http.StatusForbidden)
 			return
 		}
 		if !CheckActionRateLimit(r) {
-			http.Error(w, "muitas requisições, aguarde", http.StatusTooManyRequests)
+			http.Error(w, "too many requests, please wait", http.StatusTooManyRequests)
 			return
 		}
 

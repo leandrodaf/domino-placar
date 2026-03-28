@@ -6,12 +6,12 @@ import (
 	"github.com/leandrodaf/domino-placar/internal/models"
 )
 
-// SQLiteStore implementa Store usando SQLite.
+// SQLiteStore implements Store using SQLite.
 type SQLiteStore struct {
 	db *sql.DB
 }
 
-// NewSQLiteStore cria um SQLiteStore a partir de um *sql.DB já aberto.
+// NewSQLiteStore creates a SQLiteStore from an already opened *sql.DB.
 func NewSQLiteStore(db *sql.DB) *SQLiteStore {
 	return &SQLiteStore{db: db}
 }
