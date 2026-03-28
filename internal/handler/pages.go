@@ -146,7 +146,13 @@ func MatchResumeHandler(database db.Store) http.HandlerFunc {
 		}
 		switch match.Status {
 		case "waiting":
-			http.Redirect(w, r, "/match/"+matchID+"/lobby", http.StatusSeeOther)
+			if IsHost(r, matchID) {
+				http.Redirect(w, r, "/match/"+matchID+"/lobby", http.StatusSeeOther)
+			} else if pid := GetAuthPlayerID(r, matchID); pid != "" {
+				http.Redirect(w, r, "/match/"+matchID+"/waiting?player_id="+pid, http.StatusSeeOther)
+			} else {
+				http.Redirect(w, r, "/match/"+matchID+"/join", http.StatusSeeOther)
+			}
 		case "active":
 			round, err := database.GetCurrentRound(matchID)
 			if err == nil {
@@ -163,6 +169,17 @@ func MatchResumeHandler(database db.Store) http.HandlerFunc {
 func LobbyHandler(database db.Store, tmpl *Templates) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		matchID := r.PathValue("id")
+
+		// Only the host can access the lobby (control panel)
+		if !IsHost(r, matchID) {
+			if pid := GetAuthPlayerID(r, matchID); pid != "" {
+				http.Redirect(w, r, "/match/"+matchID+"/waiting?player_id="+pid, http.StatusSeeOther)
+			} else {
+				http.Redirect(w, r, "/match/"+matchID+"/join", http.StatusSeeOther)
+			}
+			return
+		}
+
 		match, err := database.GetMatch(matchID)
 		if err != nil {
 			http.Error(w, "match not found", http.StatusNotFound)
@@ -179,6 +196,7 @@ func LobbyHandler(database db.Store, tmpl *Templates) http.HandlerFunc {
 			"Players":   players,
 			"Count":     len(players),
 			"Tiles":     tiles,
+			"IsHost":    true,
 			"CSRFToken": GenerateCSRFToken(matchID),
 		})
 	}

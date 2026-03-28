@@ -13,6 +13,12 @@ func TournamentLobbyHandler(database db.Store, tmpl *Templates) http.HandlerFunc
 	return func(w http.ResponseWriter, r *http.Request) {
 		tournamentID := r.PathValue("id")
 
+		// Only the host can access the tournament lobby (control panel)
+		if !IsHost(r, tournamentID) {
+			http.Redirect(w, r, "/tournament/"+tournamentID+"/join", http.StatusSeeOther)
+			return
+		}
+
 		tournament, err := database.GetTournament(tournamentID)
 		if err != nil {
 			http.Error(w, "tournament not found", http.StatusNotFound)
