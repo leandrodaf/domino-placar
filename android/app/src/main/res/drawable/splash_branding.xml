@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Branding do splash: ícone de dominó centralizado -->
+<!-- Splash screen: fundo escuro + logo centralizada (Android < 12) -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:drawable="@drawable/ic_launcher_foreground"
+    <!-- Fundo escuro do app -->
+    <item android:drawable="@color/bg" />
+    <!-- Logo real centralizada -->
+    <item android:drawable="@mipmap/ic_launcher"
         android:gravity="center"
         android:width="120dp"
         android:height="120dp" />

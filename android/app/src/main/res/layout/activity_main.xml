@@ -1,15 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Layout principal: WebView + ProgressBar + Tela Offline -->
+<!-- Layout principal: SwipeRefresh + WebView + ProgressBar + Tela Offline -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/rootContainer"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#09090f">
 
-    <!-- WebView principal (100% da tela) -->
-    <WebView
-        android:id="@+id/webView"
+    <!-- Swipe-to-refresh envolve a WebView -->
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/swipeRefresh"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent">
+
+        <!-- WebView principal (100% da tela) -->
+        <WebView
+            android:id="@+id/webView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
     <!-- Barra de progresso de carregamento (topo) -->
     <ProgressBar

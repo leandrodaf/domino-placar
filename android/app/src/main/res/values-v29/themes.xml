@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Android 10+ (API 29+) — nav bar totalmente transparente + sem scrim forçado -->
 <resources>
-    <!-- Tema base — escuro, sem ActionBar, edge-to-edge -->
     <style name="Theme.DominoPlacar" parent="Theme.AppCompat.NoActionBar">
         <item name="android:windowNoTitle">true</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@color/bg</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:enforceNavigationBarContrast">false</item>
         <item name="android:windowBackground">@color/bg</item>
         <item name="android:colorPrimary">@color/accent</item>
         <item name="android:colorPrimaryDark">@color/bg</item>
         <item name="android:colorAccent">@color/accent</item>
     </style>
 
-    <!-- Tema do splash screen (Android < 12 compat) -->
     <style name="Theme.DominoPlacar.Splash" parent="Theme.DominoPlacar">
         <item name="android:windowBackground">@drawable/splash_branding</item>
     </style>

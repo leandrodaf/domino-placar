@@ -6,11 +6,13 @@ import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.util.Log;
@@ -22,6 +24,7 @@ import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -35,10 +38,14 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
+import androidx.core.graphics.Insets;
 import androidx.core.splashscreen.SplashScreen;
+import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
+import androidx.webkit.WebViewAssetLoader;
 
 import java.io.File;
 import java.io.IOException;
@@ -52,7 +59,7 @@ import java.util.Map;
  * MainActivity — WebView wrapper de produção para dominoplacar.net
  *
  * Features:
- * - WebView fullscreen imersivo (sem barras do sistema)
+ * - Edge-to-edge com barras transparentes (suporte a gestos Android 15+)
  * - Accept-Language automático (i18n via idioma do dispositivo)
  * - Wake Lock (tela sempre ligada durante partidas)
  * - Cookies + DOM Storage (sessão persistente)
@@ -65,6 +72,9 @@ import java.util.Map;
  * - Splash screen (Android 12+ compat)
  * - Back navigation inteligente
  * - Injeção de classe CSS para regras mobile-only
+ * - Injeção de CSS Safe Area (notch/nav bar Android 15+)
+ * - Swipe-to-refresh (puxar para recarregar)
+ * - WebViewAssetLoader (página offline segura)
  */
 public class MainActivity extends AppCompatActivity {
 
@@ -80,6 +90,10 @@ public class MainActivity extends AppCompatActivity {
     private WebView webView;
     private ProgressBar progressBar;
     private View offlineContainer;
+    private SwipeRefreshLayout swipeRefresh;
+
+    // WebViewAssetLoader — serve assets locais via https://appassets.androidplatform.net/
+    private WebViewAssetLoader assetLoader;
 
     // Upload de arquivo/câmera
     private ValueCallback<Uri[]> fileUploadCallback;
@@ -142,7 +156,7 @@ public class MainActivity extends AppCompatActivity {
         if (getSupportActionBar() != null) {
             getSupportActionBar().hide();
         }
-        enableImmersiveMode();
+        enableEdgeToEdge();
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
@@ -151,8 +165,17 @@ public class MainActivity extends AppCompatActivity {
         webView = findViewById(R.id.webView);
         progressBar = findViewById(R.id.progressBar);
         offlineContainer = findViewById(R.id.offlineContainer);
+        swipeRefresh = findViewById(R.id.swipeRefresh);
+
+        setupWindowInsets();
+
+        // WebViewAssetLoader — serve arquivos de assets/ via HTTPS (sem erro de permissão)
+        assetLoader = new WebViewAssetLoader.Builder()
+            .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
+            .build();
 
         setupWebView();
+        setupSwipeRefresh();
         setupNetworkMonitor();
         setupBackNavigation();
         requestCameraPermissionIfNeeded();
@@ -169,7 +192,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         isInForeground = true;
-        enableImmersiveMode();
         if (isShowingOffline && isNetworkAvailable()) {
             hideOfflinePage();
             loadMainUrl();
@@ -225,8 +247,8 @@ public class MainActivity extends AppCompatActivity {
         // Encoding
         settings.setDefaultTextEncodingName("UTF-8");
 
-        // Acesso a file:// para offline.html nos assets
-        settings.setAllowFileAccess(true);
+        // Acesso a file:// desabilitado — usamos WebViewAssetLoader para servir assets via HTTPS
+        settings.setAllowFileAccess(false);
 
         // Forçar HTTPS — bloquear mixed content
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
@@ -277,6 +299,7 @@ public class MainActivity extends AppCompatActivity {
 
         // JS que transforma a WebView em experiência de app nativo.
         // Injeta <style> com !important para garantir que NADA seja selecionável,
+        // inclui CSS safe-area-inset para notch e barra de gestos (Android 15+),
         // e usa MutationObserver para cobrir conteúdo HTMX dinâmico.
         private static final String INJECT_APP_MODE_JS =
             "(function(){" +
@@ -286,6 +309,13 @@ public class MainActivity extends AppCompatActivity {
                 "var s=document.createElement('style');" +
                 "s.id='__app_webview_style';" +
                 "s.textContent='" +
+                    // Safe area para notch e barra de navegação por gestos
+                    ":root{" +
+                        "--sat:env(safe-area-inset-top,0px);" +
+                        "--sar:env(safe-area-inset-right,0px);" +
+                        "--sab:env(safe-area-inset-bottom,0px);" +
+                        "--sal:env(safe-area-inset-left,0px);" +
+                    "}" +
                     "*:not(input):not(textarea){" +
                         "-webkit-user-select:none!important;" +
                         "user-select:none!important;" +
@@ -303,6 +333,19 @@ public class MainActivity extends AppCompatActivity {
                     "img,a{-webkit-touch-callout:none!important;}" +
                 "';" +
                 "(document.head||document.documentElement).appendChild(s);" +
+                // Garante que a meta viewport tem viewport-fit=cover para safe areas
+                "var vp=document.querySelector('meta[name=viewport]');" +
+                "if(vp){" +
+                    "var c=vp.getAttribute('content')||'';" +
+                    "if(c.indexOf('viewport-fit')===-1){" +
+                        "vp.setAttribute('content',c+',viewport-fit=cover');" +
+                    "}" +
+                "}else{" +
+                    "vp=document.createElement('meta');" +
+                    "vp.name='viewport';" +
+                    "vp.content='width=device-width,initial-scale=1,viewport-fit=cover';" +
+                    "document.head.appendChild(vp);" +
+                "}" +
                 // Bloqueia menu de contexto
                 "document.addEventListener('contextmenu',function(e){" +
                     "if(e.target.tagName!=='INPUT'&&e.target.tagName!=='TEXTAREA')e.preventDefault();" +
@@ -314,6 +357,16 @@ public class MainActivity extends AppCompatActivity {
                     "if(e.target.tagName!=='INPUT'&&e.target.tagName!=='TEXTAREA')e.preventDefault();" +
                 "},true);" +
             "})();";
+
+        @Override
+        public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+            // WebViewAssetLoader serve assets/ via https://appassets.androidplatform.net/
+            if (assetLoader != null) {
+                WebResourceResponse response = assetLoader.shouldInterceptRequest(request.getUrl());
+                if (response != null) return response;
+            }
+            return super.shouldInterceptRequest(view, request);
+        }
 
         @Override
         public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
@@ -329,6 +382,9 @@ public class MainActivity extends AppCompatActivity {
 
             if (progressBar != null) {
                 progressBar.setVisibility(View.GONE);
+            }
+            if (swipeRefresh != null) {
+                swipeRefresh.setRefreshing(false);
             }
 
             // Fecha splash screen
@@ -354,6 +410,11 @@ public class MainActivity extends AppCompatActivity {
         public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
             Uri uri = request.getUrl();
             String host = uri.getHost();
+
+            // Assets locais via WebViewAssetLoader
+            if ("appassets.androidplatform.net".equals(host)) {
+                return false;
+            }
 
             // Navegação interna
             if (host != null && host.endsWith(ALLOWED_HOST)) {
@@ -512,6 +573,33 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    // ── Swipe-to-Refresh ─────────────────────────────────────────
+
+    private void setupSwipeRefresh() {
+        if (swipeRefresh == null) return;
+
+        // Cores do loading spinner — usa o accent do app
+        swipeRefresh.setColorSchemeColors(
+            ContextCompat.getColor(this, R.color.accent)
+        );
+        swipeRefresh.setProgressBackgroundColorSchemeColor(
+            ContextCompat.getColor(this, R.color.surface)
+        );
+
+        swipeRefresh.setOnRefreshListener(() -> {
+            if (webView != null) {
+                webView.reload();
+            } else {
+                swipeRefresh.setRefreshing(false);
+            }
+        });
+
+        // Só ativa pull-to-refresh quando a página está no topo (evita conflito com scroll)
+        webView.setOnScrollChangeListener((v, scrollX, scrollY, oldScrollX, oldScrollY) ->
+            swipeRefresh.setEnabled(scrollY == 0)
+        );
+    }
+
     // ── Offline Handling ───────────────────────────────────────
 
     private void showOfflinePage() {
@@ -593,19 +681,49 @@ public class MainActivity extends AppCompatActivity {
             && caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED);
     }
 
-    // ── Immersive Mode ─────────────────────────────────────────
+    // ── Edge-to-Edge + Window Insets ─────────────────────────────
 
-    private void enableImmersiveMode() {
+    /**
+     * Edge-to-edge: conteúdo se estende atrás das barras do sistema.
+     * Compatível com Android 15+ (que força edge-to-edge) e gestos.
+     */
+    private void enableEdgeToEdge() {
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+
+        // Barras transparentes — o fundo escuro (#09090f) faz a transição imperceptivel
+        getWindow().setStatusBarColor(Color.TRANSPARENT);
+        getWindow().setNavigationBarColor(Color.TRANSPARENT);
+
+        // Desabilita scrim forçado na barra de navegação (API 29+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            getWindow().setNavigationBarContrastEnforced(false);
+        }
+
+        // Ícones claros nas barras (tema escuro)
         WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(
             getWindow(), getWindow().getDecorView()
         );
         if (controller != null) {
-            controller.hide(WindowInsetsCompat.Type.systemBars());
-            controller.setSystemBarsBehavior(
-                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-            );
+            controller.setAppearanceLightStatusBars(false);
+            controller.setAppearanceLightNavigationBars(false);
         }
+    }
+
+    /**
+     * Aplica padding dinâmico baseado nos insets das barras do sistema e teclado.
+     * Garante que o conteúdo nunca fique atrás da status bar, nav bar ou teclado.
+     */
+    private void setupWindowInsets() {
+        View rootView = findViewById(R.id.rootContainer);
+        ViewCompat.setOnApplyWindowInsetsListener(rootView, (v, windowInsets) -> {
+            Insets systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+            Insets ime = windowInsets.getInsets(WindowInsetsCompat.Type.ime());
+
+            // Quando o teclado aparece, usa a altura do teclado; caso contrário, nav bar
+            int bottomPadding = Math.max(systemBars.bottom, ime.bottom);
+            v.setPadding(systemBars.left, systemBars.top, systemBars.right, bottomPadding);
+            return WindowInsetsCompat.CONSUMED;
+        });
     }
 
     // ── Back Navigation ────────────────────────────────────────

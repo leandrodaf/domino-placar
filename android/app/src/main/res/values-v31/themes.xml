@@ -3,7 +3,7 @@
 <resources>
     <style name="Theme.DominoPlacar.Splash" parent="Theme.DominoPlacar">
         <item name="android:windowSplashScreenBackground">@color/bg</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
         <item name="android:windowSplashScreenIconBackgroundColor">@color/bg</item>
     </style>
 </resources>
