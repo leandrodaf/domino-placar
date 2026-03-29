@@ -1,8 +1,17 @@
 version: 2
 
+project_name: domino-placar
+
 builds:
   - main: .
     binary: domino-placar
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
     goos:
       - linux
       - darwin
@@ -17,14 +26,69 @@ archives:
     format_overrides:
       - goos: windows
         format: zip
+    files:
+      - README.md
+      - LICENSE
+      - CHANGELOG.md
+      - templates/**/*
+      - static/**/*
+      - internal/i18n/locales/*
+
+dockers:
+  - image_templates:
+      - "ghcr.io/leandrodaf/domino-placar:{{ .Tag }}"
+      - "ghcr.io/leandrodaf/domino-placar:latest"
+    dockerfile: Dockerfile
+    build_flag_templates:
+      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
+      - "--label=org.opencontainers.image.version={{ .Version }}"
+      - "--label=org.opencontainers.image.source=https://github.com/leandrodaf/domino-placar"
+      - "--label=org.opencontainers.image.created={{ .Date }}"
+      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
 
 checksum:
   name_template: checksums.txt
 
 changelog:
   sort: asc
+  use: github
+  groups:
+    - title: "New Features"
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: "Bug Fixes"
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: "Other"
+      order: 999
   filters:
     exclude:
       - "^docs:"
       - "^test:"
       - "^ci:"
+      - "^chore:"
+      - "Merge pull request"
+
+release:
+  github:
+    owner: leandrodaf
+    name: domino-placar
+  prerelease: auto
+  name_template: "v{{ .Version }}"
+  header: |
+    ## Dominó Placar v{{ .Version }}
+
+    Real-time digital scoreboard for Pontinho — the Brazilian domino game.
+
+    ### Highlights
+    - 🎯 Real-time scoring via SSE
+    - 📸 Automatic tile detection via photo (Roboflow)
+    - 🏆 Multi-table tournaments
+    - 👥 Turmas (private groups) with invite codes
+    - 📱 Android app with push notifications
+    - 🌐 i18n: Portuguese & English
+
+    **Play now → [dominoplacar.net](https://dominoplacar.net)**
+  footer: |
+    ---
+    Full changelog: https://github.com/leandrodaf/domino-placar/compare/...{{ .Tag }}

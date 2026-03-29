@@ -15,7 +15,15 @@ import (
 	"github.com/leandrodaf/domino-placar/internal/i18n"
 )
 
+// Build-time variables (set via ldflags by GoReleaser).
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 func main() {
+	log.Printf("domino-placar %s (commit=%s built=%s)", version, commit, date)
 	// Ensure uploads directory exists
 	if err := os.MkdirAll("uploads", 0750); err != nil {
 		log.Fatalf("Failed to create uploads dir: %v", err)
