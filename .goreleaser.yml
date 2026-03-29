@@ -21,19 +21,18 @@ builds:
       - arm64
 
 archives:
-  - formats: [tar.gz]
+  - format: tar.gz
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    formats_overrides:
+    format_overrides:
       - goos: windows
-        formats: [zip]
+        format: zip
     files:
-      - src: README.md
-      - src: LICENSE
-      - src: CHANGELOG.md
-      - src: "templates/*"
-      - src: "static/*"
-      - src: "static/tiles/*"
-      - src: "internal/i18n/locales/*"
+      - README.md
+      - LICENSE
+      - CHANGELOG.md
+      - templates/**/*
+      - static/**/*
+      - internal/i18n/locales/*
 
 checksum:
   name_template: checksums.txt
