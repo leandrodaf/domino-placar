@@ -12,6 +12,11 @@ local.properties
 .idea/
 *.iml
 
+# Keystore credentials
+keystore.properties
+*.jks
+*.keystore
+
 # OS
 .DS_Store
 Thumbs.db

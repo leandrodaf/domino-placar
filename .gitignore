@@ -47,6 +47,7 @@ android/app/google-services.json
 *.aab
 *.keystore
 *.jks
+android/keystore.properties
 
 # Python / temp scripts
 __pycache__/
