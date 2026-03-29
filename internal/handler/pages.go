@@ -135,6 +135,12 @@ func HomeHandler(tmpl *Templates) http.HandlerFunc {
 	}
 }
 
+func PrivacyHandler(tmpl *Templates) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		tmpl.Render(w, r, "privacy.html", nil)
+	}
+}
+
 // MatchResumeHandler — GET /match/{id}
 func MatchResumeHandler(database db.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

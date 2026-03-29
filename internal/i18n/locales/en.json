@@ -403,5 +403,54 @@
   "turma.code_copied": "Code copied!",
   "turma.code_not_found": "No group found with this code.",
   "turma.invalid_code_error": "Invalid invite code. Please try again.",
-  "turma.confirm_remove": "Are you sure you want to remove this member?"
+  "turma.confirm_remove": "Are you sure you want to remove this member?",
+
+  "privacy.title": "Privacy Policy — Domino Score",
+  "privacy.heading": "Privacy Policy",
+  "privacy.last_updated": "Last updated: March 29, 2026",
+
+  "privacy.section1_title": "1. Information we collect",
+  "privacy.section1_intro": "<strong>Domino Score</strong> collects only the information strictly necessary for the app to function:",
+  "privacy.collect_name": "<strong>Player name</strong> — voluntarily provided when joining a match.",
+  "privacy.collect_uid": "<strong>Unique player identifier</strong> — generated locally on the device to keep history across matches.",
+  "privacy.collect_images": "<strong>Domino tile images</strong> — voluntarily uploaded during a match for automatic score calculation. Images are processed and may be deleted after the match ends.",
+  "privacy.collect_fcm": "<strong>Push notification token (FCM)</strong> — used exclusively to send notifications about match progress.",
+
+  "privacy.section2_title": "2. Information we do NOT collect",
+  "privacy.no_email": "We do not collect email, phone number, national ID or any personal documents.",
+  "privacy.no_location": "We do not collect location data.",
+  "privacy.no_contacts": "We do not collect contacts or address book data.",
+  "privacy.no_tracking": "We do not use third-party tracking cookies.",
+  "privacy.no_ads": "We do not share data with advertising networks.",
+
+  "privacy.section3_title": "3. How we use the data",
+  "privacy.section3_intro": "The collected data is used exclusively to:",
+  "privacy.use_matches": "Manage domino matches and tournaments in real time.",
+  "privacy.use_scores": "Calculate and display scores and rankings.",
+  "privacy.use_push": "Send push notifications about match events (start, rounds, results).",
+  "privacy.use_stats": "Maintain anonymous global statistics (wins, losses, records).",
+
+  "privacy.section4_title": "4. Storage and security",
+  "privacy.section4_text": "Match data is stored on secure servers and transmitted over encrypted connections (HTTPS). Local data (name, identifier, match history) is saved in the browser or device local storage (localStorage) and can be cleared by the user at any time.",
+
+  "privacy.section5_title": "5. Data sharing",
+  "privacy.section5_intro": "We do not sell, rent or share your personal data with third parties. The only third-party services used are:",
+  "privacy.share_fcm": "<strong>Firebase Cloud Messaging (Google)</strong> — for delivering push notifications.",
+
+  "privacy.section6_title": "6. User rights",
+  "privacy.section6_intro": "You may, at any time:",
+  "privacy.right_clear": "Clear your local data by deleting browser or app data.",
+  "privacy.right_delete": "Request deletion of your data from our server by contacting us.",
+  "privacy.right_push": "Stop receiving push notifications by disabling them in your device settings.",
+
+  "privacy.section7_title": "7. Target audience",
+  "privacy.section7_text": "Domino Score is not directed at children under 13 years of age. We do not intentionally collect data from children under 13.",
+
+  "privacy.section8_title": "8. Changes to this policy",
+  "privacy.section8_text": "This Privacy Policy may be updated periodically. Any changes will be posted on this page with a revised update date.",
+
+  "privacy.section9_title": "9. Contact",
+  "privacy.section9_text": "If you have questions about this Privacy Policy, contact us at: <strong>contato@dominoplacar.net</strong>",
+
+  "privacy.back_home": "← Back to home"
 }

@@ -95,6 +95,9 @@ func main() {
 	// Home
 	mux.HandleFunc("GET /", handler.HomeHandler(tmpl))
 
+	// Privacy Policy
+	mux.HandleFunc("GET /privacy", handler.PrivacyHandler(tmpl))
+
 	// Match creation
 	mux.HandleFunc("POST /match", handler.CreateMatchHandler(store))
 

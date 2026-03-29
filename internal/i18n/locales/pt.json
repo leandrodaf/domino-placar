@@ -403,5 +403,54 @@
   "turma.code_copied": "Código copiado!",
   "turma.code_not_found": "Turma não encontrada com este código.",
   "turma.invalid_code_error": "Código de convite inválido. Tente novamente.",
-  "turma.confirm_remove": "Tem certeza que deseja remover este membro?"
+  "turma.confirm_remove": "Tem certeza que deseja remover este membro?",
+
+  "privacy.title": "Política de Privacidade — Dominó Placar",
+  "privacy.heading": "Política de Privacidade",
+  "privacy.last_updated": "Última atualização: 29 de março de 2026",
+
+  "privacy.section1_title": "1. Informações que coletamos",
+  "privacy.section1_intro": "O <strong>Dominó Placar</strong> coleta apenas as informações estritamente necessárias para o funcionamento do app:",
+  "privacy.collect_name": "<strong>Nome do jogador</strong> — informado voluntariamente ao entrar em uma partida.",
+  "privacy.collect_uid": "<strong>Identificador único do jogador</strong> — gerado localmente no dispositivo para manter o histórico entre partidas.",
+  "privacy.collect_images": "<strong>Imagens de peças de dominó</strong> — enviadas voluntariamente durante a partida para cálculo automático de pontos. As imagens são processadas e podem ser excluídas após o término da partida.",
+  "privacy.collect_fcm": "<strong>Token de notificação push (FCM)</strong> — usado exclusivamente para enviar notificações sobre o andamento da partida.",
+
+  "privacy.section2_title": "2. Informações que NÃO coletamos",
+  "privacy.no_email": "Não coletamos e-mail, telefone, CPF ou qualquer documento pessoal.",
+  "privacy.no_location": "Não coletamos dados de localização.",
+  "privacy.no_contacts": "Não coletamos dados de contatos ou agenda.",
+  "privacy.no_tracking": "Não utilizamos cookies de rastreamento de terceiros.",
+  "privacy.no_ads": "Não compartilhamos dados com redes de publicidade.",
+
+  "privacy.section3_title": "3. Como usamos os dados",
+  "privacy.section3_intro": "Os dados coletados são usados exclusivamente para:",
+  "privacy.use_matches": "Gerenciar partidas e torneios de dominó em tempo real.",
+  "privacy.use_scores": "Calcular e exibir pontuações e rankings.",
+  "privacy.use_push": "Enviar notificações push sobre eventos da partida (início, rodadas, resultados).",
+  "privacy.use_stats": "Manter estatísticas globais anônimas (vitórias, derrotas, recordes).",
+
+  "privacy.section4_title": "4. Armazenamento e segurança",
+  "privacy.section4_text": "Os dados da partida são armazenados em servidores seguros e transmitidos por conexões criptografadas (HTTPS). Dados locais (nome, identificador, histórico de partidas) são salvos no armazenamento local do navegador ou dispositivo (localStorage) e podem ser apagados pelo próprio usuário a qualquer momento.",
+
+  "privacy.section5_title": "5. Compartilhamento de dados",
+  "privacy.section5_intro": "Não vendemos, alugamos ou compartilhamos seus dados pessoais com terceiros. Os únicos serviços de terceiros utilizados são:",
+  "privacy.share_fcm": "<strong>Firebase Cloud Messaging (Google)</strong> — para entrega de notificações push.",
+
+  "privacy.section6_title": "6. Direitos do usuário",
+  "privacy.section6_intro": "Você pode, a qualquer momento:",
+  "privacy.right_clear": "Limpar seus dados locais apagando os dados do navegador ou app.",
+  "privacy.right_delete": "Solicitar a exclusão de seus dados do servidor entrando em contato conosco.",
+  "privacy.right_push": "Deixar de receber notificações push desativando-as nas configurações do dispositivo.",
+
+  "privacy.section7_title": "7. Público-alvo",
+  "privacy.section7_text": "O Dominó Placar não é direcionado a crianças menores de 13 anos. Não coletamos intencionalmente dados de menores de 13 anos.",
+
+  "privacy.section8_title": "8. Alterações nesta política",
+  "privacy.section8_text": "Esta Política de Privacidade pode ser atualizada periodicamente. Quaisquer alterações serão publicadas nesta página com a data de atualização revisada.",
+
+  "privacy.section9_title": "9. Contato",
+  "privacy.section9_text": "Em caso de dúvidas sobre esta Política de Privacidade, entre em contato pelo e-mail: <strong>contato@dominoplacar.net</strong>",
+
+  "privacy.back_home": "← Voltar ao início"
 }

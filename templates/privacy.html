@@ -1,0 +1,67 @@
+{{template "base" .}}
+
+{{define "title"}}{{T .Lang "privacy.title"}}{{end}}
+
+{{define "content"}}
+<div class="card" style="max-width:720px; margin:0 auto; line-height:1.7;">
+  <h1 style="font-size:1.5rem; margin-bottom:0.5rem;">{{T .Lang "privacy.heading"}}</h1>
+  <p style="color:var(--muted); font-size:0.85rem; margin-bottom:1.5rem;">{{T .Lang "privacy.last_updated"}}</p>
+
+  <h2 style="font-size:1.1rem; margin-top:1.5rem;">{{T .Lang "privacy.section1_title"}}</h2>
+  <p>{{TH .Lang "privacy.section1_intro"}}</p>
+  <ul style="padding-left:1.2rem; margin:0.5rem 0;">
+    <li>{{TH .Lang "privacy.collect_name"}}</li>
+    <li>{{TH .Lang "privacy.collect_uid"}}</li>
+    <li>{{TH .Lang "privacy.collect_images"}}</li>
+    <li>{{TH .Lang "privacy.collect_fcm"}}</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin-top:1.5rem;">{{T .Lang "privacy.section2_title"}}</h2>
+  <ul style="padding-left:1.2rem; margin:0.5rem 0;">
+    <li>{{T .Lang "privacy.no_email"}}</li>
+    <li>{{T .Lang "privacy.no_location"}}</li>
+    <li>{{T .Lang "privacy.no_contacts"}}</li>
+    <li>{{T .Lang "privacy.no_tracking"}}</li>
+    <li>{{T .Lang "privacy.no_ads"}}</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin-top:1.5rem;">{{T .Lang "privacy.section3_title"}}</h2>
+  <p>{{T .Lang "privacy.section3_intro"}}</p>
+  <ul style="padding-left:1.2rem; margin:0.5rem 0;">
+    <li>{{T .Lang "privacy.use_matches"}}</li>
+    <li>{{T .Lang "privacy.use_scores"}}</li>
+    <li>{{T .Lang "privacy.use_push"}}</li>
+    <li>{{T .Lang "privacy.use_stats"}}</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin-top:1.5rem;">{{T .Lang "privacy.section4_title"}}</h2>
+  <p>{{T .Lang "privacy.section4_text"}}</p>
+
+  <h2 style="font-size:1.1rem; margin-top:1.5rem;">{{T .Lang "privacy.section5_title"}}</h2>
+  <p>{{T .Lang "privacy.section5_intro"}}</p>
+  <ul style="padding-left:1.2rem; margin:0.5rem 0;">
+    <li>{{TH .Lang "privacy.share_fcm"}}</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin-top:1.5rem;">{{T .Lang "privacy.section6_title"}}</h2>
+  <p>{{T .Lang "privacy.section6_intro"}}</p>
+  <ul style="padding-left:1.2rem; margin:0.5rem 0;">
+    <li>{{T .Lang "privacy.right_clear"}}</li>
+    <li>{{T .Lang "privacy.right_delete"}}</li>
+    <li>{{T .Lang "privacy.right_push"}}</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin-top:1.5rem;">{{T .Lang "privacy.section7_title"}}</h2>
+  <p>{{T .Lang "privacy.section7_text"}}</p>
+
+  <h2 style="font-size:1.1rem; margin-top:1.5rem;">{{T .Lang "privacy.section8_title"}}</h2>
+  <p>{{T .Lang "privacy.section8_text"}}</p>
+
+  <h2 style="font-size:1.1rem; margin-top:1.5rem;">{{T .Lang "privacy.section9_title"}}</h2>
+  <p>{{TH .Lang "privacy.section9_text"}}</p>
+
+  <div style="margin-top:2rem; padding-top:1rem; border-top:1px solid var(--border); text-align:center;">
+    <a href="/" class="btn btn-ghost btn-sm">{{T .Lang "privacy.back_home"}}</a>
+  </div>
+</div>
+{{end}}
