@@ -38,7 +38,7 @@ jobs:
       security-events: write
     strategy:
       matrix:
-        language: [go, java]
+        language: [go, java, javascript-typescript]
     steps:
       - uses: actions/checkout@v4
 
