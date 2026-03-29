@@ -182,7 +182,7 @@ func DataDeletionSubmitHandler() http.HandlerFunc {
 		// Best effort local persistence for non-cloud environments.
 		if err := os.MkdirAll("uploads", 0750); err == nil {
 			if f, err := os.OpenFile("uploads/data-deletion-requests.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0640); err == nil {
-				_, _ = f.WriteString(fmt.Sprintf("%s\tip=%s\tname=%s\temail=%s\tunique_id=%s\tdetails=%s\n", requestTime, client, name, email, uniqueID, strings.ReplaceAll(details, "\n", " ")))
+				_, _ = fmt.Fprintf(f, "%s\tip=%s\tname=%s\temail=%s\tunique_id=%s\tdetails=%s\n", requestTime, client, name, email, uniqueID, strings.ReplaceAll(details, "\n", " "))
 				_ = f.Close()
 			}
 		}

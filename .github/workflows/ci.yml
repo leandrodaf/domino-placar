@@ -52,11 +52,11 @@ jobs:
           }
           EOF
 
-      - name: Build with Gradle
-        run: ./gradlew build
+      - name: Build debug APK
+        run: ./gradlew assembleDebug
 
       - name: Run Unit Tests
-        run: ./gradlew test
+        run: ./gradlew testDebugUnitTest
 
       - name: Run Android Lint
         run: ./gradlew lintDebug

@@ -1,6 +1,8 @@
 # 🁣 Dominó Placar
 
 [![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white)](https://go.dev)
+[![CI](https://github.com/leandrodaf/domino-placar/actions/workflows/ci.yml/badge.svg)](https://github.com/leandrodaf/domino-placar/actions/workflows/ci.yml)
+[![Security](https://github.com/leandrodaf/domino-placar/actions/workflows/security.yml/badge.svg)](https://github.com/leandrodaf/domino-placar/actions/workflows/security.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Deploy](https://img.shields.io/badge/Cloud%20Run-deployed-4285F4?logo=googlecloud&logoColor=white)](#deploy-on-google-cloud-cloud-run)
 [![Play Now](https://img.shields.io/badge/Play%20Now-dominoplacar.net-ff6f00?style=for-the-badge)](https://dominoplacar.net)
@@ -33,10 +35,13 @@
 - **QR Code** — host shares a QR code so players can join the room
 - **Tile detection via photo** — snap a picture of remaining tiles and the system auto-detects them (via Roboflow)
 - **Multi-table tournaments** — tournament support with automatic table allocation
+- **Turmas (groups)** — create private groups with invite codes, shared rankings, and one-tap match creation
+- **Android app** — native wrapper with push notifications (FCM), splash screen, and deep links
 - **Mobile-first** — designed for phones, premium dark theme
 - **Zero install** — works right in the browser, no app needed
-- **Hall of Fame** — persistent global ranking across matches
-- **Nicknames** — nickname system with player voting
+- **Hall of Fame** — persistent global ranking across matches with fun stats (bust records, close calls, etc.)
+- **Nicknames** — nickname nomination system with player voting
+- **Push notifications** — Firebase Cloud Messaging keeps background players updated
 - **i18n** — Portuguese and English, auto-detected from the browser
 - **Dual storage** — SQLite for local dev, Firebase Realtime Database for production
 
@@ -45,6 +50,8 @@
 ## What is it
 
 **Dominó Placar** is a web app designed to be opened on your phone during a domino game. The host creates a room, shares the QR code, and each player joins with their name. When the round ends, each player photographs their remaining tiles (or enters points manually) and the scoreboard updates in real time for everyone.
+
+You can play **casual matches**, organize **multi-table tournaments**, or create a **turma** (private group) with friends for ongoing play with shared rankings.
 
 ---
 
@@ -74,6 +81,31 @@ Be the last player standing. Anyone who accumulates **more than 51 total points*
 | 10      | 3                | 25        | Double-9 |
 
 > **Double-6** = 28 tiles · **Double-9** = 55 tiles
+
+---
+
+## Architecture
+
+```
+┌──────────────┐     SSE / HTMX      ┌──────────────────┐
+│  Browser /   │◄────────────────────►│   Go HTTP Server  │
+│  Android App │   push (FCM)         │   (net/http)      │
+└──────────────┘                      └────────┬─────────┘
+                                               │
+                                    ┌──────────┼──────────┐
+                                    │          │          │
+                              ┌─────▼───┐ ┌───▼────┐ ┌──▼───────┐
+                              │ SQLite  │ │Firebase│ │ Roboflow │
+                              │ (local) │ │  RTDB  │ │ (vision) │
+                              └─────────┘ └────────┘ └──────────┘
+```
+
+- **Backend**: Go 1.26, standard `net/http` router, `html/template`
+- **Frontend**: Vanilla JS + HTMX, no build step
+- **Real-time**: SSE (Server-Sent Events) + FCM push
+- **Database**: SQLite (WAL mode) locally, Firebase RTDB in production
+- **Computer vision**: Roboflow API for automatic tile recognition
+- **Storage**: Local `uploads/` or Google Cloud Storage
 
 ---
 
@@ -162,6 +194,26 @@ Then open `http://<YOUR-IP>:8080` in your phone's browser. Invite links and QR c
 
 ---
 
+## Android app
+
+The `android/` directory contains a native Android wrapper (WebView) that adds:
+
+- **Push notifications** via Firebase Cloud Messaging
+- **Splash screen** with the app icon
+- **Deep links** — `dominoplacar.net` URLs open directly in the app
+- **Pull-to-refresh** on all pages
+
+Build the debug APK:
+
+```bash
+cd android
+./gradlew assembleDebug
+```
+
+> The release build requires a signing keystore configured in `keystore.properties` (not committed to the repo).
+
+---
+
 ## Deploy on Google Cloud (Cloud Run)
 
 ### 1. Set up Firebase
@@ -198,6 +250,33 @@ gcloud run deploy domino-placar \
   --allow-unauthenticated \
   --set-env-vars "SESSION_SECRET=your-secret-key,FIREBASE_DATABASE_URL=https://YOUR-PROJECT-default-rtdb.firebaseio.com,GCS_BUCKET=domino-placar-photos,TRUST_PROXY=true"
 ```
+
+---
+
+## Project structure
+
+```
+├── main.go                  # HTTP server, routes, middleware
+├── internal/
+│   ├── db/                  # Database layer (SQLite + Firebase stores)
+│   ├── handler/             # HTTP handlers (match, round, tournament, turma, etc.)
+│   ├── i18n/                # Internationalization (pt.json, en.json)
+│   ├── models/              # Data models
+│   └── service/             # Image processing, QR codes, Cloud Storage
+├── templates/               # Go html/template files
+├── static/                  # CSS, tile images
+├── android/                 # Native Android app (WebView + FCM)
+├── scripts/                 # Utility scripts (screenshots, icons, seeding)
+├── play-store/              # Play Store listing assets
+├── Dockerfile               # Production Docker image
+└── .github/workflows/       # CI, security scanning, releases
+```
+
+---
+
+## License
+
+[MIT](LICENSE)
 
 > On Cloud Run, GCP credentials are automatic via ADC — no need for `FIREBASE_CREDENTIALS` or `GCS_CREDENTIALS`.
 
