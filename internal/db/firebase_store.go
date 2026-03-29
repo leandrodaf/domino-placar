@@ -1231,13 +1231,13 @@ func (s *FirebaseStore) RemoveTurmaMember(turmaID, uniqueID string) error {
 		return err
 	}
 	ctx := context.Background()
-	if err := s.ref("turma_members/"+member.ID).Delete(ctx); err != nil {
+	if err := s.ref("turma_members/" + member.ID).Delete(ctx); err != nil {
 		return err
 	}
-	if err := s.ref("idx_turma_members/"+turmaID+"/"+member.ID).Delete(ctx); err != nil {
+	if err := s.ref("idx_turma_members/" + turmaID + "/" + member.ID).Delete(ctx); err != nil {
 		return err
 	}
-	return s.ref("idx_member_turmas/"+safeKey(uniqueID)+"/"+turmaID).Delete(ctx)
+	return s.ref("idx_member_turmas/" + safeKey(uniqueID) + "/" + turmaID).Delete(ctx)
 }
 
 func (s *FirebaseStore) IsTurmaMember(turmaID, uniqueID string) (bool, error) {

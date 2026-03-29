@@ -23,6 +23,13 @@
 </div>
 {{end}}
 
+{{if .TurmaID}}
+<div class="alert alert-info" style="margin-bottom:12px; padding:8px 12px; font-size:0.88rem;">
+  👥 {{T .Lang "turma.match_badge"}} —
+  <a href="/turma/{{.TurmaID}}/ranking" style="color:var(--accent);">{{T .Lang "turma.view_turma_ranking"}}</a>
+</div>
+{{end}}
+
 {{if eq .Match.Status "finished"}}
 <div id="winner-banner" style="border-radius:16px; padding:20px 18px; margin-bottom:16px; background:linear-gradient(135deg, rgba(245,197,24,0.12), rgba(245,197,24,0.04)); border:2px solid rgba(245,197,24,0.4); text-align:center;">
   <div style="font-size:3rem; line-height:1; margin-bottom:8px;">🐂</div>

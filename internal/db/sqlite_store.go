@@ -220,3 +220,53 @@ func (s *SQLiteStore) GetTopNicknameForPlayer(uniqueID string) string {
 func (s *SQLiteStore) GetAllTimeNicknames() ([]models.NicknameNomination, error) {
 	return GetAllTimeNicknames(s.db)
 }
+
+// ─── Turma ──────────────────────────────────────────────────────────────────
+
+func (s *SQLiteStore) CreateTurma(turma *models.Turma) error {
+	return CreateTurma(s.db, turma)
+}
+
+func (s *SQLiteStore) GetTurma(id string) (*models.Turma, error) {
+	return GetTurma(s.db, id)
+}
+
+func (s *SQLiteStore) GetTurmaByInviteCode(code string) (*models.Turma, error) {
+	return GetTurmaByInviteCode(s.db, code)
+}
+
+func (s *SQLiteStore) AddTurmaMember(member *models.TurmaMember) error {
+	return AddTurmaMember(s.db, member)
+}
+
+func (s *SQLiteStore) GetTurmaMembers(turmaID string) ([]models.TurmaMember, error) {
+	return GetTurmaMembers(s.db, turmaID)
+}
+
+func (s *SQLiteStore) GetTurmaMember(turmaID, uniqueID string) (*models.TurmaMember, error) {
+	return GetTurmaMember(s.db, turmaID, uniqueID)
+}
+
+func (s *SQLiteStore) RemoveTurmaMember(turmaID, uniqueID string) error {
+	return RemoveTurmaMember(s.db, turmaID, uniqueID)
+}
+
+func (s *SQLiteStore) IsTurmaMember(turmaID, uniqueID string) (bool, error) {
+	return IsTurmaMember(s.db, turmaID, uniqueID)
+}
+
+func (s *SQLiteStore) GetTurmasByMember(uniqueID string) ([]models.Turma, error) {
+	return GetTurmasByMember(s.db, uniqueID)
+}
+
+func (s *SQLiteStore) GetTurmaMatches(turmaID string) ([]models.Match, error) {
+	return GetTurmaMatches(s.db, turmaID)
+}
+
+func (s *SQLiteStore) GetTurmaRanking(turmaID string) ([]models.TurmaRankEntry, error) {
+	return GetTurmaRanking(s.db, turmaID)
+}
+
+func (s *SQLiteStore) CreateMatchInTurma(id, baseURL, turmaID string) error {
+	return CreateMatchInTurma(s.db, id, baseURL, turmaID)
+}

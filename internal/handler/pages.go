@@ -248,6 +248,8 @@ func JoinPageHandler(database db.Store, tmpl *Templates) http.HandlerFunc {
 			errMsg = "This match is full (maximum 10 players)."
 		case "name_taken":
 			errMsg = "This name is already taken by another player. Choose a different name."
+		case "turma_only":
+			errMsg = "This match is restricted to turma members. Join the turma first."
 		}
 
 		tmpl.Render(w, r, "join.html", map[string]any{"Match": match, "Error": errMsg})

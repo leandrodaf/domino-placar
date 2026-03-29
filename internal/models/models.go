@@ -7,6 +7,7 @@ type Match struct {
 	Status         string    `db:"status"`
 	BaseURL        string    `db:"base_url"`
 	WinnerPlayerID string    `db:"winner_player_id"`
+	TurmaID        string    `db:"turma_id"`
 	CreatedAt      time.Time `db:"created_at"`
 }
 
@@ -119,4 +120,37 @@ type TournamentRankEntry struct {
 	MatchID          string
 	Score            int
 	Status           string // active, estourou
+}
+
+// Turma represents a persistent group of players (family, friends, league).
+type Turma struct {
+	ID                string    `db:"id"`
+	Name              string    `db:"name"`
+	Description       string    `db:"description"`
+	InviteCode        string    `db:"invite_code"`
+	IsPrivate         bool      `db:"is_private"`
+	CreatedByUniqueID string    `db:"created_by_unique_id"`
+	BaseURL           string    `db:"base_url"`
+	CreatedAt         time.Time `db:"created_at"`
+}
+
+// TurmaMember represents a member of a Turma.
+type TurmaMember struct {
+	ID               string    `db:"id"`
+	TurmaID          string    `db:"turma_id"`
+	UniqueIdentifier string    `db:"unique_identifier"`
+	Name             string    `db:"name"`
+	Role             string    `db:"role"` // admin, member
+	JoinedAt         time.Time `db:"joined_at"`
+}
+
+// TurmaRankEntry aggregates a player's stats within a Turma.
+type TurmaRankEntry struct {
+	UniqueIdentifier string
+	Name             string
+	MatchesPlayed    int
+	MatchesWon       int
+	TotalScore       int
+	BustCount        int
+	TotalRoundWins   int
 }

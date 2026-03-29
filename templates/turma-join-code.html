@@ -1,0 +1,39 @@
+{{template "base" .}}
+
+{{define "title"}}{{T .Lang "turma.join_code_title"}}{{end}}
+
+{{define "content"}}
+<div style="text-align:center; padding:24px 0 20px;">
+  <div style="display:inline-flex; align-items:center; justify-content:center;
+       width:56px; height:56px; background:var(--accent); border-radius:14px;
+       font-size:1.8rem; box-shadow:0 0 20px var(--accent-glow); margin-bottom:16px;">
+    🔑
+  </div>
+  <h1 style="margin-bottom:6px;">{{T .Lang "turma.join_code_heading"}}</h1>
+  <p style="color:var(--text-2); font-size:0.9rem;">{{T .Lang "turma.join_code_subtitle"}}</p>
+</div>
+
+{{if .NotFound}}
+<div class="alert alert-danger" style="margin-bottom:16px;">⚠️ {{T .Lang "turma.code_not_found"}}</div>
+{{end}}
+
+<div class="card">
+  <form method="GET" action="/turma/join">
+    <div class="form-group" style="margin-bottom:20px;">
+      <label for="code">{{T .Lang "turma.code_label"}}</label>
+      <input type="text" id="code" name="code"
+             value="{{.Code}}"
+             placeholder="{{T .Lang "turma.code_placeholder"}}"
+             required autocomplete="off" autofocus maxlength="10"
+             style="font-size:1.3rem; text-transform:uppercase; letter-spacing:0.15em; text-align:center;">
+    </div>
+    <button type="submit" class="btn btn-primary" style="font-size:1.05rem; min-height:52px;">
+      {{T .Lang "turma.code_submit"}}
+    </button>
+  </form>
+</div>
+
+<div style="text-align:center; margin-top:12px;">
+  <a href="/" class="btn btn-ghost" style="font-size:0.88rem;">← {{T .Lang "global.back_home"}}</a>
+</div>
+{{end}}

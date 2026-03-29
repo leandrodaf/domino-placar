@@ -156,7 +156,7 @@ func main() {
 	mux.HandleFunc("POST /turma/{id}/join", handler.JoinTurmaHandler(store, hub))
 	mux.HandleFunc("GET /turma/{id}/ranking", handler.TurmaRankingHandler(store, tmpl))
 	mux.HandleFunc("GET /turma/{id}/qrcode", handler.TurmaQRCodeHandler(store))
-	mux.HandleFunc("POST /turma/{id}/match", handler.CreateMatchInTurmaHandler(store))
+	mux.HandleFunc("POST /turma/{id}/match", handler.CreateMatchInTurmaHandler(store, hub))
 	mux.HandleFunc("POST /turma/{id}/remove-member/{uid}", handler.RemoveTurmaMemberHandler(store, hub))
 	mux.HandleFunc("GET /turma/{id}/events", handler.SSEHandler(hub))
 

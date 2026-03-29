@@ -37,6 +37,22 @@
       </button>
     </form>
   </div>
+  <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:8px;">
+    <a href="/turma/new" class="btn btn-secondary" style="font-size:0.95rem; min-height:46px; min-width:180px; text-align:center; text-decoration:none;">
+      {{T .Lang "turma.create"}}
+    </a>
+    <a href="/turma/join" class="btn btn-ghost" style="font-size:0.95rem; min-height:46px; min-width:180px; text-align:center; text-decoration:none;">
+      {{T .Lang "turma.join_turma"}}
+    </a>
+  </div>
+</div>
+
+<!-- Minhas Turmas (localStorage) -->
+<div id="turmas-section" style="display:none;">
+  <div class="card" style="border-color:rgba(59,130,246,0.25); background:rgba(59,130,246,0.03); padding-bottom:8px;">
+    <div class="card-title" style="color:var(--blue);">{{T .Lang "turma.my_turmas"}}</div>
+    <div id="turmas-list"></div>
+  </div>
 </div>
 
 <!-- Partidas recentes (localStorage) -->
@@ -72,39 +88,7 @@
   </div>
 </div>
 
-<div class="card">
-  <div class="card-title">{{T .Lang "home.how_to_play"}}</div>
-  <ol style="padding-left: 20px; line-height: 2.2; color: var(--text-2);">
-    <li>{{T .Lang "home.step1"}}</li>
-    <li>{{T .Lang "home.step2"}}</li>
-    <li>{{T .Lang "home.step3"}}</li>
-    <li>{{T .Lang "home.step4"}}</li>
-    <li>{{T .Lang "home.step5"}}</li>
-    <li>{{T .Lang "home.step6_prefix"}} <strong style="color:var(--accent);">{{T .Lang "home.step6_limit"}}</strong> {{T .Lang "home.step6_suffix"}}</li>
-  </ol>
-</div>
 
-<div class="card">
-  <div class="card-title">{{T .Lang "home.quick_rules"}}</div>
-  <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-    <div style="background:var(--green-dim); border:1px solid rgba(34,197,94,0.3); border-radius:10px; padding:12px; text-align:center;">
-      <div style="font-family:'Rajdhani',sans-serif; font-size:1.8rem; font-weight:700; color:var(--green);">0</div>
-      <div style="font-size:0.78rem; color:var(--text-2);">{{T .Lang "home.rule_winner"}}</div>
-    </div>
-    <div style="background:var(--red-dim); border:1px solid rgba(239,68,68,0.3); border-radius:10px; padding:12px; text-align:center;">
-      <div style="font-family:'Rajdhani',sans-serif; font-size:1.8rem; font-weight:700; color:var(--red);">51+</div>
-      <div style="font-size:0.78rem; color:var(--text-2);">{{T .Lang "home.rule_bust"}}</div>
-    </div>
-    <div style="background:var(--gold-dim); border:1px solid rgba(245,197,24,0.3); border-radius:10px; padding:12px; text-align:center;">
-      <div style="font-family:'Rajdhani',sans-serif; font-size:1.8rem; font-weight:700; color:var(--gold);">12</div>
-      <div style="font-size:0.78rem; color:var(--text-2);">{{T .Lang "home.rule_white"}}</div>
-    </div>
-    <div style="background:var(--blue-dim); border:1px solid rgba(59,130,246,0.3); border-radius:10px; padding:12px; text-align:center;">
-      <div style="font-family:'Rajdhani',sans-serif; font-size:1.8rem; font-weight:700; color:var(--blue);">2-10</div>
-      <div style="font-size:0.78rem; color:var(--text-2);">{{T .Lang "home.rule_players"}}</div>
-    </div>
-  </div>
-</div>
 
 <script>
 if (new URLSearchParams(window.location.search).get('msg') === 'cancelled') {
@@ -195,5 +179,36 @@ function recoverMatch2() {
   var id = document.getElementById('recover-id-2').value.trim();
   if (id) window.location.href = '/match/' + id;
 }
+
+// Turmas — carrega via API se o user tem unique_id
+(function() {
+  var user;
+  try { user = JSON.parse(localStorage.getItem('domino_user') || '{}'); } catch(e) { user = {}; }
+  var uid = user.unique_id || '';
+  if (!uid) return;
+
+  fetch('/turma/my?unique_id=' + encodeURIComponent(uid))
+    .then(function(r) { return r.json(); })
+    .then(function(turmas) {
+      if (!turmas || turmas.length === 0) return;
+      var section = document.getElementById('turmas-section');
+      var list = document.getElementById('turmas-list');
+      var html = '';
+      turmas.forEach(function(t) {
+        html += '<a href="/turma/' + t.id + '" style="display:flex; align-items:center; justify-content:space-between; gap:10px;' +
+          ' padding:10px 12px; border-radius:10px; background:rgba(255,255,255,0.04); border:1px solid var(--border);' +
+          ' text-decoration:none; color:var(--text-1); margin-bottom:6px;">' +
+          '<div style="min-width:0; flex:1;">' +
+            '<div style="font-weight:600;">' + t.name + '</div>' +
+            '<div style="font-size:0.75rem; color:var(--muted); margin-top:2px;">{{T .Lang "turma.invite_code"}}: ' + t.invite_code + '</div>' +
+          '</div>' +
+          '<span style="font-size:0.75rem; color:var(--muted);">→</span>' +
+        '</a>';
+      });
+      list.innerHTML = html;
+      section.style.display = 'block';
+    })
+    .catch(function() {});
+})();
 </script>
 {{end}}

@@ -1,0 +1,190 @@
+{{template "base" .}}
+
+{{define "title"}}{{T .Lang "turma.dashboard_title"}}{{end}}
+
+{{define "content"}}
+<div class="flex items-center justify-between mb-16">
+  <h1 style="margin-bottom:0;">{{.Turma.Name}}</h1>
+  <span class="badge badge-active">{{T .Lang "turma.heading"}}</span>
+</div>
+
+{{if .Turma.Description}}
+<p style="color:var(--text-2); font-size:0.9rem; margin-bottom:16px;">{{.Turma.Description}}</p>
+{{end}}
+
+<!-- Convite -->
+<div class="card">
+  <div class="card-title">{{T .Lang "turma.invite_title"}}</div>
+  <div class="qr-container">
+    <img src="/turma/{{.Turma.ID}}/qrcode" alt="QR Code">
+    <p class="qr-url">{{.Turma.BaseURL}}/turma/{{.Turma.ID}}/join</p>
+  </div>
+  <div style="background:rgba(245,197,24,0.08); border:1px solid rgba(245,197,24,0.3); border-radius:10px; padding:12px; margin:12px 0; text-align:center;">
+    <div style="font-size:0.78rem; color:var(--muted); margin-bottom:4px;">{{T .Lang "turma.invite_code"}}</div>
+    <div id="invite-code" style="font-family:'Rajdhani',sans-serif; font-size:2rem; font-weight:700; color:var(--gold); letter-spacing:0.15em;">
+      {{.Turma.InviteCode}}
+    </div>
+  </div>
+  <div style="display:flex; gap:8px; flex-wrap:wrap;">
+    <button onclick="copyCode()" class="btn btn-secondary" style="flex:1; min-width:130px; min-height:44px;">
+      {{T .Lang "turma.copy_code"}}
+    </button>
+    <button onclick="shareLink()" class="btn btn-outline" style="flex:1; min-width:130px; min-height:44px;">
+      {{T .Lang "turma.share_link"}}
+    </button>
+  </div>
+</div>
+
+<!-- Nova Partida -->
+<div class="card" style="border-color:rgba(34,197,94,0.3); background:rgba(34,197,94,0.03);">
+  <form method="POST" action="/turma/{{.Turma.ID}}/match">
+    <input type="hidden" name="_csrf" value="{{.CSRFToken}}">
+    <input type="hidden" name="unique_id" id="turma-uid" value="">
+    <button type="submit" class="btn btn-success" style="font-size:1.05rem; min-height:52px; width:100%;">
+      {{T .Lang "turma.new_match"}}
+    </button>
+  </form>
+  <script>
+  (function() {
+    var u; try { u = JSON.parse(localStorage.getItem('domino_user') || '{}'); } catch(e) { u = {}; }
+    var el = document.getElementById('turma-uid');
+    if (el && u.unique_id) el.value = u.unique_id;
+  })();
+  </script>
+</div>
+
+<!-- Ranking resumido -->
+<div class="card">
+  <div class="card-title">{{T .Lang "turma.ranking_heading"}}</div>
+  {{if .Ranking}}
+  <ol class="ranking-list">
+    {{range $i, $r := .Ranking}}
+    <li class="ranking-item {{if eq $i 0}}rank-1{{end}}">
+      <div class="rank-number {{if eq $i 0}}gold{{end}}">
+        {{if eq $i 0}}👑{{else}}{{add $i 1}}{{end}}
+      </div>
+      <div class="rank-info">
+        <div class="rank-name">{{$r.Name}}</div>
+        <div style="margin-top:4px; font-size:0.8rem; color:var(--muted);">
+          {{$r.MatchesWon}}/{{$r.MatchesPlayed}} {{T $.Lang "turma.col_wins"}}
+        </div>
+      </div>
+      <div class="rank-score safe">
+        {{$r.TotalRoundWins}}
+        <span style="font-size:0.6rem; color:var(--muted);">{{T $.Lang "turma.col_rounds"}}</span>
+      </div>
+    </li>
+    {{end}}
+  </ol>
+  <div style="text-align:center; margin-top:12px;">
+    <a href="/turma/{{.Turma.ID}}/ranking" class="btn btn-ghost btn-sm">{{T .Lang "turma.view_turma_ranking"}}</a>
+  </div>
+  {{else}}
+  <div class="empty-state">
+    <span class="icon">🎲</span>
+    <p>{{T .Lang "turma.no_ranking"}}</p>
+  </div>
+  {{end}}
+</div>
+
+<!-- Membros -->
+<div class="card">
+  <div class="card-title">{{T .Lang "turma.members_title"}} ({{len .Members}})</div>
+  {{if .Members}}
+  <ul class="player-list">
+    {{range .Members}}
+    <li class="player-item" style="display:flex; align-items:center; justify-content:space-between;">
+      <div>
+        <span class="player-name">{{.Name}}</span>
+        {{if eq .Role "admin"}}
+        <span class="badge" style="background:rgba(245,197,24,0.2); color:var(--gold); border-color:rgba(245,197,24,0.4); margin-left:6px;">{{T $.Lang "turma.admin_badge"}}</span>
+        {{else}}
+        <span class="badge badge-active" style="margin-left:6px;">{{T $.Lang "turma.member_badge"}}</span>
+        {{end}}
+      </div>
+      {{if and $.IsHost (ne .Role "admin")}}
+      <form method="POST" action="/turma/{{$.Turma.ID}}/remove-member/{{.UniqueIdentifier}}" style="margin:0;"
+            onsubmit="return confirm('{{T $.Lang "turma.confirm_remove"}}');">
+        <input type="hidden" name="_csrf" value="{{$.CSRFToken}}">
+        <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--red); font-size:0.78rem; padding:4px 8px;">
+          {{T $.Lang "turma.remove_member"}}
+        </button>
+      </form>
+      {{end}}
+    </li>
+    {{end}}
+  </ul>
+  {{else}}
+  <div class="empty-state">
+    <span class="icon">👤</span>
+    <p>{{T .Lang "turma.no_members"}}</p>
+  </div>
+  {{end}}
+</div>
+
+<!-- Partidas recentes -->
+<div class="card">
+  <div class="card-title">{{T .Lang "turma.matches_title"}}</div>
+  {{if .Matches}}
+  <div style="display:flex; flex-direction:column; gap:6px;">
+    {{range .Matches}}
+    <a href="/match/{{.ID}}" style="display:flex; align-items:center; justify-content:space-between; gap:10px;
+       padding:10px 12px; border-radius:10px; background:rgba(255,255,255,0.04); border:1px solid var(--border);
+       text-decoration:none; color:var(--text-1);">
+      <div>
+        <span class="badge {{if eq .Status "active"}}badge-active{{else if eq .Status "finished"}}badge-estourou{{else}}badge-waiting{{end}}" style="font-size:0.72rem;">
+          {{.Status}}
+        </span>
+      </div>
+      <span style="font-size:0.75rem; color:var(--muted);">→</span>
+    </a>
+    {{end}}
+  </div>
+  {{else}}
+  <div class="empty-state">
+    <span class="icon">🎮</span>
+    <p>{{T .Lang "turma.no_matches"}}</p>
+  </div>
+  {{end}}
+</div>
+
+<div style="text-align:center; margin-top:12px;">
+  <a href="/" class="btn btn-ghost" style="font-size:0.88rem;">← {{T .Lang "global.back_home"}}</a>
+</div>
+
+<script>
+function copyCode() {
+  var code = document.getElementById('invite-code').textContent.trim();
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(code).then(function() {
+      alert('{{T .Lang "turma.code_copied"}}');
+    });
+  } else {
+    prompt('{{T .Lang "turma.invite_code"}}:', code);
+  }
+}
+function shareLink() {
+  var url = '{{.Turma.BaseURL}}/turma/{{.Turma.ID}}/join';
+  if (navigator.share) {
+    navigator.share({ title: '{{.Turma.Name}}', url: url });
+  } else if (navigator.clipboard) {
+    navigator.clipboard.writeText(url);
+  }
+}
+
+// SSE — real-time updates for dashboard
+(function() {
+  if (typeof EventSource === 'undefined') return;
+  var es = new EventSource('/turma/{{.Turma.ID}}/events');
+  es.onmessage = function(e) {
+    var msg = e.data;
+    if (msg === 'member_joined' || msg === 'member_removed' || msg === 'match_created') {
+      window.location.reload();
+    }
+  };
+  es.onerror = function() {
+    // Reconnect handled by browser automatically
+  };
+})();
+</script>
+{{end}}

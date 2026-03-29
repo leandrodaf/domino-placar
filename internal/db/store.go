@@ -69,4 +69,18 @@ type Store interface {
 	GetNominationsForPlayer(matchID, nominatedUID string) ([]models.NicknameNomination, error)
 	GetTopNicknameForPlayer(uniqueID string) string
 	GetAllTimeNicknames() ([]models.NicknameNomination, error)
+
+	// Turma
+	CreateTurma(turma *models.Turma) error
+	GetTurma(id string) (*models.Turma, error)
+	GetTurmaByInviteCode(code string) (*models.Turma, error)
+	AddTurmaMember(member *models.TurmaMember) error
+	GetTurmaMembers(turmaID string) ([]models.TurmaMember, error)
+	GetTurmaMember(turmaID, uniqueID string) (*models.TurmaMember, error)
+	RemoveTurmaMember(turmaID, uniqueID string) error
+	IsTurmaMember(turmaID, uniqueID string) (bool, error)
+	GetTurmasByMember(uniqueID string) ([]models.Turma, error)
+	GetTurmaMatches(turmaID string) ([]models.Match, error)
+	GetTurmaRanking(turmaID string) ([]models.TurmaRankEntry, error)
+	CreateMatchInTurma(id, baseURL, turmaID string) error
 }

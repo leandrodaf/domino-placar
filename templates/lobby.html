@@ -9,6 +9,12 @@
   <span class="badge badge-waiting">{{T .Lang "lobby.badge_waiting"}}</span>
 </div>
 
+{{if .Turma}}
+<div class="alert alert-info" style="margin-bottom:12px; padding:8px 12px; font-size:0.88rem;">
+  👥 <strong>{{T .Lang "turma.match_badge"}}</strong> — <a href="/turma/{{.Turma.ID}}" style="color:var(--accent);">{{.Turma.Name}}</a>
+</div>
+{{end}}
+
 <!-- QR + Compartilhar -->
 <div class="card">
   <div class="card-title">{{T .Lang "lobby.invite_title"}}</div>
