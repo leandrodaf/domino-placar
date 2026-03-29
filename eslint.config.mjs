@@ -46,7 +46,6 @@ export default [
         FileReader: "readonly",
         Notification: "readonly",
         AbortController: "readonly",
-        dominoUser: "readonly",
       },
     },
     rules: {

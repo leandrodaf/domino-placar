@@ -40,6 +40,7 @@
   {{block "head-extra" .}}{{end}}
   {{if .CSRFToken}}<meta name="csrf-token" content="{{.CSRFToken}}">{{end}}
   <script>
+  /* exported dominoUser */
   // Lembra dados do jogador (nome + identificador) entre partidas
   var dominoUser = {
     key: 'domino_user',

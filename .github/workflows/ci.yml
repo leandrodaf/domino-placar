@@ -75,4 +75,4 @@ jobs:
         run: npm install eslint eslint-plugin-html --save-dev
 
       - name: Run ESLint on HTML/JS
-        run: npx eslint --max-warnings 50 "templates/**/*.html"
+        run: npx eslint --max-warnings 0 "templates/**/*.html"
