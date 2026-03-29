@@ -451,6 +451,32 @@
 
   "privacy.section9_title": "9. Contact",
   "privacy.section9_text": "If you have questions about this Privacy Policy, contact us at: <strong>contato@dominoplacar.net</strong>",
+  "privacy.data_deletion_link": "Request data deletion",
+
+  "deletion.title": "Data Deletion — Domino Score",
+  "deletion.heading": "Data Deletion Request",
+  "deletion.intro": "This official Domino Score page lets you request deletion of your data.",
+  "deletion.how_title": "How to request",
+  "deletion.step_1": "Fill in the form with your email or unique player identifier.",
+  "deletion.step_2": "Our team will locate the linked records and start deletion.",
+  "deletion.step_3": "You will receive confirmation through the contact provided, when applicable.",
+  "deletion.data_title": "What data is deleted and what may be retained",
+  "deletion.data_deleted": "<strong>Deleted on request:</strong> player name, unique identifier, match/round history, uploaded images, and linked push tokens.",
+  "deletion.data_retained": "<strong>May be temporarily retained:</strong> minimal technical logs for abuse prevention and platform security.",
+  "deletion.retention": "<strong>Timeline:</strong> requests are processed within up to 30 days; technical logs may be kept for up to 90 days and then removed.",
+  "deletion.success_title": "Request submitted",
+  "deletion.success_body": "We received your deletion request. If there is enough identifying data, we will process it within up to 30 days.",
+  "deletion.form_name": "Name (optional)",
+  "deletion.form_name_ph": "Your name in the app",
+  "deletion.form_email": "Email (recommended)",
+  "deletion.form_email_ph": "you@example.com",
+  "deletion.form_uid": "Unique player identifier (optional)",
+  "deletion.form_uid_ph": "ID used in the app",
+  "deletion.form_details": "Additional details (optional)",
+  "deletion.form_details_ph": "E.g.: match IDs, approximate date, group name",
+  "deletion.form_hint": "Provide at least email or unique identifier so we can locate your data.",
+  "deletion.form_submit": "Submit request",
+  "deletion.back_privacy": "← Back to Privacy Policy",
 
   "privacy.back_home": "← Back to home"
 }

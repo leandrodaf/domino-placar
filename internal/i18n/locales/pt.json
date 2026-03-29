@@ -451,6 +451,32 @@
 
   "privacy.section9_title": "9. Contato",
   "privacy.section9_text": "Em caso de dúvidas sobre esta Política de Privacidade, entre em contato pelo e-mail: <strong>contato@dominoplacar.net</strong>",
+  "privacy.data_deletion_link": "Solicitar exclusão de dados",
+
+  "deletion.title": "Exclusão de Dados — Dominó Placar",
+  "deletion.heading": "Solicitação de Exclusão de Dados",
+  "deletion.intro": "Esta página oficial do Dominó Placar permite solicitar a exclusão dos seus dados.",
+  "deletion.how_title": "Como solicitar",
+  "deletion.step_1": "Preencha o formulário com e-mail ou identificador único do jogador.",
+  "deletion.step_2": "Nossa equipe localiza os registros vinculados e inicia a remoção.",
+  "deletion.step_3": "Você recebe confirmação pelo contato informado, quando aplicável.",
+  "deletion.data_title": "Quais dados são excluídos e quais podem ser mantidos",
+  "deletion.data_deleted": "<strong>Excluídos sob solicitação:</strong> nome de jogador, identificador único, histórico de partidas/rodadas, imagens enviadas e tokens de push vinculados.",
+  "deletion.data_retained": "<strong>Podem ser mantidos temporariamente:</strong> logs técnicos mínimos para prevenção de abuso e segurança da plataforma.",
+  "deletion.retention": "<strong>Prazo:</strong> pedidos são processados em até 30 dias; logs técnicos podem ser mantidos por até 90 dias e então removidos.",
+  "deletion.success_title": "Solicitação enviada",
+  "deletion.success_body": "Recebemos seu pedido de exclusão. Se houver dados suficientes para identificação, processaremos em até 30 dias.",
+  "deletion.form_name": "Nome (opcional)",
+  "deletion.form_name_ph": "Seu nome no app",
+  "deletion.form_email": "E-mail (recomendado)",
+  "deletion.form_email_ph": "voce@exemplo.com",
+  "deletion.form_uid": "Identificador único do jogador (opcional)",
+  "deletion.form_uid_ph": "ID usado no app",
+  "deletion.form_details": "Detalhes adicionais (opcional)",
+  "deletion.form_details_ph": "Ex.: IDs de partida, data aproximada, nome da turma",
+  "deletion.form_hint": "Informe pelo menos e-mail ou identificador único para conseguirmos localizar seus dados.",
+  "deletion.form_submit": "Enviar solicitação",
+  "deletion.back_privacy": "← Voltar para Política de Privacidade",
 
   "privacy.back_home": "← Voltar ao início"
 }

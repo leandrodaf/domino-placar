@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/leandrodaf/domino-placar/internal/db"
 	"github.com/leandrodaf/domino-placar/internal/i18n"
@@ -138,6 +139,55 @@ func HomeHandler(tmpl *Templates) http.HandlerFunc {
 func PrivacyHandler(tmpl *Templates) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		tmpl.Render(w, r, "privacy.html", nil)
+	}
+}
+
+func DataDeletionPageHandler(tmpl *Templates) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		tmpl.Render(w, r, "data-deletion.html", map[string]any{
+			"CSRFToken": GenerateCSRFToken("data-deletion"),
+			"Submitted": r.URL.Query().Get("ok") == "1",
+		})
+	}
+}
+
+func DataDeletionSubmitHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !CheckActionRateLimit(r) {
+			http.Error(w, "too many requests", http.StatusTooManyRequests)
+			return
+		}
+
+		if !ValidateCSRFToken(r.FormValue("csrf"), "data-deletion") {
+			http.Error(w, "invalid security token", http.StatusBadRequest)
+			return
+		}
+
+		name := SanitizeInput(r.FormValue("name"), 120)
+		email := SanitizeInput(r.FormValue("email"), 180)
+		uniqueID := SanitizeInput(r.FormValue("unique_id"), 120)
+		details := SanitizeInput(r.FormValue("details"), 1000)
+
+		if email == "" && uniqueID == "" {
+			http.Redirect(w, r, "/data-deletion?ok=0", http.StatusSeeOther)
+			return
+		}
+
+		requestTime := time.Now().UTC().Format(time.RFC3339)
+		client := clientIP(r)
+
+		// Always log requests to server logs (Cloud Run logging) for traceability.
+		log.Printf("DATA_DELETION_REQUEST ts=%s ip=%s name=%q email=%q unique_id=%q details=%q", requestTime, client, name, email, uniqueID, details)
+
+		// Best effort local persistence for non-cloud environments.
+		if err := os.MkdirAll("uploads", 0750); err == nil {
+			if f, err := os.OpenFile("uploads/data-deletion-requests.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0640); err == nil {
+				_, _ = f.WriteString(fmt.Sprintf("%s\tip=%s\tname=%s\temail=%s\tunique_id=%s\tdetails=%s\n", requestTime, client, name, email, uniqueID, strings.ReplaceAll(details, "\n", " ")))
+				_ = f.Close()
+			}
+		}
+
+		http.Redirect(w, r, "/data-deletion?ok=1", http.StatusSeeOther)
 	}
 }
 

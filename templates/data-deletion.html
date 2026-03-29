@@ -1,0 +1,58 @@
+{{template "base" .}}
+
+{{define "title"}}{{T .Lang "deletion.title"}}{{end}}
+
+{{define "content"}}
+<div class="card" style="max-width:760px; margin:0 auto; line-height:1.7;">
+  <h1 style="font-size:1.5rem; margin-bottom:0.5rem;">{{T .Lang "deletion.heading"}}</h1>
+  <p style="color:var(--muted); margin-bottom:1rem;">{{T .Lang "deletion.intro"}}</p>
+
+  <div class="card" style="padding:12px; margin-bottom:14px; border-color:rgba(59,130,246,0.35); background:rgba(59,130,246,0.08);">
+    <div style="font-weight:700; margin-bottom:6px;">{{T .Lang "deletion.how_title"}}</div>
+    <ol style="margin:0; padding-left:1.2rem;">
+      <li>{{T .Lang "deletion.step_1"}}</li>
+      <li>{{T .Lang "deletion.step_2"}}</li>
+      <li>{{T .Lang "deletion.step_3"}}</li>
+    </ol>
+  </div>
+
+  <div class="card" style="padding:12px; margin-bottom:14px; border-color:rgba(245,197,24,0.35); background:rgba(245,197,24,0.08);">
+    <div style="font-weight:700; margin-bottom:6px;">{{T .Lang "deletion.data_title"}}</div>
+    <ul style="margin:0; padding-left:1.2rem;">
+      <li>{{TH .Lang "deletion.data_deleted"}}</li>
+      <li>{{TH .Lang "deletion.data_retained"}}</li>
+      <li>{{TH .Lang "deletion.retention"}}</li>
+    </ul>
+  </div>
+
+  {{if .Submitted}}
+  <div class="card" style="padding:12px; margin-bottom:14px; border-color:rgba(34,197,94,0.35); background:rgba(34,197,94,0.08);">
+    <strong>{{T .Lang "deletion.success_title"}}</strong>
+    <div>{{T .Lang "deletion.success_body"}}</div>
+  </div>
+  {{end}}
+
+  <form method="POST" action="/data-deletion" class="card" style="padding:14px;">
+    <input type="hidden" name="csrf" value="{{.CSRFToken}}">
+
+    <label for="name">{{T .Lang "deletion.form_name"}}</label>
+    <input id="name" name="name" maxlength="120" placeholder="{{T .Lang "deletion.form_name_ph"}}" style="margin-bottom:10px;">
+
+    <label for="email">{{T .Lang "deletion.form_email"}}</label>
+    <input id="email" name="email" type="email" maxlength="180" placeholder="{{T .Lang "deletion.form_email_ph"}}" style="margin-bottom:10px;">
+
+    <label for="unique_id">{{T .Lang "deletion.form_uid"}}</label>
+    <input id="unique_id" name="unique_id" maxlength="120" placeholder="{{T .Lang "deletion.form_uid_ph"}}" style="margin-bottom:10px;">
+
+    <label for="details">{{T .Lang "deletion.form_details"}}</label>
+    <textarea id="details" name="details" rows="4" maxlength="1000" placeholder="{{T .Lang "deletion.form_details_ph"}}" style="margin-bottom:12px;"></textarea>
+
+    <div style="font-size:0.82rem; color:var(--muted); margin-bottom:12px;">{{T .Lang "deletion.form_hint"}}</div>
+    <button type="submit" class="btn btn-primary">{{T .Lang "deletion.form_submit"}}</button>
+  </form>
+
+  <div style="margin-top:1rem; text-align:center;">
+    <a href="/privacy" class="btn btn-ghost btn-sm">{{T .Lang "deletion.back_privacy"}}</a>
+  </div>
+</div>
+{{end}}
