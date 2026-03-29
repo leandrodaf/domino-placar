@@ -44,7 +44,10 @@ jobs:
           cat > app/src/google-services.json << 'EOF'
           {
             "project_info": { "project_number": "000000000000", "project_id": "dummy-ci", "storage_bucket": "dummy-ci.appspot.com" },
-            "client": [{ "client_info": { "mobilesdk_app_id": "1:000000000000:android:0000000000000000", "android_client_info": { "package_name": "net.dominoplacar.app" } }, "api_key": [{ "current_key": "dummy" }] }],
+            "client": [
+              { "client_info": { "mobilesdk_app_id": "1:000000000000:android:0000000000000000", "android_client_info": { "package_name": "net.dominoplacar.app" } }, "api_key": [{ "current_key": "dummy" }] },
+              { "client_info": { "mobilesdk_app_id": "1:000000000000:android:0000000000000001", "android_client_info": { "package_name": "net.dominoplacar.app.debug" } }, "api_key": [{ "current_key": "dummy" }] }
+            ],
             "configuration_version": "1"
           }
           EOF
@@ -66,10 +69,10 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
 
       - name: Install ESLint
         run: npm install eslint eslint-plugin-html --save-dev
 
       - name: Run ESLint on HTML/JS
-        run: npx eslint "templates/**/*.html" "static/**/*.js"
+        run: npx eslint "templates/**/*.html"

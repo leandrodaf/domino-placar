@@ -88,29 +88,33 @@
 </div>
 
 <!-- Membros -->
-<div class="card">
+<div class="card" id="members-card">
   <div class="card-title">{{T .Lang "turma.members_title"}} ({{len .Members}})</div>
   {{if .Members}}
   <ul class="player-list">
     {{range .Members}}
-    <li class="player-item" style="display:flex; align-items:center; justify-content:space-between;">
-      <div>
+    <li class="player-item" style="display:flex; align-items:center; justify-content:space-between;" data-uid="{{.UniqueIdentifier}}">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span class="presence-dot" style="width:8px; height:8px; border-radius:50%; background:var(--muted); flex-shrink:0; transition:background 0.3s;"></span>
         <span class="player-name">{{.Name}}</span>
         {{if eq .Role "admin"}}
-        <span class="badge" style="background:rgba(245,197,24,0.2); color:var(--gold); border-color:rgba(245,197,24,0.4); margin-left:6px;">{{T $.Lang "turma.admin_badge"}}</span>
+        <span class="badge" style="background:rgba(245,197,24,0.2); color:var(--gold); border-color:rgba(245,197,24,0.4);">{{T $.Lang "turma.admin_badge"}}</span>
         {{else}}
-        <span class="badge badge-active" style="margin-left:6px;">{{T $.Lang "turma.member_badge"}}</span>
+        <span class="badge badge-active">{{T $.Lang "turma.member_badge"}}</span>
         {{end}}
       </div>
-      {{if and $.IsHost (ne .Role "admin")}}
-      <form method="POST" action="/turma/{{$.Turma.ID}}/remove-member/{{.UniqueIdentifier}}" style="margin:0;"
-            onsubmit="return confirm('{{T $.Lang "turma.confirm_remove"}}');">
-        <input type="hidden" name="_csrf" value="{{$.CSRFToken}}">
-        <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--red); font-size:0.78rem; padding:4px 8px;">
-          {{T $.Lang "turma.remove_member"}}
-        </button>
-      </form>
-      {{end}}
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span class="online-label" style="font-size:0.72rem; color:var(--muted);"></span>
+        {{if and $.IsHost (ne .Role "admin")}}
+        <form method="POST" action="/turma/{{$.Turma.ID}}/remove-member/{{.UniqueIdentifier}}" style="margin:0;"
+              onsubmit="return confirm('{{T $.Lang "turma.confirm_remove"}}');">
+          <input type="hidden" name="_csrf" value="{{$.CSRFToken}}">
+          <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--red); font-size:0.78rem; padding:4px 8px;">
+            {{T $.Lang "turma.remove_member"}}
+          </button>
+        </form>
+        {{end}}
+      </div>
     </li>
     {{end}}
   </ul>
@@ -172,19 +176,54 @@ function shareLink() {
   }
 }
 
-// SSE — real-time updates for dashboard
+// Presence + SSE — real-time updates for dashboard
 (function() {
+  var user;
+  try { user = JSON.parse(localStorage.getItem('domino_user') || '{}'); } catch(e) { user = {}; }
+  var myUid = user.unique_id || '';
+  var turmaID = '{{.Turma.ID}}';
+  var onlineText = '{{T .Lang "turma.online"}}';
+  var offlineText = '{{T .Lang "turma.offline"}}';
+
+  function updatePresence(onlineUids) {
+    var items = document.querySelectorAll('#members-card [data-uid]');
+    items.forEach(function(li) {
+      var uid = li.getAttribute('data-uid');
+      var dot = li.querySelector('.presence-dot');
+      var label = li.querySelector('.online-label');
+      var isOnline = onlineUids.indexOf(uid) !== -1;
+      if (dot) dot.style.background = isOnline ? 'var(--green)' : 'var(--muted)';
+      if (label) {
+        label.textContent = isOnline ? onlineText : offlineText;
+        label.style.color = isOnline ? 'var(--green)' : 'var(--muted)';
+      }
+    });
+  }
+
+  function fetchOnline() {
+    fetch('/turma/' + turmaID + '/online')
+      .then(function(r) { return r.json(); })
+      .then(function(uids) { updatePresence(uids || []); })
+      .catch(function() {});
+  }
+
+  // Initial presence fetch
+  fetchOnline();
+
+  // SSE with uid for presence tracking
   if (typeof EventSource === 'undefined') return;
-  var es = new EventSource('/turma/{{.Turma.ID}}/events');
-  es.onmessage = function(e) {
+  var url = '/turma/' + turmaID + '/events';
+  if (myUid) url += '?uid=' + encodeURIComponent(myUid);
+  var es = new EventSource(url);
+  es.addEventListener('update', function(e) {
     var msg = e.data;
-    if (msg === 'member_joined' || msg === 'member_removed' || msg === 'match_created') {
+    if (msg === 'presence_update') {
+      fetchOnline();
+    } else if (msg === 'member_joined' || msg === 'member_removed' || msg === 'match_created') {
       window.location.reload();
     }
-  };
-  es.onerror = function() {
-    // Reconnect handled by browser automatically
-  };
+  });
+  es.onerror = function() {};
 })();
 </script>
 {{end}}

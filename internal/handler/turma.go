@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/leandrodaf/domino-placar/internal/db"
 	"github.com/leandrodaf/domino-placar/internal/models"
@@ -428,5 +429,87 @@ func TurmasByMemberHandler(database db.Store) http.HandlerFunc {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(result)
+	}
+}
+
+// TurmaSSEHandler streams events to turma members with presence tracking.
+// Clients connect with ?uid=<unique_id> to register their online presence.
+func TurmaSSEHandler(hub *SSEHub) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		turmaID := r.PathValue("id")
+		if turmaID == "" {
+			http.Error(w, "missing turma id", http.StatusBadRequest)
+			return
+		}
+
+		uid := strings.TrimSpace(r.URL.Query().Get("uid"))
+
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "keep-alive")
+		w.Header().Set("X-Accel-Buffering", "no")
+
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			http.Error(w, "streaming not supported", http.StatusInternalServerError)
+			return
+		}
+
+		ch := hub.Subscribe(turmaID)
+		defer hub.Unsubscribe(turmaID, ch)
+
+		// Register presence
+		if uid != "" {
+			hub.PresenceJoin(turmaID, uid)
+			defer hub.PresenceLeave(turmaID, uid)
+			// Notify others that someone came online
+			hub.Broadcast(turmaID, "presence_update")
+		}
+
+		// Send initial ping
+		_, _ = fmt.Fprintf(w, "event: ping\ndata: connected\n\n")
+		flusher.Flush()
+
+		ctx := r.Context()
+		ticker := time.NewTicker(20 * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				// When client disconnects, broadcast presence update
+				if uid != "" {
+					// Defer already calls PresenceLeave; broadcast after a tiny delay
+					// so the leave is registered first.
+					go func() {
+						time.Sleep(100 * time.Millisecond)
+						hub.Broadcast(turmaID, "presence_update")
+					}()
+				}
+				return
+			case <-ticker.C:
+				_, _ = fmt.Fprintf(w, ": keep-alive\n\n")
+				flusher.Flush()
+			case event, ok := <-ch:
+				if !ok {
+					return
+				}
+				_, _ = fmt.Fprintf(w, "event: update\ndata: %s\n\n", event)
+				flusher.Flush()
+			}
+		}
+	}
+}
+
+// TurmaOnlineHandler serves GET /turma/{id}/online — returns list of online unique_ids.
+func TurmaOnlineHandler(hub *SSEHub) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		turmaID := r.PathValue("id")
+		uids := hub.OnlineUIDs(turmaID)
+		if uids == nil {
+			uids = []string{}
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(uids)
 	}
 }

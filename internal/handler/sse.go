@@ -10,14 +10,17 @@ import (
 
 // SSEHub manages Server-Sent Events subscribers per match.
 type SSEHub struct {
-	mu      sync.RWMutex
-	clients map[string][]chan string
-	push    *PushManager
+	mu       sync.RWMutex
+	clients  map[string][]chan string
+	push     *PushManager
+	// presence tracks online unique_ids per channel: channel -> uid -> connection count
+	presence map[string]map[string]int
 }
 
 func NewSSEHub() *SSEHub {
 	return &SSEHub{
-		clients: make(map[string][]chan string),
+		clients:  make(map[string][]chan string),
+		presence: make(map[string]map[string]int),
 	}
 }
 
@@ -76,6 +79,52 @@ func (h *SSEHub) Broadcast(matchID, event string) {
 	if h.push != nil {
 		h.push.NotifyMatch(matchID, event)
 	}
+}
+
+// PresenceJoin registers a unique_id as online for a channel.
+func (h *SSEHub) PresenceJoin(channel, uniqueID string) {
+	if uniqueID == "" {
+		return
+	}
+	h.mu.Lock()
+	if h.presence[channel] == nil {
+		h.presence[channel] = make(map[string]int)
+	}
+	h.presence[channel][uniqueID]++
+	h.mu.Unlock()
+}
+
+// PresenceLeave unregisters a unique_id from a channel.
+func (h *SSEHub) PresenceLeave(channel, uniqueID string) {
+	if uniqueID == "" {
+		return
+	}
+	h.mu.Lock()
+	if m := h.presence[channel]; m != nil {
+		m[uniqueID]--
+		if m[uniqueID] <= 0 {
+			delete(m, uniqueID)
+		}
+		if len(m) == 0 {
+			delete(h.presence, channel)
+		}
+	}
+	h.mu.Unlock()
+}
+
+// OnlineUIDs returns the set of unique_ids currently connected to a channel.
+func (h *SSEHub) OnlineUIDs(channel string) []string {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	m := h.presence[channel]
+	if len(m) == 0 {
+		return nil
+	}
+	uids := make([]string, 0, len(m))
+	for uid := range m {
+		uids = append(uids, uid)
+	}
+	return uids
 }
 
 // SSEHandler streams events to the client for a specific match.

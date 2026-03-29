@@ -365,6 +365,8 @@
   "turma.share_link": "🔗 Compartilhar Link",
   "turma.members_title": "👥 Membros",
   "turma.members_count": "membros",
+  "turma.online": "online",
+  "turma.offline": "offline",
   "turma.admin_badge": "Admin",
   "turma.member_badge": "Membro",
   "turma.remove_member": "Remover",

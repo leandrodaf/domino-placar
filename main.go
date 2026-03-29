@@ -158,7 +158,8 @@ func main() {
 	mux.HandleFunc("GET /turma/{id}/qrcode", handler.TurmaQRCodeHandler(store))
 	mux.HandleFunc("POST /turma/{id}/match", handler.CreateMatchInTurmaHandler(store, hub))
 	mux.HandleFunc("POST /turma/{id}/remove-member/{uid}", handler.RemoveTurmaMemberHandler(store, hub))
-	mux.HandleFunc("GET /turma/{id}/events", handler.SSEHandler(hub))
+	mux.HandleFunc("GET /turma/{id}/events", handler.TurmaSSEHandler(hub))
+	mux.HandleFunc("GET /turma/{id}/online", handler.TurmaOnlineHandler(hub))
 
 	// Tournament
 	mux.HandleFunc("POST /tournament", handler.CreateTournamentHandler(store))
