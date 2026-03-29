@@ -8,10 +8,11 @@ import (
 	"time"
 
 	firebase "firebase.google.com/go/v4"
+	"google.golang.org/api/option"
+
 	"github.com/leandrodaf/domino-placar/internal/db"
 	"github.com/leandrodaf/domino-placar/internal/handler"
 	"github.com/leandrodaf/domino-placar/internal/i18n"
-	"google.golang.org/api/option"
 )
 
 func main() {
@@ -81,7 +82,7 @@ func main() {
 	// Gere com: keytool -list -v -keystore release.jks -alias key0 | grep SHA256
 	mux.HandleFunc("GET /.well-known/assetlinks.json", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`[{
+		_, _ = w.Write([]byte(`[{
   "relation": ["delegate_permission/common.handle_all_urls"],
   "target": {
     "namespace": "android_app",
