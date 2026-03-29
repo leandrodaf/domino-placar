@@ -1,0 +1,1 @@
+Domino score tracker. Create matches, invite friends via QR Code and track scores in real time!

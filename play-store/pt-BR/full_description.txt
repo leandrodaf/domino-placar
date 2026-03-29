@@ -1,0 +1,32 @@
+Dominó Placar é o marcador de pontos definitivo para suas partidas de dominó!
+
+🎮 CRIE PARTIDAS INSTANTÂNEAS
+Crie uma partida com um toque e convide seus amigos escaneando o QR Code ou compartilhando o link pelo WhatsApp.
+
+📊 PLACAR EM TEMPO REAL
+Acompanhe a pontuação de todos os jogadores em tempo real. A mesa interativa mostra quem já jogou, quem ganhou a rodada e quem está na frente.
+
+🏆 TORNEIOS
+Organize torneios com múltiplas mesas. O sistema distribui os jogadores automaticamente e gera o ranking geral.
+
+👥 TURMAS
+Crie seu grupo de jogadores recorrentes. Acompanhe o ranking histórico da turma e organize partidas fácil.
+
+📸 CONTAGEM AUTOMÁTICA DE PEDRAS
+Tire uma foto das pedras na mão e o app conta os pontos automaticamente usando inteligência artificial.
+
+🐂 SISTEMA TRADICIONAL DO BOI
+Quem estourar (passar de 51 pontos) está fora. O último sobrevivente ganha o boi!
+
+✨ RECURSOS
+• Marcador de pontos intuitivo
+• Convite por QR Code e link
+• Placar em tempo real via SSE
+• Torneios com múltiplas mesas
+• Turmas com ranking histórico
+• Contagem automática com IA
+• Interface escura elegante
+• 100% gratuito, sem anúncios
+• Funciona em celular e tablet
+
+Dominó Placar é feito por jogadores de dominó, para jogadores de dominó. Baixe agora e organize sua próxima partida!

@@ -1,0 +1,32 @@
+Domino Scorekeeper is the ultimate score tracker for your domino matches!
+
+🎮 INSTANT MATCH CREATION
+Create a match with one tap and invite friends by scanning a QR Code or sharing the link via WhatsApp.
+
+📊 REAL-TIME SCOREBOARD
+Track every player's score in real time. The interactive table shows who has played, who won the round, and who's in the lead.
+
+🏆 TOURNAMENTS
+Organize tournaments with multiple tables. The system distributes players automatically and generates the overall ranking.
+
+👥 GROUPS
+Create recurring player groups. Track your group's historical ranking and easily organize matches.
+
+📸 AUTOMATIC TILE COUNTING
+Take a photo of the tiles in your hand and the app counts the points automatically using artificial intelligence.
+
+🐂 TRADITIONAL "OX" SYSTEM
+If you bust (go over 51 points), you're out. The last player standing wins the ox!
+
+✨ FEATURES
+• Intuitive score tracker
+• QR Code and link invitations
+• Real-time scores via SSE
+• Multi-table tournaments
+• Groups with historical ranking
+• Automatic counting with AI
+• Elegant dark interface
+• 100% free, no ads
+• Works on phone and tablet
+
+Domino Scorekeeper is made by domino players, for domino players. Download now and organize your next match!

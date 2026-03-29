@@ -1,0 +1,1 @@
+Marcador de pontos para dominó. Crie partidas, convide amigos por QR Code e acompanhe o placar!
