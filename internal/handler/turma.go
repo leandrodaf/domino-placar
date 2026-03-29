@@ -353,7 +353,7 @@ func TurmaQRCodeHandler(database db.Store) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "image/png")
-		w.Write(png)
+		_, _ = w.Write(png)
 	}
 }
 
@@ -407,14 +407,14 @@ func TurmasByMemberHandler(database db.Store) http.HandlerFunc {
 		uniqueID := strings.TrimSpace(r.URL.Query().Get("unique_id"))
 		if uniqueID == "" {
 			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte("[]"))
+			_, _ = w.Write([]byte("[]"))
 			return
 		}
 
 		turmas, err := database.GetTurmasByMember(uniqueID)
 		if err != nil || len(turmas) == 0 {
 			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte("[]"))
+			_, _ = w.Write([]byte("[]"))
 			return
 		}
 
@@ -428,7 +428,7 @@ func TurmasByMemberHandler(database db.Store) http.HandlerFunc {
 			result[i] = turmaJSON{ID: t.ID, Name: t.Name, InviteCode: t.InviteCode}
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(result)
+		_ = json.NewEncoder(w).Encode(result)
 	}
 }
 
@@ -510,6 +510,6 @@ func TurmaOnlineHandler(hub *SSEHub) http.HandlerFunc {
 			uids = []string{}
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(uids)
+		_ = json.NewEncoder(w).Encode(uids)
 	}
 }

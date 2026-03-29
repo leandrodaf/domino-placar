@@ -52,3 +52,4 @@ android/app/google-services.json
 __pycache__/
 *.pyc
 /tmp/
+node_modules

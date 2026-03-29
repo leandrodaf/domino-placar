@@ -25,24 +25,30 @@
     {{T .Lang "home.hero_subtitle_2"}}
   </p>
 
-  <div class="hero-actions">
-    <form method="POST" action="/match" style="width:100%; max-width:260px;">
-      <button type="submit" class="btn btn-primary" style="font-size:1.05rem; min-height:54px;">
-        {{T .Lang "home.new_match"}}
+  <div class="action-grid">
+    <form method="POST" action="/match" class="action-card action-card--primary">
+      <button type="submit" class="action-card-btn">
+        <span class="action-card-icon">🎮</span>
+        <span class="action-card-label">{{T .Lang "home.new_match"}}</span>
+        <span class="action-card-desc">{{T .Lang "home.new_match_desc"}}</span>
       </button>
     </form>
-    <form method="POST" action="/tournament" style="width:100%; max-width:260px;">
-      <button type="submit" class="btn btn-tournament" style="font-size:1.05rem; min-height:54px;">
-        {{T .Lang "home.create_tournament"}}
+    <form method="POST" action="/tournament" class="action-card action-card--tournament">
+      <button type="submit" class="action-card-btn">
+        <span class="action-card-icon">🏆</span>
+        <span class="action-card-label">{{T .Lang "home.create_tournament"}}</span>
+        <span class="action-card-desc">{{T .Lang "home.create_tournament_desc"}}</span>
       </button>
     </form>
-  </div>
-  <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:8px;">
-    <a href="/turma/new" class="btn btn-secondary" style="font-size:0.95rem; min-height:46px; min-width:180px; text-align:center; text-decoration:none;">
-      {{T .Lang "turma.create"}}
+    <a href="/turma/new" class="action-card action-card--group">
+      <span class="action-card-icon">👥</span>
+      <span class="action-card-label">{{T .Lang "turma.create"}}</span>
+      <span class="action-card-desc">{{T .Lang "turma.create_desc"}}</span>
     </a>
-    <a href="/turma/join" class="btn btn-ghost" style="font-size:0.95rem; min-height:46px; min-width:180px; text-align:center; text-decoration:none;">
-      {{T .Lang "turma.join_turma"}}
+    <a href="/turma/join" class="action-card action-card--join">
+      <span class="action-card-icon">🔑</span>
+      <span class="action-card-label">{{T .Lang "turma.join_turma"}}</span>
+      <span class="action-card-desc">{{T .Lang "turma.join_turma_desc"}}</span>
     </a>
   </div>
 </div>

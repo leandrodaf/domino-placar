@@ -10,7 +10,7 @@ jobs:
   backend-go:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: actions/setup-go@v5
         with:
@@ -30,7 +30,7 @@ jobs:
       run:
         working-directory: android
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -64,7 +64,7 @@ jobs:
   frontend-js:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -75,4 +75,4 @@ jobs:
         run: npm install eslint eslint-plugin-html --save-dev
 
       - name: Run ESLint on HTML/JS
-        run: npx eslint "templates/**/*.html"
+        run: npx eslint --max-warnings 50 "templates/**/*.html"

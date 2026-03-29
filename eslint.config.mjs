@@ -2,6 +2,18 @@ import html from "eslint-plugin-html";
 
 export default [
   {
+    // Ignore files with Go template syntax ({{ }}) inside <script> blocks
+    // ESLint cannot parse Go template expressions mixed with JavaScript
+    ignores: [
+      "templates/game.html",
+      "templates/lobby.html",
+      "templates/ranking.html",
+      "templates/round-scores.html",
+      "templates/tournament-ranking.html",
+      "templates/tournament-waiting.html",
+    ],
+  },
+  {
     files: ["**/*.html"],
     plugins: { html },
   },
@@ -27,17 +39,19 @@ export default [
         URLSearchParams: "readonly",
         alert: "readonly",
         confirm: "readonly",
+        prompt: "readonly",
         location: "readonly",
         history: "readonly",
         Image: "readonly",
         FileReader: "readonly",
         Notification: "readonly",
         AbortController: "readonly",
+        dominoUser: "readonly",
       },
     },
     rules: {
       "no-undef": "warn",
-      "no-unused-vars": "warn",
+      "no-unused-vars": ["warn", { "args": "none", "caughtErrors": "none" }],
       "no-redeclare": "error",
       eqeqeq: "warn",
       "no-eval": "error",
