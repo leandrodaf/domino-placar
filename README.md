@@ -17,11 +17,12 @@
 ## Screenshots
 
 <p align="center">
-  <img src="images/home-page.png" width="200" alt="Home page">
-  <img src="images/loby-create.png" width="200" alt="Lobby with QR code">
-  <img src="images/loby-players.png" width="200" alt="Lobby with players">
-  <img src="images/party-players.png" width="200" alt="Game round">
-  <img src="images/ranking.png" width="200" alt="Ranking">
+  <img src="images/home.png" width="180" alt="Home page">
+  <img src="images/lobby.png" width="180" alt="Lobby with QR code">
+  <img src="images/game.png" width="180" alt="Game table">
+  <img src="images/ranking-active.png" width="180" alt="Live ranking">
+  <img src="images/ranking-winner.png" width="180" alt="Winner screen">
+  <img src="images/join.png" width="180" alt="Join match">
 </p>
 
 ---

@@ -475,13 +475,10 @@ def generate_all():
     fg.save(str(fg_path), "PNG", optimize=True)
     print(f"  ✅ {fg_path}")
 
-    icon_src = Path("images/icone-domino-placar.png")
-    if icon_src.exists():
-        icon = Image.open(icon_src).convert("RGBA").resize((512, 512), Image.LANCZOS)
-        bg = Image.new("RGBA", (512, 512), (*BG, 255))
-        bg.paste(icon, (0, 0), icon)
-        ip = OUT_DIR / "app-icon-512.png"
-        bg.convert("RGB").save(str(ip), "PNG", optimize=True)
+    # Icon is generated separately by scripts/generate_icon.py
+    ip = OUT_DIR / "app-icon-512.png"
+    if ip.exists():
+        print(f"  ✅ {ip} (already exists)")
         print(f"  ✅ {ip}")
 
     print("\n📝 Metadata...")
