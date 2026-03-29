@@ -67,15 +67,6 @@ func (pm *PushManager) RegisterHandler() http.HandlerFunc {
 	}
 }
 
-// UnregisterMatch remove todos os tokens registrados para uma partida.
-// Chamado quando a partida termina ou é cancelada (cleanup).
-func (pm *PushManager) UnregisterMatch(matchID string) {
-	pm.mu.Lock()
-	delete(pm.tokens, matchID)
-	pm.mu.Unlock()
-	log.Printf("FCM: cleaned up tokens for match %s", matchID)
-}
-
 // PushEvent representa uma notificação a ser enviada.
 type PushEvent struct {
 	MatchID   string

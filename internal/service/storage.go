@@ -32,9 +32,6 @@ func getGCSClient() (*storage.Client, error) {
 	return gcsClient, gcsErr
 }
 
-// GCSEnabled returns true if GCS_BUCKET is configured.
-func GCSEnabled() bool { return os.Getenv("GCS_BUCKET") != "" }
-
 // UploadImageToGCS uploads imageBytes to GCS and returns the public URL.
 // Returns ("", nil) if GCS_BUCKET is not set (caller should save locally).
 // The object is created with ContentType image/jpeg.
