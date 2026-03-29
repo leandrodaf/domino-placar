@@ -51,4 +51,15 @@
 <div style="text-align:center; margin-top:8px; font-size:0.78rem; color:var(--muted);">
   {{T .Lang "join.match_id"}}: {{.Match.ID}}
 </div>
+
+<script>
+(function() {
+  var f = document.querySelector('form[action$="/join"]');
+  if (!f) return;
+  var nameEl = f.querySelector('#name');
+  var uidEl  = f.querySelector('#unique_id');
+  dominoUser.fillForm(nameEl, uidEl);
+  dominoUser.bindSave(f, nameEl, uidEl);
+})();
+</script>
 {{end}}

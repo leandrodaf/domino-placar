@@ -1491,17 +1491,17 @@ footer {
   -webkit-touch-callout: none;
 }
 
-/* Remove barra de navegação (footer) no app — o app É o cliente */
+/* Nav fixa no topo do app — com compensação de espaço */
 .app-webview .nav {
   position: fixed;
-  top: 0;
+  top: env(safe-area-inset-top, 0px);
   left: 0;
   right: 0;
 }
 
-/* Padding seguro para notch/câmera frontal (safe area) */
+/* Padding seguro para notch/câmera frontal (safe area) + espaço do nav fixo */
 .app-webview body {
-  padding-top: env(safe-area-inset-top, 0px);
+  padding-top: calc(env(safe-area-inset-top, 0px) + 57px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 

@@ -72,6 +72,15 @@
       </div>
       <button type="submit" class="btn btn-success">{{T .Lang "lobby.join_submit"}}</button>
     </form>
+    <script>
+    (function() {
+      var nameEl = document.getElementById('host-name');
+      var uidEl  = document.getElementById('host-uid');
+      var f = nameEl ? nameEl.closest('form') : null;
+      dominoUser.fillForm(nameEl, uidEl);
+      dominoUser.bindSave(f, nameEl, uidEl);
+    })();
+    </script>
   </div>
 </details>
 

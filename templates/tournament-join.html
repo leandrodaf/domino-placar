@@ -60,4 +60,15 @@
 <div class="alert alert-info mt-16">
   {{T .Lang "tournament.id_label"}}: <strong>{{.Tournament.ID}}</strong>
 </div>
+
+<script>
+(function() {
+  var f = document.querySelector('form[action$="/join"]');
+  if (!f) return;
+  var nameEl = f.querySelector('#name');
+  var uidEl  = f.querySelector('#unique_id');
+  dominoUser.fillForm(nameEl, uidEl);
+  dominoUser.bindSave(f, nameEl, uidEl);
+})();
+</script>
 {{end}}

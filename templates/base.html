@@ -40,6 +40,31 @@
   {{block "head-extra" .}}{{end}}
   {{if .CSRFToken}}<meta name="csrf-token" content="{{.CSRFToken}}">{{end}}
   <script>
+  // Lembra dados do jogador (nome + identificador) entre partidas
+  var dominoUser = {
+    key: 'domino_user',
+    load: function() {
+      try { return JSON.parse(localStorage.getItem(this.key)) || {}; } catch(e) { return {}; }
+    },
+    save: function(name, uid) {
+      try { localStorage.setItem(this.key, JSON.stringify({ name: name, unique_id: uid })); } catch(e) {}
+    },
+    fillForm: function(nameEl, uidEl) {
+      var u = this.load();
+      if (nameEl && u.name && !nameEl.value) nameEl.value = u.name;
+      if (uidEl && u.unique_id && !uidEl.value) uidEl.value = u.unique_id;
+    },
+    bindSave: function(formEl, nameEl, uidEl) {
+      var self = this;
+      if (!formEl) return;
+      formEl.addEventListener('submit', function() {
+        var n = nameEl ? nameEl.value.trim() : '';
+        var u = uidEl ? uidEl.value.trim() : '';
+        if (n || u) self.save(n, u);
+      });
+    }
+  };
+
   // Salva partida no histórico localStorage quando visitar uma página de partida
   (function() {
     if (typeof window._matchMeta === 'undefined') return;
