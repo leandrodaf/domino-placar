@@ -19,14 +19,34 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 from playwright.sync_api import sync_playwright
 
-SERVER_URL = "http://localhost:8080"
+SERVER_URL  = os.environ.get("SERVER_URL",  "http://localhost:8080")
 DISPLAY_URL = "https://dominoplacar.net"
-DB_PATH = "domino.db"
-OUT_DIR = Path("play-store")
-RAW_DIR = OUT_DIR / "raw"
+DB_PATH     = "domino.db"
+OUT_DIR     = Path("play-store")
+RAW_DIR     = OUT_DIR / "raw"
 
 SESSION_SECRET = os.environ.get("SESSION_SECRET", "screenshot-secret-2024")
-PHONE_VP = {"width": 412, "height": 915}
+
+# When seeding a remote server (seed_remote.py), IDs are passed via env vars.
+# If set, skip local SQLite seeding and use the remote data.
+_ENV_MID  = os.environ.get("MID")
+_ENV_R4ID = os.environ.get("R4ID")
+_ENV_FID  = os.environ.get("FID")
+_ENV_LID  = os.environ.get("LID")
+PHONE_VP      = {"width": 412,  "height": 915}
+
+# 7" tablet portrait  — 600×1067 × 1.8 DPR → 1080×1921 ≈ 1080×1920 (9:16)
+TABLET_7_VP   = {"width": 600,  "height": 1067}
+TABLET_7_DPR  = 1.8
+
+# 10" tablet portrait — 800×1422 × 1.35 DPR → 1080×1920 (9:16, min 1080px ✅)
+TABLET_10_VP  = {"width": 800,  "height": 1422}
+TABLET_10_DPR = 1.35
+
+# Chromebook / 10" landscape — 1280×720 × 1.5 DPR → 1920×1080 (16:9, min 1080px ✅)
+CHROMEBOOK_VP  = {"width": 1280, "height": 720}
+CHROMEBOOK_DPR = 1.5
+CHROMEBOOK_W, CHROMEBOOK_H = 1920, 1080
 
 PLAYERS = [
     ("Carlos", "carlos-uid-001"),
@@ -142,44 +162,85 @@ def seed_database():
 # PLAYWRIGHT SCREENSHOTS
 # ═══════════════════════════════════════════════════════════════
 
+def _take_shots(page, shots_list, out_dir, wait_extra_ms=1200):
+    """Capture a list of (name, url, wait_until) screenshots."""
+    for name, url, wait in shots_list:
+        print(f"  📱 {name}")
+        page.goto(url, wait_until=wait)
+        page.wait_for_timeout(wait_extra_ms)
+        page.screenshot(path=str(out_dir / f"{name}.png"), full_page=False)
+
+
 def take_screenshots():
-    print("🎮 Seeding database...")
-    mid, r4id, fid, lid = seed_database()
+    if _ENV_MID:
+        print(f"🌐 Using remote data from {SERVER_URL}")
+        print(f"   MID={_ENV_MID}  R4ID={_ENV_R4ID}  FID={_ENV_FID}  LID={_ENV_LID}")
+        mid, r4id, fid, lid = _ENV_MID, _ENV_R4ID, _ENV_FID, _ENV_LID
+    else:
+        print("🎮 Seeding local database...")
+        mid, r4id, fid, lid = seed_database()
     RAW_DIR.mkdir(parents=True, exist_ok=True)
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
 
-        for lang, folder in [("pt", "pt-BR"), ("en", "en-US")]:
-            print(f"\n📸 {folder}...")
+        for lang, locale, folder in [("pt", "pt-BR", "pt-BR"), ("en", "en-US", "en-US")]:
+            shots = [
+                ("01-home",           f"{SERVER_URL}/?lang={lang}",                                  "networkidle"),
+                ("02-lobby",          f"{SERVER_URL}/match/{lid}/lobby?lang={lang}",                 "load"),
+                ("03-game",           f"{SERVER_URL}/match/{mid}/round/{r4id}/game?lang={lang}",     "load"),
+                ("04-ranking-active", f"{SERVER_URL}/match/{mid}/ranking?lang={lang}",               "load"),
+                ("05-ranking-winner", f"{SERVER_URL}/match/{fid}/ranking?lang={lang}",               "load"),
+                ("06-join",           f"{SERVER_URL}/match/{lid}/join?lang={lang}",                  "networkidle"),
+            ]
+            common_ctx = dict(locale=locale, color_scheme="dark")
+            cookies    = [host_cookie(m) for m in (mid, fid, lid)]
+
+            # ── Phone ──────────────────────────────────────────────
+            print(f"\n📱 Phone  {folder}...")
             out = RAW_DIR / folder
             out.mkdir(parents=True, exist_ok=True)
-
-            ctx = browser.new_context(
-                viewport=PHONE_VP, device_scale_factor=2.625,
-                locale="pt-BR" if lang == "pt" else "en-US",
-                color_scheme="dark")
-            for m in [mid, fid, lid]:
-                ctx.add_cookies([host_cookie(m)])
-            page = ctx.new_page()
-
-            shots = [
-                ("01-home",           f"{SERVER_URL}/?lang={lang}",                                       "networkidle"),
-                ("02-lobby",          f"{SERVER_URL}/match/{lid}/lobby?lang={lang}",                      "load"),
-                ("03-game",           f"{SERVER_URL}/match/{mid}/round/{r4id}/game?lang={lang}",          "load"),
-                ("04-ranking-active", f"{SERVER_URL}/match/{mid}/ranking?lang={lang}",                    "load"),
-                ("05-ranking-winner", f"{SERVER_URL}/match/{fid}/ranking?lang={lang}",                    "load"),
-                ("06-join",           f"{SERVER_URL}/match/{lid}/join?lang={lang}",                       "networkidle"),
-            ]
-            for name, url, wait in shots:
-                print(f"  📱 {name}")
-                page.goto(url, wait_until=wait)
-                page.wait_for_timeout(1200)
-                page.screenshot(path=str(out / f"{name}.png"), full_page=False)
+            ctx = browser.new_context(viewport=PHONE_VP, device_scale_factor=2.625, **common_ctx)
+            for cookie in cookies:
+                ctx.add_cookies([cookie])
+            _take_shots(ctx.new_page(), shots, out)
             ctx.close()
+
+            # ── 7" Tablet portrait ─────────────────────────────────
+            print(f"\n📟 Tablet 7\"  {folder}...")
+            out7 = RAW_DIR / folder / "tablet-7"
+            out7.mkdir(parents=True, exist_ok=True)
+            ctx = browser.new_context(viewport=TABLET_7_VP, device_scale_factor=TABLET_7_DPR, **common_ctx)
+            for cookie in cookies:
+                ctx.add_cookies([cookie])
+            _take_shots(ctx.new_page(), shots, out7)
+            ctx.close()
+
+            # ── 10" Tablet portrait ────────────────────────────────
+            print(f"\n📟 Tablet 10\"  {folder}...")
+            out10 = RAW_DIR / folder / "tablet-10"
+            out10.mkdir(parents=True, exist_ok=True)
+            ctx = browser.new_context(viewport=TABLET_10_VP, device_scale_factor=TABLET_10_DPR, **common_ctx)
+            for cookie in cookies:
+                ctx.add_cookies([cookie])
+            _take_shots(ctx.new_page(), shots, out10)
+            ctx.close()
+
+            # ── Chromebook / 10" landscape ─────────────────────────
+            # Only 4 shots needed (Play Store min = 4 for Chromebook)
+            print(f"\n💻 Chromebook landscape  {folder}...")
+            out_cb = RAW_DIR / folder / "chromebook"
+            out_cb.mkdir(parents=True, exist_ok=True)
+            chromebook_shots = shots[:4]   # home, lobby, game, ranking-active
+            ctx = browser.new_context(viewport=CHROMEBOOK_VP, device_scale_factor=CHROMEBOOK_DPR, **common_ctx)
+            for cookie in cookies:
+                ctx.add_cookies([cookie])
+            _take_shots(ctx.new_page(), chromebook_shots, out_cb)
+            ctx.close()
+
         browser.close()
 
-    print("\n✅ Raw screenshots done")
+    print("\n✅ Raw screenshots done (phone + tablet-7 + tablet-10 + chromebook)")
     return mid, r4id, fid, lid
 
 
@@ -289,6 +350,68 @@ def compose_phone(raw_path, title, subtitle, w=1080, h=1920):
     draw.rounded_rectangle([sx - 1, sy - 1, sx + scaled_w, sy + scaled_h],
                            radius=20, outline=(ACCENT[0], ACCENT[1], ACCENT[2], 80), width=2)
 
+    return canvas
+
+
+def compose_landscape(raw_path, title, subtitle, w=CHROMEBOOK_W, h=CHROMEBOOK_H):
+    """
+    Landscape Play Store screenshot for Chromebook / 10-inch tablet.
+
+    Layout (1920×1080):
+      ┌──────────────────────────────────────────┐
+      │  title (bold, centered)     40px top      │
+      │  ── accent bar ──                         │
+      │  subtitle                                  │
+      │  [screenshot — centered, fills remaining] │
+      └──────────────────────────────────────────┘
+    """
+    top_c = (int(ACCENT[0]*0.10+BG[0]*0.90),
+             int(ACCENT[1]*0.10+BG[1]*0.90),
+             int(ACCENT[2]*0.10+BG[2]*0.90))
+    canvas = _gradient(w, h, top_c, BG)
+    draw   = ImageDraw.Draw(canvas)
+
+    tf = font(72, bold=True)
+    sf = font(36, bold=False)
+
+    text_top = 40
+    _ctxt(draw, text_top, title, tf, TEXT_W, w)
+
+    bar_y = text_top + 90
+    bar_w = 60
+    bx    = (w - bar_w) // 2
+    draw.rounded_rectangle([bx, bar_y, bx + bar_w, bar_y + 5], radius=2, fill=ACCENT)
+    _ctxt(draw, bar_y + 24, subtitle, sf, TEXT_M, w)
+
+    # Screenshot — scale to fill remaining height, centred horizontally
+    img = Image.open(raw_path).convert("RGB")
+    scr_top      = bar_y + 80
+    scr_margin_x = int(w * 0.04)
+    avail_w      = w - 2 * scr_margin_x
+    avail_h      = h - scr_top - 20
+
+    scale    = min(avail_w / img.width, avail_h / img.height)
+    sw, sh   = int(img.width * scale), int(img.height * scale)
+    img      = img.resize((sw, sh), Image.LANCZOS)
+    sx       = (w - sw) // 2
+    sy       = scr_top
+
+    # Drop shadow
+    shadow = Image.new("RGBA", (sw + 30, sh + 30), (0, 0, 0, 0))
+    ImageDraw.Draw(shadow).rounded_rectangle(
+        [0, 0, shadow.width - 1, shadow.height - 1], radius=20, fill=(0, 0, 0, 60))
+    shadow = shadow.filter(ImageFilter.GaussianBlur(10))
+    canvas.paste(Image.merge("RGB", shadow.split()[:3]),
+                 (sx - 15, sy - 5), mask=shadow.split()[3])
+
+    # Rounded screenshot
+    mask = Image.new("L", (sw, sh), 0)
+    ImageDraw.Draw(mask).rounded_rectangle([0, 0, sw - 1, sh - 1], radius=16, fill=255)
+    canvas.paste(img, (sx, sy), mask=mask)
+
+    # Border
+    draw.rounded_rectangle([sx - 1, sy - 1, sx + sw, sy + sh],
+                            radius=16, outline=(ACCENT[0], ACCENT[1], ACCENT[2], 80), width=2)
     return canvas
 
 
@@ -448,6 +571,23 @@ PHONE_TITLES = {
     ],
 }
 
+# Tablet (7" and 10" portrait) reuse the same phone titles — layout adapts via wider viewport.
+# Landscape (Chromebook / 10" landscape) has its own titles to fit the widescreen layout.
+CHROMEBOOK_TITLES = {
+    "pt-BR": [
+        ("01-home",           "Tela Inicial",        "Crie partidas com um toque"),
+        ("02-lobby",          "Sala de Espera",       "Convide jogadores via QR Code"),
+        ("03-game",           "Mesa de Jogo",         "Pontuação rodada a rodada"),
+        ("04-ranking-active", "Placar ao Vivo",       "Acompanhe quem lidera"),
+    ],
+    "en-US": [
+        ("01-home",           "Home Screen",          "Create matches instantly"),
+        ("02-lobby",          "Waiting Room",          "Invite players via QR Code"),
+        ("03-game",           "Game Table",            "Round-by-round scoring"),
+        ("04-ranking-active", "Live Scoreboard",       "See who's leading"),
+    ],
+}
+
 
 # ═══════════════════════════════════════════════════════════════
 # GENERATE ALL ASSETS
@@ -457,29 +597,68 @@ def generate_all():
     print("\n🎨 Composing Play Store assets...")
 
     for lang in ["pt-BR", "en-US"]:
+        # ── Phone ──────────────────────────────────────────────────
         phone_dir = OUT_DIR / lang / "phone"
         phone_dir.mkdir(parents=True, exist_ok=True)
-
         for i, (base, title, sub) in enumerate(PHONE_TITLES[lang]):
             raw = RAW_DIR / lang / f"{base}.png"
             if not raw.exists():
                 print(f"  ⚠️  Missing {raw}")
                 continue
-            img = compose_phone(str(raw), title, sub)
+            img  = compose_phone(str(raw), title, sub)
             dest = phone_dir / f"{i+1:02d}_{base}.png"
             img.save(str(dest), "PNG", optimize=True)
             print(f"  ✅ {dest} ({dest.stat().st_size//1024}KB)")
 
+        # ── 7" Tablet portrait ──────────────────────────────────────
+        # Reuse compose_phone (same 1080×1920 output) with tablet raw shots
+        tab7_dir = OUT_DIR / lang / "tablet-7"
+        tab7_dir.mkdir(parents=True, exist_ok=True)
+        for i, (base, title, sub) in enumerate(PHONE_TITLES[lang]):
+            raw = RAW_DIR / lang / "tablet-7" / f"{base}.png"
+            if not raw.exists():
+                print(f"  ⚠️  Missing {raw} (tablet-7)")
+                continue
+            img  = compose_phone(str(raw), title, sub)
+            dest = tab7_dir / f"{i+1:02d}_{base}.png"
+            img.save(str(dest), "PNG", optimize=True)
+            print(f"  ✅ {dest} ({dest.stat().st_size//1024}KB)")
+
+        # ── 10" Tablet portrait ─────────────────────────────────────
+        tab10_dir = OUT_DIR / lang / "tablet-10"
+        tab10_dir.mkdir(parents=True, exist_ok=True)
+        for i, (base, title, sub) in enumerate(PHONE_TITLES[lang]):
+            raw = RAW_DIR / lang / "tablet-10" / f"{base}.png"
+            if not raw.exists():
+                print(f"  ⚠️  Missing {raw} (tablet-10)")
+                continue
+            img  = compose_phone(str(raw), title, sub, w=1080, h=1920)
+            dest = tab10_dir / f"{i+1:02d}_{base}.png"
+            img.save(str(dest), "PNG", optimize=True)
+            print(f"  ✅ {dest} ({dest.stat().st_size//1024}KB)")
+
+        # ── Chromebook landscape ────────────────────────────────────
+        cb_dir = OUT_DIR / lang / "chromebook"
+        cb_dir.mkdir(parents=True, exist_ok=True)
+        for i, (base, title, sub) in enumerate(CHROMEBOOK_TITLES[lang]):
+            raw = RAW_DIR / lang / "chromebook" / f"{base}.png"
+            if not raw.exists():
+                print(f"  ⚠️  Missing {raw} (chromebook)")
+                continue
+            img  = compose_landscape(str(raw), title, sub)
+            dest = cb_dir / f"{i+1:02d}_{base}.png"
+            img.save(str(dest), "PNG", optimize=True)
+            print(f"  ✅ {dest} ({dest.stat().st_size//1024}KB)")
+
+    # ── Feature graphic ─────────────────────────────────────────────
     fg = make_feature_graphic()
     fg_path = OUT_DIR / "feature-graphic-1024x500.png"
     fg.save(str(fg_path), "PNG", optimize=True)
     print(f"  ✅ {fg_path}")
 
-    # Icon is generated separately by scripts/generate_icon.py
     ip = OUT_DIR / "app-icon-512.png"
     if ip.exists():
         print(f"  ✅ {ip} (already exists)")
-        print(f"  ✅ {ip}")
 
     print("\n📝 Metadata...")
     for lang, data in METADATA.items():
