@@ -52,12 +52,13 @@ type fbMatch struct {
 	Status         string `json:"status"`
 	BaseURL        string `json:"base_url"`
 	WinnerPlayerID string `json:"winner_player_id,omitempty"`
+	TurmaID        string `json:"turma_id,omitempty"`
 	CreatedAt      string `json:"created_at"`
 }
 
 func (f *fbMatch) toModel() *models.Match {
 	t, _ := time.Parse(time.RFC3339, f.CreatedAt)
-	return &models.Match{ID: f.ID, Status: f.Status, BaseURL: f.BaseURL, CreatedAt: t}
+	return &models.Match{ID: f.ID, Status: f.Status, BaseURL: f.BaseURL, WinnerPlayerID: f.WinnerPlayerID, TurmaID: f.TurmaID, CreatedAt: t}
 }
 
 type fbPlayer struct {
@@ -436,7 +437,7 @@ func (s *FirebaseStore) FinishRound(roundID string) error {
 		return err
 	}
 	if r.MatchID != "" {
-		s.ref("idx_round_match/"+r.MatchID+"/"+roundID+"/status").Set(ctx, "finished")
+		_ = s.ref("idx_round_match/"+r.MatchID+"/"+roundID+"/status").Set(ctx, "finished")
 	}
 	return nil
 }
@@ -995,7 +996,7 @@ func (s *FirebaseStore) VoteForNomination(nominationID, voterUID string) (bool, 
 	voteRef := s.ref("idx_vote/" + nominationID + "/" + voteKey)
 
 	var existing bool
-	voteRef.Get(ctx, &existing)
+	_ = voteRef.Get(ctx, &existing)
 	if existing {
 		return false, nil // already voted
 	}
@@ -1007,7 +1008,7 @@ func (s *FirebaseStore) VoteForNomination(nominationID, voterUID string) (bool, 
 	// Atomically increment the vote count
 	err := s.ref("nickname_nominations/"+nominationID+"/vote_count").Transaction(ctx, func(node fbdb.TransactionNode) (interface{}, error) {
 		var current int
-		node.Unmarshal(&current)
+		_ = node.Unmarshal(&current)
 		return current + 1, nil
 	})
 	return true, err
@@ -1095,4 +1096,294 @@ func (s *FirebaseStore) GetAllTimeNicknames() ([]models.NicknameNomination, erro
 		result = result[:20]
 	}
 	return result, nil
+}
+
+// ─── Turma ────────────────────────────────────────────────────────────────────
+
+type fbTurma struct {
+	ID                string `json:"id"`
+	Name              string `json:"name"`
+	Description       string `json:"description"`
+	InviteCode        string `json:"invite_code"`
+	IsPrivate         bool   `json:"is_private"`
+	CreatedByUniqueID string `json:"created_by_unique_id"`
+	BaseURL           string `json:"base_url"`
+	CreatedAt         string `json:"created_at"`
+}
+
+func (f *fbTurma) toModel() *models.Turma {
+	t, _ := time.Parse(time.RFC3339, f.CreatedAt)
+	return &models.Turma{
+		ID: f.ID, Name: f.Name, Description: f.Description,
+		InviteCode: f.InviteCode, IsPrivate: f.IsPrivate,
+		CreatedByUniqueID: f.CreatedByUniqueID, BaseURL: f.BaseURL, CreatedAt: t,
+	}
+}
+
+type fbTurmaMember struct {
+	ID               string `json:"id"`
+	TurmaID          string `json:"turma_id"`
+	UniqueIdentifier string `json:"unique_identifier"`
+	Name             string `json:"name"`
+	Role             string `json:"role"`
+	JoinedAt         string `json:"joined_at"`
+}
+
+func (f *fbTurmaMember) toModel() models.TurmaMember {
+	t, _ := time.Parse(time.RFC3339, f.JoinedAt)
+	return models.TurmaMember{
+		ID: f.ID, TurmaID: f.TurmaID, UniqueIdentifier: f.UniqueIdentifier,
+		Name: f.Name, Role: f.Role, JoinedAt: t,
+	}
+}
+
+func (s *FirebaseStore) CreateTurma(turma *models.Turma) error {
+	ctx := context.Background()
+	fb := fbTurma{
+		ID: turma.ID, Name: turma.Name, Description: turma.Description,
+		InviteCode: turma.InviteCode, IsPrivate: turma.IsPrivate,
+		CreatedByUniqueID: turma.CreatedByUniqueID, BaseURL: turma.BaseURL,
+		CreatedAt: nowStr(),
+	}
+	if err := s.ref("turmas/"+turma.ID).Set(ctx, fb); err != nil {
+		return err
+	}
+	// Index invite code → turma id
+	return s.ref("idx_turma_code/"+safeKey(turma.InviteCode)).Set(ctx, turma.ID)
+}
+
+func (s *FirebaseStore) GetTurma(id string) (*models.Turma, error) {
+	ctx := context.Background()
+	var t fbTurma
+	if err := s.ref("turmas/"+id).Get(ctx, &t); err != nil {
+		return nil, err
+	}
+	if t.ID == "" {
+		return nil, errNotFound
+	}
+	return t.toModel(), nil
+}
+
+func (s *FirebaseStore) GetTurmaByInviteCode(code string) (*models.Turma, error) {
+	ctx := context.Background()
+	var turmaID string
+	if err := s.ref("idx_turma_code/"+safeKey(code)).Get(ctx, &turmaID); err != nil {
+		return nil, err
+	}
+	if turmaID == "" {
+		return nil, errNotFound
+	}
+	return s.GetTurma(turmaID)
+}
+
+func (s *FirebaseStore) AddTurmaMember(member *models.TurmaMember) error {
+	ctx := context.Background()
+	fb := fbTurmaMember{
+		ID: member.ID, TurmaID: member.TurmaID, UniqueIdentifier: member.UniqueIdentifier,
+		Name: member.Name, Role: member.Role, JoinedAt: nowStr(),
+	}
+	if err := s.ref("turma_members/"+member.ID).Set(ctx, fb); err != nil {
+		return err
+	}
+	// Index turma → members
+	if err := s.ref("idx_turma_members/"+member.TurmaID+"/"+member.ID).Set(ctx, true); err != nil {
+		return err
+	}
+	// Index uid → turmas
+	return s.ref("idx_member_turmas/"+safeKey(member.UniqueIdentifier)+"/"+member.TurmaID).Set(ctx, true)
+}
+
+func (s *FirebaseStore) GetTurmaMembers(turmaID string) ([]models.TurmaMember, error) {
+	ctx := context.Background()
+	var ids map[string]bool
+	if err := s.ref("idx_turma_members/"+turmaID).Get(ctx, &ids); err != nil {
+		return nil, err
+	}
+	var members []models.TurmaMember
+	for id := range ids {
+		var m fbTurmaMember
+		if err := s.ref("turma_members/"+id).Get(ctx, &m); err == nil && m.ID != "" {
+			members = append(members, m.toModel())
+		}
+	}
+	sort.Slice(members, func(i, j int) bool {
+		return members[i].JoinedAt.Before(members[j].JoinedAt)
+	})
+	return members, nil
+}
+
+func (s *FirebaseStore) GetTurmaMember(turmaID, uniqueID string) (*models.TurmaMember, error) {
+	members, err := s.GetTurmaMembers(turmaID)
+	if err != nil {
+		return nil, err
+	}
+	for i := range members {
+		if members[i].UniqueIdentifier == uniqueID {
+			return &members[i], nil
+		}
+	}
+	return nil, errNotFound
+}
+
+func (s *FirebaseStore) RemoveTurmaMember(turmaID, uniqueID string) error {
+	member, err := s.GetTurmaMember(turmaID, uniqueID)
+	if err != nil {
+		return err
+	}
+	ctx := context.Background()
+	if err := s.ref("turma_members/"+member.ID).Delete(ctx); err != nil {
+		return err
+	}
+	if err := s.ref("idx_turma_members/"+turmaID+"/"+member.ID).Delete(ctx); err != nil {
+		return err
+	}
+	return s.ref("idx_member_turmas/"+safeKey(uniqueID)+"/"+turmaID).Delete(ctx)
+}
+
+func (s *FirebaseStore) IsTurmaMember(turmaID, uniqueID string) (bool, error) {
+	_, err := s.GetTurmaMember(turmaID, uniqueID)
+	if err != nil {
+		return false, nil
+	}
+	return true, nil
+}
+
+func (s *FirebaseStore) GetTurmasByMember(uniqueID string) ([]models.Turma, error) {
+	ctx := context.Background()
+	var turmaIDs map[string]bool
+	if err := s.ref("idx_member_turmas/"+safeKey(uniqueID)).Get(ctx, &turmaIDs); err != nil {
+		return nil, err
+	}
+	var turmas []models.Turma
+	for tid := range turmaIDs {
+		if t, err := s.GetTurma(tid); err == nil {
+			turmas = append(turmas, *t)
+		}
+	}
+	sort.Slice(turmas, func(i, j int) bool {
+		return turmas[i].CreatedAt.After(turmas[j].CreatedAt)
+	})
+	return turmas, nil
+}
+
+func (s *FirebaseStore) GetTurmaMatches(turmaID string) ([]models.Match, error) {
+	allMatches, err := s.getAllMatches()
+	if err != nil {
+		return nil, err
+	}
+	var result []models.Match
+	for _, m := range allMatches {
+		if m.TurmaID == turmaID {
+			result = append(result, m)
+		}
+	}
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].CreatedAt.After(result[j].CreatedAt)
+	})
+	return result, nil
+}
+
+func (s *FirebaseStore) CreateMatchInTurma(id, baseURL, turmaID string) error {
+	ctx := context.Background()
+	m := fbMatch{ID: id, Status: "waiting", BaseURL: baseURL, TurmaID: turmaID, CreatedAt: nowStr()}
+	return s.ref("matches/"+id).Set(ctx, m)
+}
+
+func (s *FirebaseStore) GetTurmaRanking(turmaID string) ([]models.TurmaRankEntry, error) {
+	players, err := s.getAllPlayers()
+	if err != nil {
+		return nil, err
+	}
+	allMatches, err := s.getAllMatches()
+	if err != nil {
+		return nil, err
+	}
+	rounds, err := s.getAllRounds()
+	if err != nil {
+		return nil, err
+	}
+
+	// Build set of match IDs belonging to this turma
+	turmaMatchIDs := map[string]bool{}
+	for _, m := range allMatches {
+		if m.TurmaID == turmaID {
+			turmaMatchIDs[m.ID] = true
+		}
+	}
+
+	// Match win map
+	matchWinByUID := map[string]int{}
+	for _, m := range allMatches {
+		if !turmaMatchIDs[m.ID] || m.WinnerPlayerID == "" {
+			continue
+		}
+		for _, p := range players {
+			if p.ID == m.WinnerPlayerID {
+				matchWinByUID[p.UniqueIdentifier]++
+				break
+			}
+		}
+	}
+
+	// Round win map
+	roundWinByUID := map[string]int{}
+	for _, r := range rounds {
+		if !turmaMatchIDs[r.MatchID] || r.WinnerPlayerID == "" {
+			continue
+		}
+		for _, p := range players {
+			if p.ID == r.WinnerPlayerID {
+				roundWinByUID[p.UniqueIdentifier]++
+				break
+			}
+		}
+	}
+
+	type aggregate struct {
+		Name          string
+		MatchesPlayed map[string]bool
+		TotalScore    int
+		BustCount     int
+	}
+	agg := map[string]*aggregate{}
+	for _, p := range players {
+		if !turmaMatchIDs[p.MatchID] {
+			continue
+		}
+		uid := p.UniqueIdentifier
+		a, ok := agg[uid]
+		if !ok {
+			a = &aggregate{MatchesPlayed: map[string]bool{}}
+			agg[uid] = a
+		}
+		a.Name = p.Name
+		a.MatchesPlayed[p.MatchID] = true
+		a.TotalScore += p.TotalScore
+		if p.Status == "estourou" {
+			a.BustCount++
+		}
+	}
+
+	var entries []models.TurmaRankEntry
+	for uid, a := range agg {
+		entries = append(entries, models.TurmaRankEntry{
+			UniqueIdentifier: uid,
+			Name:             a.Name,
+			MatchesPlayed:    len(a.MatchesPlayed),
+			MatchesWon:       matchWinByUID[uid],
+			TotalScore:       a.TotalScore,
+			BustCount:        a.BustCount,
+			TotalRoundWins:   roundWinByUID[uid],
+		})
+	}
+	sort.Slice(entries, func(i, j int) bool {
+		if entries[i].MatchesWon != entries[j].MatchesWon {
+			return entries[i].MatchesWon > entries[j].MatchesWon
+		}
+		if entries[i].TotalRoundWins != entries[j].TotalRoundWins {
+			return entries[i].TotalRoundWins > entries[j].TotalRoundWins
+		}
+		return entries[i].BustCount < entries[j].BustCount
+	})
+	return entries, nil
 }

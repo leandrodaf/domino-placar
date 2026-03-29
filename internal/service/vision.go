@@ -53,10 +53,10 @@ func AnalyzeImage(imageBytes []byte) (*CVResult, error) {
 	if err != nil {
 		return nil, fmt.Errorf("calling Roboflow API: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("Roboflow API returned status %d", resp.StatusCode)
+		return nil, fmt.Errorf("roboflow API returned status %d", resp.StatusCode)
 	}
 
 	var rfResp roboflowResponse

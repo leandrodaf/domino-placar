@@ -36,7 +36,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("Failed to open database: %v", err)
 		}
-		defer sqlDB.Close()
+		defer func() { _ = sqlDB.Close() }()
 
 		if err := db.CreateTables(sqlDB); err != nil {
 			log.Fatalf("Failed to create tables: %v", err)
@@ -145,6 +145,20 @@ func main() {
 
 	// Ranking global
 	mux.HandleFunc("GET /global-ranking", handler.GlobalRankingHandler(store, tmpl))
+
+	// Turma (grupos privados)
+	mux.HandleFunc("GET /turma/new", handler.CreateTurmaPageHandler(tmpl))
+	mux.HandleFunc("POST /turma", handler.CreateTurmaHandler(store))
+	mux.HandleFunc("GET /turma/join", handler.JoinByCodeHandler(store, tmpl))
+	mux.HandleFunc("GET /turma/my", handler.TurmasByMemberHandler(store))
+	mux.HandleFunc("GET /turma/{id}", handler.TurmaDashboardHandler(store, tmpl))
+	mux.HandleFunc("GET /turma/{id}/join", handler.JoinTurmaPageHandler(store, tmpl))
+	mux.HandleFunc("POST /turma/{id}/join", handler.JoinTurmaHandler(store, hub))
+	mux.HandleFunc("GET /turma/{id}/ranking", handler.TurmaRankingHandler(store, tmpl))
+	mux.HandleFunc("GET /turma/{id}/qrcode", handler.TurmaQRCodeHandler(store))
+	mux.HandleFunc("POST /turma/{id}/match", handler.CreateMatchInTurmaHandler(store))
+	mux.HandleFunc("POST /turma/{id}/remove-member/{uid}", handler.RemoveTurmaMemberHandler(store, hub))
+	mux.HandleFunc("GET /turma/{id}/events", handler.SSEHandler(hub))
 
 	// Tournament
 	mux.HandleFunc("POST /tournament", handler.CreateTournamentHandler(store))

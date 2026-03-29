@@ -39,6 +39,16 @@ jobs:
           distribution: temurin
           cache: gradle
 
+      - name: Create dummy google-services.json
+        run: |
+          cat > app/src/google-services.json << 'EOF'
+          {
+            "project_info": { "project_number": "000000000000", "project_id": "dummy-ci", "storage_bucket": "dummy-ci.appspot.com" },
+            "client": [{ "client_info": { "mobilesdk_app_id": "1:000000000000:android:0000000000000000", "android_client_info": { "package_name": "net.dominoplacar.app" } }, "api_key": [{ "current_key": "dummy" }] }],
+            "configuration_version": "1"
+          }
+          EOF
+
       - name: Build with Gradle
         run: ./gradlew build
 

@@ -63,7 +63,7 @@ func (pm *PushManager) RegisterHandler() http.HandlerFunc {
 
 		log.Printf("FCM: registered token for match %s (total: %d devices)", req.MatchID, count)
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status":"ok"}`))
+		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	}
 }
 

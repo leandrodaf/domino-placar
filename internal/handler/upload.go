@@ -120,7 +120,7 @@ func UploadHandler(database db.Store, hub *SSEHub, tmpl *Templates) http.Handler
 			http.Redirect(w, r, uploadBase, http.StatusSeeOther)
 			return
 		}
-		defer file.Close()
+		defer func() { _ = file.Close() }()
 
 		imageBytes, err := io.ReadAll(file)
 		if err != nil {
@@ -201,7 +201,7 @@ func TableImageHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 			http.Redirect(w, r, gameBase, http.StatusSeeOther)
 			return
 		}
-		defer file.Close()
+		defer func() { _ = file.Close() }()
 
 		imageBytes, err := io.ReadAll(file)
 		if err != nil {
@@ -340,6 +340,14 @@ func JoinHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 		if err != nil {
 			http.Error(w, "match not found", http.StatusNotFound)
 			return
+		}
+
+		// If match belongs to a turma, only members can join
+		if match.TurmaID != "" {
+			if isMember, _ := database.IsTurmaMember(match.TurmaID, uniqueID); !isMember {
+				http.Redirect(w, r, "/match/"+matchID+"/join?error=turma_only", http.StatusSeeOther)
+				return
+			}
 		}
 
 		if match.Status != "waiting" {
@@ -733,19 +741,11 @@ func BuildTileStats(handImages []models.HandImage, tableJSON string, totalTiles 
 	}
 }
 
-func marshalTiles(tiles []string) string {
-	if len(tiles) == 0 {
-		return "[]"
-	}
-	b, _ := json.Marshal(tiles)
-	return string(b)
-}
-
 func unmarshalTiles(s string) []string {
 	if s == "" || s == "[]" {
 		return nil
 	}
 	var tiles []string
-	json.Unmarshal([]byte(s), &tiles)
+	_ = json.Unmarshal([]byte(s), &tiles)
 	return tiles
 }

@@ -191,14 +191,20 @@ func LobbyHandler(database db.Store, tmpl *Templates) http.HandlerFunc {
 		}
 
 		tiles := CalcTiles(len(players))
-		tmpl.Render(w, r, "lobby.html", map[string]any{
+		data := map[string]any{
 			"Match":     match,
 			"Players":   players,
 			"Count":     len(players),
 			"Tiles":     tiles,
 			"IsHost":    true,
 			"CSRFToken": GenerateCSRFToken(matchID),
-		})
+		}
+		if match.TurmaID != "" {
+			if turma, err := database.GetTurma(match.TurmaID); err == nil {
+				data["Turma"] = turma
+			}
+		}
+		tmpl.Render(w, r, "lobby.html", data)
 	}
 }
 
@@ -360,10 +366,10 @@ func GameHandler(database db.Store, tmpl *Templates) http.HandlerFunc {
 		var seatRows []SeatRow
 		for i, p := range players {
 			var sx, sy float64
-			switch {
-			case n == 1:
+			switch n {
+			case 1:
 				sx, sy = 50, 50
-			case n == 2:
+			case 2:
 				if i == 0 {
 					sx, sy = 50, 11
 				} else {
@@ -631,6 +637,7 @@ func RankingHandler(database db.Store, tmpl *Templates) http.HandlerFunc {
 			"IsHost":          isHost,
 			"CurrentPlayerID": currentPlayerID,
 			"CSRFToken":       GenerateCSRFToken(matchID),
+			"TurmaID":         match.TurmaID,
 		})
 	}
 }

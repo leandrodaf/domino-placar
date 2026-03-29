@@ -100,7 +100,7 @@ func NominateHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 		existing, _ := database.GetNominationsForPlayer(matchID, player.UniqueIdentifier)
 		for _, n := range existing {
 			if strings.EqualFold(n.Nickname, nickname) {
-				database.VoteForNomination(n.ID, voterUID)
+				_, _ = database.VoteForNomination(n.ID, voterUID)
 				hub.Broadcast(matchID, "nickname_updated")
 				http.Redirect(w, r, "/match/"+matchID+"/nicknames?voter_id="+voterUID, http.StatusSeeOther)
 				return
@@ -114,7 +114,7 @@ func NominateHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 			return
 		}
 
-		database.VoteForNomination(nomID, voterUID)
+		_, _ = database.VoteForNomination(nomID, voterUID)
 		hub.Broadcast(matchID, "nickname_updated")
 
 		http.Redirect(w, r, "/match/"+matchID+"/nicknames?voter_id="+voterUID, http.StatusSeeOther)

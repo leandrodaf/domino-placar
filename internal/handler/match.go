@@ -96,6 +96,6 @@ func QRCodeHandler(database db.Store) http.HandlerFunc {
 		}
 
 		w.Header().Set("Content-Type", "image/png")
-		w.Write(png)
+		_, _ = w.Write(png)
 	}
 }

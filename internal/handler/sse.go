@@ -102,7 +102,7 @@ func SSEHandler(hub *SSEHub) http.HandlerFunc {
 		defer hub.Unsubscribe(matchID, ch)
 
 		// Send initial ping
-		fmt.Fprintf(w, "event: ping\ndata: connected\n\n")
+		_, _ = fmt.Fprintf(w, "event: ping\ndata: connected\n\n")
 		flusher.Flush()
 
 		ctx := r.Context()
@@ -117,13 +117,13 @@ func SSEHandler(hub *SSEHub) http.HandlerFunc {
 				return
 			case <-ticker.C:
 				// Comentário SSE (linhas começando com ":") não geram eventos no cliente
-				fmt.Fprintf(w, ": keep-alive\n\n")
+				_, _ = fmt.Fprintf(w, ": keep-alive\n\n")
 				flusher.Flush()
 			case event, ok := <-ch:
 				if !ok {
 					return
 				}
-				fmt.Fprintf(w, "event: update\ndata: %s\n\n", event)
+				_, _ = fmt.Fprintf(w, "event: update\ndata: %s\n\n", event)
 				flusher.Flush()
 			}
 		}

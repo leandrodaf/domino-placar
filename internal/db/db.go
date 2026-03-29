@@ -17,7 +17,7 @@ func OpenDB(path string) (*sql.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("creating db file: %w", err)
 	}
-	f.Close()
+	_ = f.Close()
 
 	// URI format: mode=rwc creates if not exists, _journal_mode=WAL improves concurrency
 	dsn := fmt.Sprintf("file:%s?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)", path)
@@ -124,6 +124,39 @@ func CreateTables(db *sql.DB) error {
 	_, _ = db.Exec(`ALTER TABLE rounds ADD COLUMN table_detected_tiles TEXT NOT NULL DEFAULT '[]'`)
 	_, _ = db.Exec(`ALTER TABLE hand_images ADD COLUMN detected_tiles TEXT NOT NULL DEFAULT '[]'`)
 	_, _ = db.Exec(`ALTER TABLE rounds ADD COLUMN starter_player_id TEXT NOT NULL DEFAULT ''`)
+	_, _ = db.Exec(`ALTER TABLE matches ADD COLUMN turma_id TEXT NOT NULL DEFAULT ''`)
+
+	// Turma tables
+	turmaQueries := []string{
+		`CREATE TABLE IF NOT EXISTS turmas (
+			id TEXT PRIMARY KEY,
+			name TEXT NOT NULL,
+			description TEXT NOT NULL DEFAULT '',
+			invite_code TEXT NOT NULL UNIQUE,
+			is_private INTEGER NOT NULL DEFAULT 0,
+			created_by_unique_id TEXT NOT NULL,
+			base_url TEXT NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE TABLE IF NOT EXISTS turma_members (
+			id TEXT PRIMARY KEY,
+			turma_id TEXT NOT NULL,
+			unique_identifier TEXT NOT NULL,
+			name TEXT NOT NULL,
+			role TEXT NOT NULL DEFAULT 'member',
+			joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (turma_id) REFERENCES turmas(id),
+			UNIQUE(turma_id, unique_identifier)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_turma_member ON turma_members(turma_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_turma_member_uid ON turma_members(unique_identifier)`,
+		`CREATE INDEX IF NOT EXISTS idx_match_turma ON matches(turma_id)`,
+	}
+	for _, q := range turmaQueries {
+		if _, err := db.Exec(q); err != nil {
+			return fmt.Errorf("creating turma table: %w", err)
+		}
+	}
 
 	log.Println("Database tables initialized")
 	return nil
@@ -138,14 +171,17 @@ func CreateMatch(db *sql.DB, id, baseURL string) error {
 
 func GetMatch(db *sql.DB, id string) (*models.Match, error) {
 	m := &models.Match{}
-	var winnerID sql.NullString
-	err := db.QueryRow(`SELECT id, status, base_url, COALESCE(winner_player_id,''), created_at FROM matches WHERE id = ?`, id).
-		Scan(&m.ID, &m.Status, &m.BaseURL, &winnerID, &m.CreatedAt)
+	var winnerID, turmaID sql.NullString
+	err := db.QueryRow(`SELECT id, status, base_url, COALESCE(winner_player_id,''), COALESCE(turma_id,''), created_at FROM matches WHERE id = ?`, id).
+		Scan(&m.ID, &m.Status, &m.BaseURL, &winnerID, &turmaID, &m.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
 	if winnerID.Valid {
 		m.WinnerPlayerID = winnerID.String
+	}
+	if turmaID.Valid {
+		m.TurmaID = turmaID.String
 	}
 	return m, nil
 }
@@ -170,7 +206,7 @@ func GetPlayers(db *sql.DB, matchID string) ([]models.Player, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var players []models.Player
 	for rows.Next() {
@@ -333,7 +369,7 @@ func GetHandImages(db *sql.DB, roundID string) ([]models.HandImage, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var images []models.HandImage
 	for rows.Next() {
@@ -364,7 +400,7 @@ func GetRanking(db *sql.DB, matchID string) ([]models.Player, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var players []models.Player
 	for rows.Next() {
@@ -437,7 +473,7 @@ func GetTournamentPlayers(db *sql.DB, tournamentID string) ([]models.TournamentP
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var players []models.TournamentPlayer
 	for rows.Next() {
@@ -483,7 +519,7 @@ func GetTournamentMatches(db *sql.DB, tournamentID string) ([]models.TournamentM
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var matches []models.TournamentMatch
 	for rows.Next() {
@@ -509,7 +545,7 @@ func GetTournamentRanking(db *sql.DB, tournamentID string) ([]models.TournamentR
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var entries []models.TournamentRankEntry
 	for rows.Next() {
@@ -567,7 +603,7 @@ func GetGlobalStats(db *sql.DB) ([]models.GlobalStat, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var stats []models.GlobalStat
 	for rows.Next() {
@@ -639,7 +675,7 @@ func queryZoeiraStats(db *sql.DB, q string) ([]models.ZoeiraStat, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var stats []models.ZoeiraStat
 	for rows.Next() {
 		var s models.ZoeiraStat
@@ -675,7 +711,7 @@ func VoteForNomination(db *sql.DB, nominationID, voterUID string) (bool, error) 
 	}
 	// Check if the row was inserted (changes > 0 = new vote)
 	var changes int
-	db.QueryRow(`SELECT changes()`).Scan(&changes)
+	_ = db.QueryRow(`SELECT changes()`).Scan(&changes)
 	if changes == 0 {
 		return false, nil // already voted
 	}
@@ -693,7 +729,7 @@ func GetNominationsForMatch(db *sql.DB, matchID string) ([]models.NicknameNomina
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var noms []models.NicknameNomination
 	for rows.Next() {
 		var n models.NicknameNomination
@@ -715,7 +751,7 @@ func GetNominationsForPlayer(db *sql.DB, matchID, nominatedUID string) ([]models
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var noms []models.NicknameNomination
 	for rows.Next() {
 		var n models.NicknameNomination
@@ -730,7 +766,7 @@ func GetNominationsForPlayer(db *sql.DB, matchID, nominatedUID string) ([]models
 // GetTopNicknameForPlayer returns the most voted nickname for a unique_id (across all matches).
 func GetTopNicknameForPlayer(db *sql.DB, uniqueID string) string {
 	var nickname string
-	db.QueryRow(
+	_ = db.QueryRow(
 		`SELECT nickname FROM nickname_nominations
 		 WHERE nominated_unique_id = ? ORDER BY vote_count DESC LIMIT 1`,
 		uniqueID,
@@ -752,7 +788,7 @@ func GetAllTimeNicknames(db *sql.DB) ([]models.NicknameNomination, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	var noms []models.NicknameNomination
 	for rows.Next() {
 		var n models.NicknameNomination
@@ -762,4 +798,193 @@ func GetAllTimeNicknames(db *sql.DB) ([]models.NicknameNomination, error) {
 		noms = append(noms, n)
 	}
 	return noms, rows.Err()
+}
+
+// ─── Turma operations ──────────────────────────────────────────────────────────
+
+func CreateTurma(db *sql.DB, turma *models.Turma) error {
+	isPrivate := 0
+	if turma.IsPrivate {
+		isPrivate = 1
+	}
+	_, err := db.Exec(
+		`INSERT INTO turmas (id, name, description, invite_code, is_private, created_by_unique_id, base_url) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		turma.ID, turma.Name, turma.Description, turma.InviteCode, isPrivate, turma.CreatedByUniqueID, turma.BaseURL,
+	)
+	return err
+}
+
+func GetTurma(db *sql.DB, id string) (*models.Turma, error) {
+	t := &models.Turma{}
+	var isPrivate int
+	err := db.QueryRow(`SELECT id, name, description, invite_code, is_private, created_by_unique_id, base_url, created_at FROM turmas WHERE id = ?`, id).
+		Scan(&t.ID, &t.Name, &t.Description, &t.InviteCode, &isPrivate, &t.CreatedByUniqueID, &t.BaseURL, &t.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	t.IsPrivate = isPrivate == 1
+	return t, nil
+}
+
+func GetTurmaByInviteCode(db *sql.DB, code string) (*models.Turma, error) {
+	t := &models.Turma{}
+	var isPrivate int
+	err := db.QueryRow(`SELECT id, name, description, invite_code, is_private, created_by_unique_id, base_url, created_at FROM turmas WHERE invite_code = ?`, code).
+		Scan(&t.ID, &t.Name, &t.Description, &t.InviteCode, &isPrivate, &t.CreatedByUniqueID, &t.BaseURL, &t.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	t.IsPrivate = isPrivate == 1
+	return t, nil
+}
+
+func AddTurmaMember(db *sql.DB, member *models.TurmaMember) error {
+	_, err := db.Exec(
+		`INSERT INTO turma_members (id, turma_id, unique_identifier, name, role) VALUES (?, ?, ?, ?, ?)`,
+		member.ID, member.TurmaID, member.UniqueIdentifier, member.Name, member.Role,
+	)
+	return err
+}
+
+func GetTurmaMembers(db *sql.DB, turmaID string) ([]models.TurmaMember, error) {
+	rows, err := db.Query(`SELECT id, turma_id, unique_identifier, name, role, joined_at FROM turma_members WHERE turma_id = ? ORDER BY joined_at`, turmaID)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	var members []models.TurmaMember
+	for rows.Next() {
+		var m models.TurmaMember
+		if err := rows.Scan(&m.ID, &m.TurmaID, &m.UniqueIdentifier, &m.Name, &m.Role, &m.JoinedAt); err != nil {
+			return nil, err
+		}
+		members = append(members, m)
+	}
+	return members, rows.Err()
+}
+
+func GetTurmaMember(db *sql.DB, turmaID, uniqueID string) (*models.TurmaMember, error) {
+	m := &models.TurmaMember{}
+	err := db.QueryRow(`SELECT id, turma_id, unique_identifier, name, role, joined_at FROM turma_members WHERE turma_id = ? AND unique_identifier = ?`, turmaID, uniqueID).
+		Scan(&m.ID, &m.TurmaID, &m.UniqueIdentifier, &m.Name, &m.Role, &m.JoinedAt)
+	if err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func RemoveTurmaMember(db *sql.DB, turmaID, uniqueID string) error {
+	_, err := db.Exec(`DELETE FROM turma_members WHERE turma_id = ? AND unique_identifier = ?`, turmaID, uniqueID)
+	return err
+}
+
+func IsTurmaMember(db *sql.DB, turmaID, uniqueID string) (bool, error) {
+	var count int
+	err := db.QueryRow(`SELECT COUNT(*) FROM turma_members WHERE turma_id = ? AND unique_identifier = ?`, turmaID, uniqueID).Scan(&count)
+	return count > 0, err
+}
+
+func GetTurmasByMember(db *sql.DB, uniqueID string) ([]models.Turma, error) {
+	const q = `
+	SELECT t.id, t.name, t.description, t.invite_code, t.is_private, t.created_by_unique_id, t.base_url, t.created_at
+	FROM turmas t
+	JOIN turma_members tm ON t.id = tm.turma_id
+	WHERE tm.unique_identifier = ?
+	ORDER BY t.created_at DESC`
+	rows, err := db.Query(q, uniqueID)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	var turmas []models.Turma
+	for rows.Next() {
+		var t models.Turma
+		var isPrivate int
+		if err := rows.Scan(&t.ID, &t.Name, &t.Description, &t.InviteCode, &isPrivate, &t.CreatedByUniqueID, &t.BaseURL, &t.CreatedAt); err != nil {
+			return nil, err
+		}
+		t.IsPrivate = isPrivate == 1
+		turmas = append(turmas, t)
+	}
+	return turmas, rows.Err()
+}
+
+func GetTurmaMatches(db *sql.DB, turmaID string) ([]models.Match, error) {
+	rows, err := db.Query(`SELECT id, status, base_url, COALESCE(winner_player_id,''), COALESCE(turma_id,''), created_at FROM matches WHERE turma_id = ? ORDER BY created_at DESC`, turmaID)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	var matches []models.Match
+	for rows.Next() {
+		var m models.Match
+		if err := rows.Scan(&m.ID, &m.Status, &m.BaseURL, &m.WinnerPlayerID, &m.TurmaID, &m.CreatedAt); err != nil {
+			return nil, err
+		}
+		matches = append(matches, m)
+	}
+	return matches, rows.Err()
+}
+
+func CreateMatchInTurma(db *sql.DB, id, baseURL, turmaID string) error {
+	_, err := db.Exec(`INSERT INTO matches (id, status, base_url, turma_id) VALUES (?, 'waiting', ?, ?)`, id, baseURL, turmaID)
+	return err
+}
+
+func GetTurmaRanking(db *sql.DB, turmaID string) ([]models.TurmaRankEntry, error) {
+	const q = `
+	WITH turma_matches AS (
+		SELECT id FROM matches WHERE turma_id = ?
+	),
+	match_wins AS (
+		SELECT p.unique_identifier, COUNT(*) AS wins
+		FROM players p
+		JOIN matches m ON p.match_id = m.id AND m.winner_player_id = p.id
+		WHERE m.turma_id = ?
+		GROUP BY p.unique_identifier
+	),
+	round_wins AS (
+		SELECT p.unique_identifier, COUNT(*) AS wins
+		FROM players p
+		JOIN rounds r ON r.winner_player_id = p.id AND r.match_id IN (SELECT id FROM turma_matches)
+		GROUP BY p.unique_identifier
+	),
+	base AS (
+		SELECT
+			p.unique_identifier,
+			MAX(p.name) AS name,
+			COUNT(DISTINCT p.match_id) AS matches_played,
+			SUM(p.total_score) AS total_score,
+			SUM(CASE WHEN p.status = 'estourou' THEN 1 ELSE 0 END) AS bust_count
+		FROM players p
+		WHERE p.match_id IN (SELECT id FROM turma_matches)
+		GROUP BY p.unique_identifier
+	)
+	SELECT
+		b.unique_identifier,
+		b.name,
+		b.matches_played,
+		COALESCE(mw.wins, 0) AS matches_won,
+		b.total_score,
+		b.bust_count,
+		COALESCE(rw.wins, 0) AS total_round_wins
+	FROM base b
+	LEFT JOIN match_wins mw ON b.unique_identifier = mw.unique_identifier
+	LEFT JOIN round_wins rw ON b.unique_identifier = rw.unique_identifier
+	ORDER BY matches_won DESC, total_round_wins DESC, b.bust_count ASC`
+
+	rows, err := db.Query(q, turmaID, turmaID)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	var entries []models.TurmaRankEntry
+	for rows.Next() {
+		var e models.TurmaRankEntry
+		if err := rows.Scan(&e.UniqueIdentifier, &e.Name, &e.MatchesPlayed, &e.MatchesWon, &e.TotalScore, &e.BustCount, &e.TotalRoundWins); err != nil {
+			return nil, err
+		}
+		entries = append(entries, e)
+	}
+	return entries, rows.Err()
 }
