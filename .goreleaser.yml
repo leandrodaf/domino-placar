@@ -21,30 +21,19 @@ builds:
       - arm64
 
 archives:
-  - format: tar.gz
+  - formats: [tar.gz]
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    format_overrides:
+    formats_overrides:
       - goos: windows
-        format: zip
+        formats: [zip]
     files:
-      - README.md
-      - LICENSE
-      - CHANGELOG.md
-      - templates/**/*
-      - static/**/*
-      - internal/i18n/locales/*
-
-dockers:
-  - image_templates:
-      - "ghcr.io/leandrodaf/domino-placar:{{ .Tag }}"
-      - "ghcr.io/leandrodaf/domino-placar:latest"
-    dockerfile: Dockerfile
-    build_flag_templates:
-      - "--label=org.opencontainers.image.title={{ .ProjectName }}"
-      - "--label=org.opencontainers.image.version={{ .Version }}"
-      - "--label=org.opencontainers.image.source=https://github.com/leandrodaf/domino-placar"
-      - "--label=org.opencontainers.image.created={{ .Date }}"
-      - "--label=org.opencontainers.image.revision={{ .FullCommit }}"
+      - src: README.md
+      - src: LICENSE
+      - src: CHANGELOG.md
+      - src: "templates/*"
+      - src: "static/*"
+      - src: "static/tiles/*"
+      - src: "internal/i18n/locales/*"
 
 checksum:
   name_template: checksums.txt
