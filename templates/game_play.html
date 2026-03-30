@@ -80,7 +80,8 @@
         <button id="btn-orient-h" class="btn-orient btn-orient--active" onclick="setOrient('h')">— Deitada</button>
         <button id="btn-orient-v" class="btn-orient" onclick="setOrient('v')">| Em pé</button>
       </div>
-      <div id="side-selector-btns">
+      <!-- Two-sided choice -->
+      <div id="side-selector-btns" style="display:none;">
         <button id="btn-side-left" class="btn-side" onclick="confirmPlay('left')">
           <span class="side-arrow">◀</span>
           <span class="side-val">Esquerda: <strong id="left-end-val"></strong></span>
@@ -90,6 +91,10 @@
           <span class="side-arrow">▶</span>
         </button>
       </div>
+      <!-- Forced side (only one valid) — shown for forced-side doubles -->
+      <button id="btn-confirm-forced" class="btn-side" style="display:none; width:100%;" onclick="confirmForcedPlay()">
+        ✔ Confirmar jogada
+      </button>
       <button class="btn-cancel-sel" onclick="cancelSelection()">✕ Cancelar</button>
     </div>
 
@@ -259,7 +264,7 @@
   50% { opacity: 0.4; transform: scale(0.7); }
 }
 
-/* ── Board area ── */
+/* ── Board area — felt table surface ── */
 #board-area {
   flex: 1;
   display: flex;
@@ -267,26 +272,40 @@
   overflow: hidden;
   min-height: 0;
   position: relative;
-  padding: 8px 0;
+  /* Dark green felt table */
+  background:
+    radial-gradient(ellipse 140% 80% at 50% 30%, rgba(22,60,30,0.85) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 40% at 20% 60%, rgba(10,40,20,0.4) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 80% 60%, rgba(10,40,20,0.4) 0%, transparent 50%),
+    linear-gradient(180deg, #091a0d 0%, #0b2010 60%, #071408 100%);
+  border-top: 1px solid rgba(34,197,94,0.12);
+  border-bottom: 1px solid rgba(34,197,94,0.12);
+  /* 2.5D perspective */
+  perspective: 900px;
+  perspective-origin: 50% 15%;
 }
 #board-scroll {
   flex: 1;
   overflow-x: auto;
-  overflow-y: hidden;
-  padding: 12px 8px;
+  overflow-y: visible;
+  padding: 18px 16px 32px;
   height: 100%;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
+  scrollbar-color: rgba(34,197,94,0.2) transparent;
 }
 #board-chain {
   display: flex;
-  align-items: center;
-  gap: 2px;
-  min-height: 90px;
-  min-width: 100%;
+  align-items: flex-end;
+  gap: 1px;
+  min-height: 100px;
+  min-width: max-content;
   padding: 4px 0;
+  /* 2.5D tilt — top recedes, bottom is nearest */
+  transform: rotateX(14deg);
+  transform-origin: 50% 100%;
+  transform-style: preserve-3d;
 }
 #board-empty {
   display: flex;
@@ -295,49 +314,69 @@
   justify-content: center;
   width: 100%;
   gap: 6px;
-  color: var(--muted);
+  color: rgba(34,197,94,0.4);
   font-size: 0.85rem;
   padding: 16px;
-  opacity: 0.7;
+  transform: none;
 }
 .board-tile {
   flex-shrink: 0;
-  border-radius: 5px;
+  border-radius: 6px;
   width: 44px;
   height: 70px;
   display: block;
   image-rendering: crisp-edges;
-  transition: transform 0.15s;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+  /* 3D tile thickness: right + bottom dark edges */
+  box-shadow:
+    0 0 0 1.5px rgba(255,255,255,0.13),
+    4px 0px 0 rgba(0,0,0,0.8),
+    0px 5px 0 rgba(0,0,0,0.7),
+    5px 6px 0 rgba(0,0,0,0.9),
+    6px 9px 14px rgba(0,0,0,0.65);
+  position: relative;
+  z-index: 1;
 }
-/* Vertical/carroça: rotate 90°, swap visual dimensions */
+/* Vertical/carroça — standing upright (perpendicular) */
+.board-tile-wrap.wrap-v {
+  width: 78px;   /* space it needs in the chain */
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
 .board-tile.vertical {
+  /* Physically narrower + taller: rotate the image and show pip-top stacked */
   width: 70px;
   height: 44px;
-  transform: rotate(90deg);
-  margin: 0 -13px; /* compensate for visual size change */
+  transform: rotate(90deg) translateY(2px);
+  transform-origin: center center;
+  box-shadow:
+    0 0 0 1.5px rgba(255,255,255,0.13),
+    0px 5px 0 rgba(0,0,0,0.8),
+    5px 0px 0 rgba(0,0,0,0.7),
+    5px 6px 0 rgba(0,0,0,0.9),
+    6px 9px 14px rgba(0,0,0,0.65);
 }
 .board-tile.flip { transform: rotate(180deg); }
-.board-tile.vertical.flip { transform: rotate(270deg); }
+.board-tile.vertical.flip { transform: rotate(270deg) translateY(2px); }
 .board-tile--new {
-  animation: tile-drop 0.25s ease-out;
+  animation: tile-drop 0.28s cubic-bezier(0.22,1,0.36,1);
 }
 @keyframes tile-drop {
-  from { opacity: 0; transform: translateY(-10px) scale(0.9); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+  from { opacity: 0; transform: translateY(-14px) scale(0.88); }
+  to   { opacity: 1; transform: translateY(0)     scale(1); }
 }
 .board-tile.flip.board-tile--new {
-  animation: tile-drop-flip 0.25s ease-out;
+  animation: tile-drop-flip 0.28s cubic-bezier(0.22,1,0.36,1);
 }
 @keyframes tile-drop-flip {
-  from { opacity: 0; transform: rotate(180deg) translateY(-10px) scale(0.9); }
-  to   { opacity: 1; transform: rotate(180deg) translateY(0) scale(1); }
+  from { opacity: 0; transform: rotate(180deg) translateY(-14px) scale(0.88); }
+  to   { opacity: 1; transform: rotate(180deg) translateY(0)     scale(1); }
 }
-/* Wrapper to hold vertical tile with correct spacing in chain */
+/* Wrapper for layout alignment */
 .board-tile-wrap {
   flex-shrink: 0;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
 }
 
@@ -721,7 +760,15 @@ function renderState(state) {
       turnText.textContent = '🏆 Jogo encerrado!';
     } else if (myTurn) {
       banner.className = 'turn-banner turn-banner--my-turn';
-      turnText.textContent = '⭐ Sua vez — jogue uma peça!';
+      var hasPlayable = (state.playable_tiles || []).length > 0;
+      var hasBoneyardTiles = state.boneyard_count > 0;
+      if (hasPlayable) {
+        turnText.textContent = '⭐ Sua vez — jogue uma peça!';
+      } else if (HAS_BONEYARD && hasBoneyardTiles) {
+        turnText.textContent = '🎲 Sua vez — compre uma pedra do monte!';
+      } else {
+        turnText.textContent = '⏭ Sua vez — passe a vez (sem mais opções)';
+      }
     } else {
       banner.className = 'turn-banner turn-banner--waiting';
       turnText.textContent = '⏳ Vez de ' + currentPlayerName + '...';
@@ -786,12 +833,7 @@ function renderBoard(board) {
     var isVertical = pt.orientation === 'v';
 
     var wrap = document.createElement('div');
-    wrap.className = 'board-tile-wrap';
-    if (isVertical) {
-      // For vertical tiles the img is rotated 90°, so the wrap
-      // needs to be tall enough to contain the rotated tile
-      wrap.style.cssText = 'width:44px; height:90px;';
-    }
+    wrap.className = 'board-tile-wrap' + (isVertical ? ' wrap-v' : '');
 
     var img = document.createElement('img');
     img.src = '/static/tiles/tile_' + lo + '_' + hi + '.png';
@@ -800,7 +842,6 @@ function renderBoard(board) {
     if (isVertical) cls += ' vertical';
     if (pt.flipped) cls += ' flip';
     img.className = cls;
-    // Animate newly added tile
     if (idx === newTileCount - 1 && newTileCount > prevTileCount) {
       img.classList.add('board-tile--new');
     }
@@ -877,7 +918,8 @@ function renderActions(state, myTurn) {
 
 // ── Tile interaction ─────────────────────────────────────────────────────────
 
-var selectedOrientation = 'v'; // default for doubles
+var selectedOrientation = 'v';
+var selectedForcedSide  = null;
 
 function isDouble(tStr) {
   var p = tStr.split('-');
@@ -891,52 +933,54 @@ function setOrient(o) {
   });
 }
 
+// Opens the tile placement selector in the correct mode.
+// showSideBtns=true → player chooses left/right; false → side is forced (double orientation only)
+function openSelector(tStr, showSideBtns, forcedSide) {
+  var ss         = document.getElementById('side-selector');
+  var sideBtns   = document.getElementById('side-selector-btns');
+  var orientRow  = document.getElementById('orient-row');
+  var btnForced  = document.getElementById('btn-confirm-forced');
+  var board      = currentState ? currentState.board : null;
+
+  document.getElementById('sel-tile-label').textContent = tStr.replace('-', '|');
+  selectedForcedSide = showSideBtns ? null : forcedSide;
+
+  if (showSideBtns) {
+    sideBtns.style.display  = 'flex';
+    btnForced.style.display = 'none';
+    if (board) {
+      document.getElementById('left-end-val').textContent  = board.left_open;
+      document.getElementById('right-end-val').textContent = board.right_open;
+    }
+  } else {
+    sideBtns.style.display  = 'none';
+    btnForced.style.display = 'block';
+  }
+
+  orientRow.style.display = isDouble(tStr) ? 'flex' : 'none';
+  if (ss) ss.style.display = 'block';
+}
+
 function onTileClick(tStr) {
   if (!currentState) return;
   var board = currentState.board;
-  var sideSelector = document.getElementById('side-selector');
 
-  // Deselect previous
   document.querySelectorAll('.hand-tile--selected').forEach(function(el) {
     el.classList.remove('hand-tile--selected');
   });
-
   var tileEl = document.querySelector('.hand-tile[data-tile="' + tStr + '"]');
   if (tileEl) tileEl.classList.add('hand-tile--selected');
   selectedTile = tStr;
 
-  // Set default orientation: vertical for doubles, horizontal otherwise
   selectedOrientation = isDouble(tStr) ? 'v' : 'h';
   setOrient(selectedOrientation);
 
-  // Show/hide orientation toggle
-  var orientRow = document.getElementById('orient-row');
-  if (orientRow) orientRow.style.display = isDouble(tStr) ? 'flex' : 'none';
+  var dbl = isDouble(tStr);
 
-  // Empty board — play anywhere
+  // Empty board — first play
   if (board.tile_count === 0) {
-    // Show side selector with orientation if it's a double
-    if (isDouble(tStr)) {
-      document.getElementById('sel-tile-label').textContent = tStr.replace('-', '|');
-      document.getElementById('left-end-val').textContent  = '—';
-      document.getElementById('right-end-val').textContent = '—';
-      if (sideSelector) sideSelector.style.display = 'block';
-      return;
-    }
-    doPlay(tStr, 'right', 'h');
-    return;
-  }
-
-  // Both ends equal — any side is equivalent
-  if (board.left_open === board.right_open) {
-    if (isDouble(tStr)) {
-      document.getElementById('sel-tile-label').textContent = tStr.replace('-', '|');
-      document.getElementById('left-end-val').textContent  = board.left_open;
-      document.getElementById('right-end-val').textContent = board.right_open;
-      if (sideSelector) sideSelector.style.display = 'block';
-      return;
-    }
-    doPlay(tStr, 'right', 'h');
+    if (dbl) { openSelector(tStr, false, 'right'); }
+    else     { doPlay(tStr, 'right', 'h'); }
     return;
   }
 
@@ -945,31 +989,21 @@ function onTileClick(tStr) {
   var fitsLeft  = (h === board.left_open  || l === board.left_open);
   var fitsRight = (h === board.right_open || l === board.right_open);
 
+  // Both ends equal — any side is equivalent
+  if (board.left_open === board.right_open) {
+    if (dbl) { openSelector(tStr, false, 'right'); }
+    else     { doPlay(tStr, 'right', 'h'); }
+    return;
+  }
+
   if (fitsLeft && fitsRight) {
-    // Show side selector
-    document.getElementById('sel-tile-label').textContent = tStr.replace('-', '|');
-    document.getElementById('left-end-val').textContent  = board.left_open;
-    document.getElementById('right-end-val').textContent = board.right_open;
-    if (sideSelector) sideSelector.style.display = 'block';
+    openSelector(tStr, true, null);                    // player chooses side
   } else if (fitsLeft) {
-    if (isDouble(tStr)) {
-      // Show orientation only (side is forced)
-      document.getElementById('sel-tile-label').textContent = tStr.replace('-', '|');
-      document.getElementById('left-end-val').textContent  = board.left_open;
-      document.getElementById('right-end-val').textContent = '—';
-      if (sideSelector) sideSelector.style.display = 'block';
-    } else {
-      doPlay(tStr, 'left', 'h');
-    }
+    if (dbl) { openSelector(tStr, false, 'left'); }
+    else     { doPlay(tStr, 'left', 'h'); }
   } else {
-    if (isDouble(tStr)) {
-      document.getElementById('sel-tile-label').textContent = tStr.replace('-', '|');
-      document.getElementById('left-end-val').textContent  = '—';
-      document.getElementById('right-end-val').textContent = board.right_open;
-      if (sideSelector) sideSelector.style.display = 'block';
-    } else {
-      doPlay(tStr, 'right', 'h');
-    }
+    if (dbl) { openSelector(tStr, false, 'right'); }
+    else     { doPlay(tStr, 'right', 'h'); }
   }
 }
 
@@ -980,14 +1014,23 @@ function confirmPlay(side) {
   doPlay(selectedTile, side, selectedOrientation);
 }
 
+function confirmForcedPlay() {
+  if (!selectedTile || !selectedForcedSide) return;
+  var ss = document.getElementById('side-selector');
+  if (ss) ss.style.display = 'none';
+  doPlay(selectedTile, selectedForcedSide, selectedOrientation);
+}
+
 function cancelSelection() {
   selectedTile = null;
+  selectedForcedSide = null;
   document.querySelectorAll('.hand-tile--selected').forEach(function(el) {
     el.classList.remove('hand-tile--selected');
   });
   var ss = document.getElementById('side-selector');
   if (ss) ss.style.display = 'none';
 }
+
 
 // ── Actions ──────────────────────────────────────────────────────────────────
 
