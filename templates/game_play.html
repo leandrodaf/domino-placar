@@ -74,12 +74,6 @@
     <!-- Side + orientation selector -->
     <div id="side-selector" style="display:none;">
       <div id="side-selector-title">Onde jogar <strong id="sel-tile-label"></strong>?</div>
-      <!-- Orientation toggle — shown only for doubles -->
-      <div id="orient-row" style="display:none; margin-bottom:8px;">
-        <span style="font-size:0.78rem; color:var(--muted); margin-right:8px;">Posição da carroça:</span>
-        <button id="btn-orient-h" class="btn-orient" onclick="setOrient('h')">— Deitada</button>
-        <button id="btn-orient-v" class="btn-orient btn-orient--active" onclick="setOrient('v')">| Em pé</button>
-      </div>
       <!-- Two-sided choice -->
       <div id="side-selector-btns" style="display:none;">
         <button id="btn-side-left" class="btn-side" onclick="confirmPlay('left')">
@@ -109,7 +103,7 @@
       {{if .MyParticipant}}
         {{if .MyParticipant.Hand}}
           {{range .MyParticipant.Hand}}
-          <div class="hand-tile" data-tile="{{.String}}" onclick="onTileClick('{{.String}}')">
+          <div class="hand-tile hand-tile--disabled" data-tile="{{.String}}">
             <img src="{{tileImg .High .Low}}" alt="{{.String}}" loading="lazy">
           </div>
           {{end}}
@@ -659,24 +653,6 @@
   gap: 6px;
   flex-wrap: wrap;
 }
-.btn-orient {
-  padding: 4px 12px;
-  border-radius: 8px;
-  border: 1.5px solid var(--border-2);
-  background: rgba(255,255,255,0.04);
-  color: var(--muted);
-  font-size: 0.78rem;
-  cursor: pointer;
-  transition: background 0.12s, border-color 0.12s, color 0.12s;
-}
-.btn-orient--active {
-  background: rgba(245,197,24,0.14);
-  border-color: var(--gold);
-  color: var(--gold);
-  font-weight: 600;
-}
-.btn-orient:hover { border-color: var(--border); color: var(--text); }
-
 /* ── Overlays ── */
 .overlay {
   position: fixed;
@@ -934,29 +910,20 @@ function renderActions(state, myTurn) {
 
 // ── Tile interaction ─────────────────────────────────────────────────────────
 
-var selectedOrientation = 'v';
-var selectedForcedSide  = null;
+var selectedForcedSide = null;
 
 function isDouble(tStr) {
   var p = tStr.split('-');
   return p[0] === p[1];
 }
 
-function setOrient(o) {
-  selectedOrientation = o;
-  document.querySelectorAll('.btn-orient').forEach(function(b) {
-    b.classList.toggle('btn-orient--active', b.id === 'btn-orient-' + o);
-  });
-}
-
-// Opens the tile placement selector in the correct mode.
-// showSideBtns=true → player chooses left/right; false → side is forced (double orientation only)
+// Opens the tile placement selector.
+// showSideBtns=true → player chooses left/right; false → side is already determined (doubles)
 function openSelector(tStr, showSideBtns, forcedSide) {
-  var ss         = document.getElementById('side-selector');
-  var sideBtns   = document.getElementById('side-selector-btns');
-  var orientRow  = document.getElementById('orient-row');
-  var btnForced  = document.getElementById('btn-confirm-forced');
-  var board      = currentState ? currentState.board : null;
+  var ss        = document.getElementById('side-selector');
+  var sideBtns  = document.getElementById('side-selector-btns');
+  var btnForced = document.getElementById('btn-confirm-forced');
+  var board     = currentState ? currentState.board : null;
 
   document.getElementById('sel-tile-label').textContent = tStr.replace('-', '|');
   selectedForcedSide = showSideBtns ? null : forcedSide;
@@ -972,14 +939,13 @@ function openSelector(tStr, showSideBtns, forcedSide) {
     sideBtns.style.display  = 'none';
     btnForced.style.display = 'block';
   }
-
-  orientRow.style.display = isDouble(tStr) ? 'flex' : 'none';
   if (ss) ss.style.display = 'block';
 }
 
 function onTileClick(tStr) {
   if (!currentState) return;
   var board = currentState.board;
+  var dbl   = isDouble(tStr);
 
   document.querySelectorAll('.hand-tile--selected').forEach(function(el) {
     el.classList.remove('hand-tile--selected');
@@ -988,38 +954,36 @@ function onTileClick(tStr) {
   if (tileEl) tileEl.classList.add('hand-tile--selected');
   selectedTile = tStr;
 
-  selectedOrientation = isDouble(tStr) ? 'v' : 'h';
-  setOrient(selectedOrientation);
-
-  var dbl = isDouble(tStr);
+  var orient = dbl ? 'v' : 'h';
+  void orient; // orient is computed inside doPlay now
 
   // Empty board — first play
   if (board.tile_count === 0) {
     if (dbl) { openSelector(tStr, false, 'right'); }
-    else     { doPlay(tStr, 'right', 'h'); }
+    else     { doPlay(tStr, 'right'); }
     return;
   }
 
   var parts = tStr.split('-');
-  var h = parseInt(parts[0], 10), l = parseInt(parts[1], 10);
-  var fitsLeft  = (h === board.left_open  || l === board.left_open);
-  var fitsRight = (h === board.right_open || l === board.right_open);
+  var hi = parseInt(parts[0], 10), lo = parseInt(parts[1], 10);
+  var fitsLeft  = (hi === board.left_open  || lo === board.left_open);
+  var fitsRight = (hi === board.right_open || lo === board.right_open);
 
-  // Both ends equal — any side is equivalent
+  // Both ends equal — side doesn't matter
   if (board.left_open === board.right_open) {
     if (dbl) { openSelector(tStr, false, 'right'); }
-    else     { doPlay(tStr, 'right', 'h'); }
+    else     { doPlay(tStr, 'right'); }
     return;
   }
 
   if (fitsLeft && fitsRight) {
-    openSelector(tStr, true, null);                    // player chooses side
+    openSelector(tStr, true, null);       // player must choose side
   } else if (fitsLeft) {
     if (dbl) { openSelector(tStr, false, 'left'); }
-    else     { doPlay(tStr, 'left', 'h'); }
+    else     { doPlay(tStr, 'left'); }
   } else {
     if (dbl) { openSelector(tStr, false, 'right'); }
-    else     { doPlay(tStr, 'right', 'h'); }
+    else     { doPlay(tStr, 'right'); }
   }
 }
 
@@ -1027,14 +991,14 @@ function confirmPlay(side) {
   if (!selectedTile) return;
   var ss = document.getElementById('side-selector');
   if (ss) ss.style.display = 'none';
-  doPlay(selectedTile, side, selectedOrientation);
+  doPlay(selectedTile, side);
 }
 
 function confirmForcedPlay() {
   if (!selectedTile || !selectedForcedSide) return;
   var ss = document.getElementById('side-selector');
   if (ss) ss.style.display = 'none';
-  doPlay(selectedTile, selectedForcedSide, selectedOrientation);
+  doPlay(selectedTile, selectedForcedSide);
 }
 
 function cancelSelection() {
@@ -1050,13 +1014,13 @@ function cancelSelection() {
 
 // ── Actions ──────────────────────────────────────────────────────────────────
 
-function doPlay(tileStr, side, orientation) {
+function doPlay(tileStr, side) {
   // Animate the played tile out before posting
   var tileEl = document.querySelector('.hand-tile[data-tile="' + tileStr + '"]');
   if (tileEl) tileEl.classList.add('hand-tile--played');
   selectedTile = null;
-  // Carroças (doubles) are ALWAYS vertical; non-doubles always horizontal unless explicitly set
-  var orient = isDouble(tileStr) ? (orientation === 'h' ? 'h' : 'v') : 'h';
+  // Doubles are always vertical; non-doubles always horizontal
+  var orient = isDouble(tileStr) ? 'v' : 'h';
   setTimeout(function() { postAction({ type: 'play', tile: tileStr, side: side, orientation: orient }); }, 200);
 }
 
