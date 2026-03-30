@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -64,7 +65,8 @@ func GameStateHandler(mgr *GameSessionManager) http.HandlerFunc {
 			}
 		}
 
-		state := gs.StateForPlayer(uniqueID)
+		cols, _ := strconv.Atoi(r.URL.Query().Get("cols"))
+		state := gs.StateForPlayer(uniqueID, cols)
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-Control", "no-store")
 		_ = json.NewEncoder(w).Encode(state)
@@ -96,6 +98,7 @@ func GameActionHandler(mgr *GameSessionManager, hub *SSEHub) http.HandlerFunc {
 			Tile        string `json:"tile"`
 			Side        string `json:"side"`
 			Orientation string `json:"orientation"`
+			Cols        int    `json:"cols"`
 		}
 
 		// Support both JSON body and form data
@@ -169,7 +172,7 @@ func GameActionHandler(mgr *GameSessionManager, hub *SSEHub) http.HandlerFunc {
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"drawn": drawnTile.String(),
-				"state": gs.StateForPlayer(getUniqueIDFromPID(gs, participantID)),
+				"state": gs.StateForPlayer(getUniqueIDFromPID(gs, participantID), body.Cols),
 			})
 			return
 
@@ -207,7 +210,7 @@ func GameActionHandler(mgr *GameSessionManager, hub *SSEHub) http.HandlerFunc {
 
 		// Return updated state
 		uniqueID := getUniqueIDFromPID(gs, participantID)
-		state := gs.StateForPlayer(uniqueID)
+		state := gs.StateForPlayer(uniqueID, body.Cols)
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(state)
 	}

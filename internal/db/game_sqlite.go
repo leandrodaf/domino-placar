@@ -188,7 +188,7 @@ func GetGameSessionPublicState(db *sql.DB, sessionID, viewerUID string) (map[str
 	if err != nil {
 		return nil, err
 	}
-	return gs.StateForPlayer(viewerUID), nil
+	return gs.StateForPlayer(viewerUID, 0), nil
 }
 
 // ─── Session JSON for lobby ───────────────────────────────────────────────

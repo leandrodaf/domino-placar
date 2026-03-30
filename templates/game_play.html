@@ -389,6 +389,13 @@
   from { opacity: 0; transform: rotate(90deg) scale(0.8); }
   to   { opacity: 1; transform: rotate(90deg) scale(1); }
 }
+.board-tile.vertical.flip.board-tile--new {
+  animation: tile-drop-vflip 0.28s cubic-bezier(0.22,1,0.36,1);
+}
+@keyframes tile-drop-vflip {
+  from { opacity: 0; transform: rotate(180deg) scale(0.8); }
+  to   { opacity: 1; transform: rotate(180deg) scale(1); }
+}
 
 /* ── Snake turn indicator ── */
 .chain-turn {
@@ -729,44 +736,36 @@ var HAS_BONEYARD = '{{if .Session.Rules.HasBoneyard}}1{{end}}' === '1';
 
 var selectedTile = null;
 var currentState = null;
-// ── Board layout state (absolute-position snake) ──────────────────────────
+// ── Board layout state ────────────────────────────────────────────────────
+// boardCols is computed once at page load from the available viewport width.
+// It is sent to the backend with every state request so that the server can
+// use layout_pixel.go to compute absolute (x, y, rotation) for each tile.
 var BOARD_TILE_STEP = 59;  // 57px wide + 2px gap (horizontal tile slot)
-var BOARD_ROW_H    = 62;  // row-slot height: fits vertical tiles (57px) + gap
-var BOARD_LEFT_ROWS = 4;  // rows pre-allocated above the first tile for left-end plays
 
-var boardCols     = null;  // tiles per row — set once on first tile, never changes
-var boardStartIdx = null;  // sequential index of the very first tile placed
-var boardLeftIdx  = null;  // next left-end index (decrements on each left-end play)
-var boardRightIdx = null;  // next right-end index (increments on each right-end play)
-var boardTileEls  = {};    // tile_str → .board-tile-wrap DOM element
-var boardPrevKeys = [];    // previous chain tile strings (change detection)
+var boardCols = (function() {
+  var scroll = document.getElementById('board-scroll');
+  var w = (scroll ? scroll.clientWidth : 0) || window.innerWidth || 320;
+  return Math.max(3, Math.floor(Math.max(200, w - 28) / BOARD_TILE_STEP));
+})();
+
+var boardTileEls  = {};  // tile_str → .board-tile-wrap DOM element
+var boardPrevKeys = [];  // previous chain tile strings (change detection)
 
 function _boardReset() {
-  boardCols = null; boardStartIdx = null;
-  boardLeftIdx = null; boardRightIdx = null;
   boardTileEls = {}; boardPrevKeys = [];
 }
 
-// Convert sequential snake index → absolute pixel position (x, y).
-// Implements the standard L→R / R→L serpentine layout.
-function _boardXY(idx, isVertical) {
-  var row      = Math.floor(idx / boardCols);
-  var colInRow = idx % boardCols;
-  var col      = (row % 2 === 0) ? colInRow : (boardCols - 1 - colInRow);
-  var tileH    = isVertical ? 57 : 36;
-  return {
-    x: col * BOARD_TILE_STEP,
-    y: row * BOARD_ROW_H + Math.floor((BOARD_ROW_H - tileH) / 2)
-  };
-}
-
-function _boardPlace(container, pt, idx, isNew) {
-  var isVertical = pt.orientation === 'v';
-  var pos = _boardXY(idx, isVertical);
-  var el  = makeTileWrap(pt, isNew);
+// Place a tile using the server-computed (x, y) centre coordinates and rotation.
+// rotation: 0=East horizontal, 90=vertical, 180=West horizontal, 270=vertical inverted.
+function _boardPlace(container, pt, isNew) {
+  var isVertical = (pt.rotation === 90 || pt.rotation === 270);
+  // Convert tile centre to CSS top-left (wrapper dimensions: 57×36 or 36×57).
+  var halfW = isVertical ? 18   : 28.5;
+  var halfH = isVertical ? 28.5 : 18;
+  var el = makeTileWrap(pt, isNew);
   el.style.position = 'absolute';
-  el.style.left     = pos.x + 'px';
-  el.style.top      = pos.y + 'px';
+  el.style.left     = (pt.x - halfW) + 'px';
+  el.style.top      = (pt.y - halfH) + 'px';
   container.appendChild(el);
   boardTileEls[pt.tile] = el;
   return el;
@@ -866,7 +865,9 @@ function makeTileWrap(pt, isNew) {
   var h = parseInt(parts[0], 10);
   var l = parseInt(parts[1], 10);
   var lo = Math.min(h, l), hi = Math.max(h, l);
-  var isVertical = pt.orientation === 'v';
+  // rotation: 0=East, 90=vertical, 180=West(flip), 270=vertical-inverted
+  var isVertical = (pt.rotation === 90 || pt.rotation === 270);
+  var isFlip     = (pt.rotation === 180 || pt.rotation === 270);
 
   var wrap = document.createElement('div');
   wrap.className = 'board-tile-wrap' + (isVertical ? ' wrap-v' : '');
@@ -876,8 +877,8 @@ function makeTileWrap(pt, isNew) {
   img.alt = pt.tile;
   var cls = 'board-tile';
   if (isVertical) cls += ' vertical';
-  if (pt.flipped) cls += ' flip';
-  if (isNew) cls += ' board-tile--new';
+  if (isFlip)     cls += ' flip';
+  if (isNew)      cls += ' board-tile--new';
   img.className = cls;
   wrap.appendChild(img);
   return wrap;
@@ -911,43 +912,24 @@ function renderBoard(board) {
 
   if (emptyEl) emptyEl.style.display = 'none';
 
-  // ── Initialise snake grid on first tile ────────────────────────────────────
-  if (boardCols === null) {
-    var availW = Math.max(200, (scroll.clientWidth || 320) - 28);
-    boardCols     = Math.max(3, Math.floor(availW / BOARD_TILE_STEP));
-    // First tile goes to the CENTRE column of row BOARD_LEFT_ROWS so the chain
-    // can grow to both sides before hitting an edge.
-    boardStartIdx = BOARD_LEFT_ROWS * boardCols + Math.floor(boardCols / 2);
-    boardLeftIdx  = boardStartIdx - 1;
-    boardRightIdx = boardStartIdx;
+  // ── Initialise container on first tile ─────────────────────────────────────
+  if (!cont.style.width) {
     cont.style.position = 'relative';
     cont.style.width    = (boardCols * BOARD_TILE_STEP) + 'px';
-    // Pre-size the container so the first tile (at row BOARD_LEFT_ROWS) can be
-    // scrolled to the centre of the viewport right from the start.
-    cont.style.height   = ((BOARD_LEFT_ROWS * 2 + 1) * BOARD_ROW_H + 8) + 'px';
+    cont.style.height   = '200px';
   }
 
   var newKeys   = chain.map(function(p) { return p.tile; });
   var newTileEl = null;
 
-  if (boardPrevKeys.length === 0 && newKeys.length > 0) {
-    // ── First render: place all tiles sequentially ─────────────────────────
-    for (var i = 0; i < chain.length; i++) {
-      if (!boardTileEls[chain[i].tile]) {
-        _boardPlace(cont, chain[i], boardRightIdx++, i === chain.length - 1);
-      }
+  // Place any tiles not yet rendered. New = not in previous snapshot.
+  chain.forEach(function(pt) {
+    if (!boardTileEls[pt.tile]) {
+      var isNew = boardPrevKeys.length > 0 &&
+                  boardPrevKeys.indexOf(pt.tile) === -1;
+      newTileEl = _boardPlace(cont, pt, isNew);
     }
-    // Scroll to show the last tile (most recently played)
-    newTileEl = boardTileEls[chain[chain.length - 1].tile];
-  } else if (newKeys.length > boardPrevKeys.length) {
-    // ── Incremental: one new tile at left or right end ─────────────────────
-    if (!boardTileEls[newKeys[0]]) {
-      newTileEl = _boardPlace(cont, chain[0], boardLeftIdx--, true);
-    }
-    if (!boardTileEls[newKeys[newKeys.length - 1]]) {
-      newTileEl = _boardPlace(cont, chain[chain.length - 1], boardRightIdx++, true);
-    }
-  }
+  });
 
   boardPrevKeys = newKeys.slice();
   _boardUpdateHeight(cont);
@@ -1151,7 +1133,7 @@ function postAction(body) {
   fetch('/game/' + SESSION_ID + '/action', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
+    body: JSON.stringify(Object.assign({ cols: boardCols }, body))
   })
   .then(function(r) {
     if (!r.ok) return r.text().then(function(t) { throw new Error(t); });
@@ -1167,7 +1149,7 @@ function postAction(body) {
 }
 
 function fetchState() {
-  return fetch('/game/' + SESSION_ID + '/state')
+  return fetch('/game/' + SESSION_ID + '/state?cols=' + boardCols)
     .then(function(r) { return r.json(); })
     .then(function(s) { renderState(s); return s; })
     .catch(function() {});
@@ -1288,11 +1270,11 @@ function showGameOverOverlay(state) {
     if (msg === 'game_move_played' || msg === 'game_turn_changed' || msg === 'game_started') {
       fetchState();
     } else if (msg === 'game_round_ended') {
-      fetch('/game/' + SESSION_ID + '/state')
+      fetch('/game/' + SESSION_ID + '/state?cols=' + boardCols)
         .then(function(r) { return r.json(); })
         .then(function(s) { renderState(s); showRoundOverlay(s); });
     } else if (msg === 'game_finished') {
-      fetch('/game/' + SESSION_ID + '/state')
+      fetch('/game/' + SESSION_ID + '/state?cols=' + boardCols)
         .then(function(r) { return r.json(); })
         .then(function(s) { renderState(s); showGameOverOverlay(s); });
     }

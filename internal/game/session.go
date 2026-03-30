@@ -301,7 +301,36 @@ func (gs *GameSession) CheckGameOver() (bool, *Participant) {
 
 // StateForPlayer returns a JSON-serializable snapshot of the game state
 // from the perspective of the given uniqueID (hides other players' hands).
-func (gs *GameSession) StateForPlayer(uniqueID string) map[string]any {
+// defaultBoardCols is the fallback number of tile columns when the client
+// does not supply its canvas width.
+const defaultBoardCols = 6
+
+// boardConfigFromCols builds a BoardConfig using the client-reported number
+// of tile columns. The pixel dimensions must match the frontend CSS constants:
+//   - TileLength = 57 px  (long side of one tile face)
+//   - TileWidth  = 36 px  (short side)
+//   - TileStep   = 59 px  (tile slot width including the 2-px gap)
+func boardConfigFromCols(cols int) BoardConfig {
+	const (
+		tileLength = 57.0
+		tileWidth  = 36.0
+		tileStep   = 59.0
+		padding    = 8.0
+		screenH    = 1000.0 // board scrolls vertically; only horizontal overflow matters
+	)
+	if cols <= 0 {
+		cols = defaultBoardCols
+	}
+	return BoardConfig{
+		ScreenWidth:  float64(cols) * tileStep,
+		ScreenHeight: screenH,
+		TileLength:   tileLength,
+		TileWidth:    tileWidth,
+		Padding:      padding,
+	}
+}
+
+func (gs *GameSession) StateForPlayer(uniqueID string, cols int) map[string]any {
 	gs.mu.Lock()
 	defer gs.mu.Unlock()
 
@@ -331,22 +360,21 @@ func (gs *GameSession) StateForPlayer(uniqueID string) map[string]any {
 		players = append(players, entry)
 	}
 
-	boardTiles := make([]map[string]any, 0, len(gs.Board.Chain))
-	for _, pt := range gs.Board.Chain {
-		orient := pt.Orientation
-		if orient == "" {
-			if pt.Tile.IsDouble() {
-				orient = "v"
-			} else {
-				orient = "h"
-			}
-		}
+	chainTiles := make([]Tile, len(gs.Board.Chain))
+	for i, pt := range gs.Board.Chain {
+		chainTiles[i] = pt.Tile
+	}
+	rendered := RenderChain(boardConfigFromCols(cols), chainTiles)
+
+	boardTiles := make([]map[string]any, 0, len(rendered))
+	for _, rt := range rendered {
 		boardTiles = append(boardTiles, map[string]any{
-			"tile":        pt.Tile.String(),
-			"high":        pt.Tile.High,
-			"low":         pt.Tile.Low,
-			"flipped":     pt.Flipped,
-			"orientation": orient,
+			"tile":     rt.Tile.String(),
+			"high":     rt.Tile.High,
+			"low":      rt.Tile.Low,
+			"x":        rt.X,
+			"y":        rt.Y,
+			"rotation": rt.Rotation,
 		})
 	}
 
