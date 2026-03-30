@@ -77,8 +77,8 @@
       <!-- Orientation toggle — shown only for doubles -->
       <div id="orient-row" style="display:none; margin-bottom:8px;">
         <span style="font-size:0.78rem; color:var(--muted); margin-right:8px;">Posição da carroça:</span>
-        <button id="btn-orient-h" class="btn-orient btn-orient--active" onclick="setOrient('h')">— Deitada</button>
-        <button id="btn-orient-v" class="btn-orient" onclick="setOrient('v')">| Em pé</button>
+        <button id="btn-orient-h" class="btn-orient" onclick="setOrient('h')">— Deitada</button>
+        <button id="btn-orient-v" class="btn-orient btn-orient--active" onclick="setOrient('v')">| Em pé</button>
       </div>
       <!-- Two-sided choice -->
       <div id="side-selector-btns" style="display:none;">
@@ -1055,7 +1055,8 @@ function doPlay(tileStr, side, orientation) {
   var tileEl = document.querySelector('.hand-tile[data-tile="' + tileStr + '"]');
   if (tileEl) tileEl.classList.add('hand-tile--played');
   selectedTile = null;
-  var orient = orientation || (isDouble(tileStr) ? 'v' : 'h');
+  // Carroças (doubles) are ALWAYS vertical; non-doubles always horizontal unless explicitly set
+  var orient = isDouble(tileStr) ? (orientation === 'h' ? 'h' : 'v') : 'h';
   setTimeout(function() { postAction({ type: 'play', tile: tileStr, side: side, orientation: orient }); }, 200);
 }
 
