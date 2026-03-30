@@ -44,11 +44,12 @@ type GameSession struct {
 	TurnIdx      int            // current turn index into Participants
 
 	// Round state
-	RoundNumber int
-	Board       BoardState
-	Boneyard    []Tile
-	PassCount   int             // consecutive passes in current round
-	BlockedIDs  map[string]bool
+	RoundNumber   int
+	Board         BoardState
+	Boneyard      []Tile
+	PassCount     int             // consecutive passes in current round
+	BlockedIDs    map[string]bool
+	LastRound     *RoundEndResult // result of the most recently completed round
 
 	CreatedAt time.Time
 }
@@ -337,7 +338,7 @@ func (gs *GameSession) StateForPlayer(uniqueID string) map[string]any {
 		}
 	}
 
-	return map[string]any{
+	result := map[string]any{
 		"id":             gs.ID,
 		"variant":        gs.Variant,
 		"max_points":     gs.MaxPoints,
@@ -356,6 +357,19 @@ func (gs *GameSession) StateForPlayer(uniqueID string) map[string]any {
 		"my_hand":        handToStrings(myHand),
 		"playable_tiles": playable,
 	}
+	if gs.LastRound != nil {
+		winnerName := ""
+		if w := gs.FindParticipantByID(gs.LastRound.WinnerID); w != nil {
+			winnerName = w.Name
+		}
+		result["last_round"] = map[string]any{
+			"winner_id":      gs.LastRound.WinnerID,
+			"winner_name":    winnerName,
+			"points_awarded": gs.LastRound.PointsAwarded,
+			"reason":         string(gs.LastRound.Reason),
+		}
+	}
+	return result
 }
 
 func (gs *GameSession) allHands() map[string]Hand {
@@ -375,6 +389,7 @@ func (gs *GameSession) applyRoundResult(result RoundEndResult) {
 	if winner != nil {
 		winner.TotalScore += result.PointsAwarded
 	}
+	gs.LastRound = &result
 	if over, _ := gs.CheckGameOver(); over {
 		gs.Status = SessionFinished
 	}
