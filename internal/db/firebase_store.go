@@ -53,12 +53,27 @@ type fbMatch struct {
 	BaseURL        string `json:"base_url"`
 	WinnerPlayerID string `json:"winner_player_id,omitempty"`
 	TurmaID        string `json:"turma_id,omitempty"`
+	GameType       string `json:"game_type,omitempty"`
+	MaxPoints      int    `json:"max_points,omitempty"`
 	CreatedAt      string `json:"created_at"`
 }
 
 func (f *fbMatch) toModel() *models.Match {
 	t, _ := time.Parse(time.RFC3339, f.CreatedAt)
-	return &models.Match{ID: f.ID, Status: f.Status, BaseURL: f.BaseURL, WinnerPlayerID: f.WinnerPlayerID, TurmaID: f.TurmaID, CreatedAt: t}
+	gameType := f.GameType
+	if gameType == "" {
+		gameType = models.GameTypeDefault
+	}
+	maxPoints := f.MaxPoints
+	if maxPoints <= 0 {
+		maxPoints = models.DefaultMaxPoints(gameType)
+	}
+	return &models.Match{
+		ID: f.ID, Status: f.Status, BaseURL: f.BaseURL,
+		WinnerPlayerID: f.WinnerPlayerID, TurmaID: f.TurmaID,
+		GameType: gameType, MaxPoints: maxPoints,
+		CreatedAt: t,
+	}
 }
 
 type fbPlayer struct {
@@ -126,12 +141,22 @@ type fbTournament struct {
 	Name      string `json:"name"`
 	Status    string `json:"status"`
 	BaseURL   string `json:"base_url"`
+	GameType  string `json:"game_type,omitempty"`
+	MaxPoints int    `json:"max_points,omitempty"`
 	CreatedAt string `json:"created_at"`
 }
 
 func (f *fbTournament) toModel() *models.Tournament {
 	t, _ := time.Parse(time.RFC3339, f.CreatedAt)
-	return &models.Tournament{ID: f.ID, Name: f.Name, Status: f.Status, BaseURL: f.BaseURL, CreatedAt: t}
+	gameType := f.GameType
+	if gameType == "" {
+		gameType = models.GameTypeDefault
+	}
+	maxPoints := f.MaxPoints
+	if maxPoints == 0 {
+		maxPoints = models.DefaultMaxPoints(gameType)
+	}
+	return &models.Tournament{ID: f.ID, Name: f.Name, Status: f.Status, BaseURL: f.BaseURL, GameType: gameType, MaxPoints: maxPoints, CreatedAt: t}
 }
 
 type fbTournamentPlayer struct {
@@ -191,9 +216,9 @@ func safeKey(k string) string {
 
 // ─── Match ───────────────────────────────────────────────────────────────────
 
-func (s *FirebaseStore) CreateMatch(id, baseURL string) error {
+func (s *FirebaseStore) CreateMatch(id, baseURL, gameType string, maxPoints int) error {
 	ctx := context.Background()
-	m := fbMatch{ID: id, Status: "waiting", BaseURL: baseURL, CreatedAt: nowStr()}
+	m := fbMatch{ID: id, Status: "waiting", BaseURL: baseURL, GameType: gameType, MaxPoints: maxPoints, CreatedAt: nowStr()}
 	return s.ref("matches/"+id).Set(ctx, m)
 }
 
@@ -301,10 +326,10 @@ func (s *FirebaseStore) UpdatePlayerName(playerID, name string) error {
 	return s.ref("players/"+playerID).Update(ctx, map[string]interface{}{"name": name})
 }
 
-func (s *FirebaseStore) SetPlayerScore(playerID string, score int) error {
+func (s *FirebaseStore) SetPlayerScore(playerID string, score, maxPoints int) error {
 	ctx := context.Background()
 	status := "active"
-	if score > 51 {
+	if score > maxPoints {
 		status = "estourou"
 	}
 	return s.ref("players/"+playerID).Update(ctx, map[string]interface{}{
@@ -538,9 +563,9 @@ func (s *FirebaseStore) GetHandImages(roundID string) ([]models.HandImage, error
 
 // ─── Tournament ───────────────────────────────────────────────────────────────
 
-func (s *FirebaseStore) CreateTournament(id, name, baseURL string) error {
+func (s *FirebaseStore) CreateTournament(id, name, baseURL, gameType string, maxPoints int) error {
 	ctx := context.Background()
-	t := fbTournament{ID: id, Name: name, Status: "registration", BaseURL: baseURL, CreatedAt: nowStr()}
+	t := fbTournament{ID: id, Name: name, Status: "registration", BaseURL: baseURL, GameType: gameType, MaxPoints: maxPoints, CreatedAt: nowStr()}
 	return s.ref("tournaments/"+id).Set(ctx, t)
 }
 
@@ -559,6 +584,11 @@ func (s *FirebaseStore) GetTournament(id string) (*models.Tournament, error) {
 func (s *FirebaseStore) UpdateTournamentStatus(id, status string) error {
 	ctx := context.Background()
 	return s.ref("tournaments/"+id).Update(ctx, map[string]interface{}{"status": status})
+}
+
+func (s *FirebaseStore) UpdateTournamentGameType(id, gameType string, maxPoints int) error {
+	ctx := context.Background()
+	return s.ref("tournaments/"+id).Update(ctx, map[string]interface{}{"game_type": gameType, "max_points": maxPoints})
 }
 
 func (s *FirebaseStore) CreateTournamentPlayer(id, tournamentID, name, uniqueID string) error {
@@ -1283,10 +1313,18 @@ func (s *FirebaseStore) GetTurmaMatches(turmaID string) ([]models.Match, error) 
 	return result, nil
 }
 
-func (s *FirebaseStore) CreateMatchInTurma(id, baseURL, turmaID string) error {
+func (s *FirebaseStore) CreateMatchInTurma(id, baseURL, turmaID, gameType string, maxPoints int) error {
 	ctx := context.Background()
-	m := fbMatch{ID: id, Status: "waiting", BaseURL: baseURL, TurmaID: turmaID, CreatedAt: nowStr()}
+	m := fbMatch{ID: id, Status: "waiting", BaseURL: baseURL, TurmaID: turmaID, GameType: gameType, MaxPoints: maxPoints, CreatedAt: nowStr()}
 	return s.ref("matches/"+id).Set(ctx, m)
+}
+
+func (s *FirebaseStore) DeleteMatch(id string) error {
+	ctx := context.Background()
+	// Firebase doesn't have referential integrity — delete match node (best effort)
+	// Related players/rounds under /players, /rounds nodes keyed by match_id
+	// are orphaned (acceptable for turma cleanup use case)
+	return s.ref("matches/" + id).Delete(ctx)
 }
 
 func (s *FirebaseStore) GetTurmaRanking(turmaID string) ([]models.TurmaRankEntry, error) {

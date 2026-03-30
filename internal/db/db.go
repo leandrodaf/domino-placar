@@ -125,6 +125,10 @@ func CreateTables(db *sql.DB) error {
 	_, _ = db.Exec(`ALTER TABLE hand_images ADD COLUMN detected_tiles TEXT NOT NULL DEFAULT '[]'`)
 	_, _ = db.Exec(`ALTER TABLE rounds ADD COLUMN starter_player_id TEXT NOT NULL DEFAULT ''`)
 	_, _ = db.Exec(`ALTER TABLE matches ADD COLUMN turma_id TEXT NOT NULL DEFAULT ''`)
+	_, _ = db.Exec(`ALTER TABLE matches ADD COLUMN game_type TEXT NOT NULL DEFAULT 'pontinho'`)
+	_, _ = db.Exec(`ALTER TABLE matches ADD COLUMN max_points INTEGER NOT NULL DEFAULT 51`)
+	_, _ = db.Exec(`ALTER TABLE tournaments ADD COLUMN game_type TEXT NOT NULL DEFAULT 'pontinho'`)
+	_, _ = db.Exec(`ALTER TABLE tournaments ADD COLUMN max_points INTEGER NOT NULL DEFAULT 51`)
 
 	// Turma tables
 	turmaQueries := []string{
@@ -158,22 +162,68 @@ func CreateTables(db *sql.DB) error {
 		}
 	}
 
+	// Game session tables
+	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS game_sessions (
+		id TEXT PRIMARY KEY,
+		variant TEXT NOT NULL DEFAULT 'pontinho',
+		max_points INTEGER NOT NULL DEFAULT 51,
+		team_mode INTEGER NOT NULL DEFAULT 0,
+		status TEXT NOT NULL DEFAULT 'waiting',
+		host_unique_id TEXT NOT NULL DEFAULT '',
+		turn_idx INTEGER NOT NULL DEFAULT 0,
+		round_number INTEGER NOT NULL DEFAULT 1,
+		board_json TEXT NOT NULL DEFAULT '{}',
+		boneyard_json TEXT NOT NULL DEFAULT '[]',
+		pass_count INTEGER NOT NULL DEFAULT 0,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	)`); err != nil {
+		return err
+	}
+	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS game_participants (
+		id TEXT PRIMARY KEY,
+		session_id TEXT NOT NULL,
+		name TEXT NOT NULL,
+		unique_id TEXT NOT NULL,
+		seat INTEGER NOT NULL DEFAULT 0,
+		team INTEGER NOT NULL DEFAULT 0,
+		is_bot INTEGER NOT NULL DEFAULT 0,
+		total_score INTEGER NOT NULL DEFAULT 0,
+		hand_json TEXT NOT NULL DEFAULT '[]',
+		FOREIGN KEY (session_id) REFERENCES game_sessions(id)
+	)`); err != nil {
+		return err
+	}
+	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS game_moves (
+		id TEXT PRIMARY KEY,
+		session_id TEXT NOT NULL,
+		participant_id TEXT NOT NULL,
+		round_number INTEGER NOT NULL DEFAULT 1,
+		move_type TEXT NOT NULL,
+		tile TEXT NOT NULL DEFAULT '',
+		side TEXT NOT NULL DEFAULT '',
+		move_num INTEGER NOT NULL DEFAULT 0,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (session_id) REFERENCES game_sessions(id)
+	)`); err != nil {
+		return err
+	}
+
 	log.Println("Database tables initialized")
 	return nil
 }
 
 // Match operations
 
-func CreateMatch(db *sql.DB, id, baseURL string) error {
-	_, err := db.Exec(`INSERT INTO matches (id, status, base_url) VALUES (?, 'waiting', ?)`, id, baseURL)
+func CreateMatch(db *sql.DB, id, baseURL, gameType string, maxPoints int) error {
+	_, err := db.Exec(`INSERT INTO matches (id, status, base_url, game_type, max_points) VALUES (?, 'waiting', ?, ?, ?)`, id, baseURL, gameType, maxPoints)
 	return err
 }
 
 func GetMatch(db *sql.DB, id string) (*models.Match, error) {
 	m := &models.Match{}
 	var winnerID, turmaID sql.NullString
-	err := db.QueryRow(`SELECT id, status, base_url, COALESCE(winner_player_id,''), COALESCE(turma_id,''), created_at FROM matches WHERE id = ?`, id).
-		Scan(&m.ID, &m.Status, &m.BaseURL, &winnerID, &turmaID, &m.CreatedAt)
+	err := db.QueryRow(`SELECT id, status, base_url, COALESCE(winner_player_id,''), COALESCE(turma_id,''), COALESCE(game_type,'pontinho'), COALESCE(max_points,51), created_at FROM matches WHERE id = ?`, id).
+		Scan(&m.ID, &m.Status, &m.BaseURL, &winnerID, &turmaID, &m.GameType, &m.MaxPoints, &m.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -420,9 +470,9 @@ func SetMatchWinner(db *sql.DB, matchID, playerID string) error {
 }
 
 // SetPlayerScore sets the absolute score of a player and recalculates their status.
-func SetPlayerScore(db *sql.DB, playerID string, score int) error {
+func SetPlayerScore(db *sql.DB, playerID string, score, maxPoints int) error {
 	status := "active"
-	if score > 51 {
+	if score > maxPoints {
 		status = "estourou"
 	}
 	_, err := db.Exec(`UPDATE players SET total_score = ?, status = ? WHERE id = ?`, score, status, playerID)
@@ -438,15 +488,16 @@ func CountPlayersByMatch(db *sql.DB, matchID string) (int, error) {
 
 // Tournament operations
 
-func CreateTournament(db *sql.DB, id, name, baseURL string) error {
-	_, err := db.Exec(`INSERT INTO tournaments (id, name, status, base_url) VALUES (?, ?, 'registration', ?)`, id, name, baseURL)
+func CreateTournament(db *sql.DB, id, name, baseURL, gameType string, maxPoints int) error {
+	_, err := db.Exec(`INSERT INTO tournaments (id, name, status, base_url, game_type, max_points) VALUES (?, ?, 'registration', ?, ?, ?)`,
+		id, name, baseURL, gameType, maxPoints)
 	return err
 }
 
 func GetTournament(db *sql.DB, id string) (*models.Tournament, error) {
 	t := &models.Tournament{}
-	err := db.QueryRow(`SELECT id, name, status, base_url, created_at FROM tournaments WHERE id = ?`, id).
-		Scan(&t.ID, &t.Name, &t.Status, &t.BaseURL, &t.CreatedAt)
+	err := db.QueryRow(`SELECT id, name, status, base_url, COALESCE(game_type,'pontinho'), COALESCE(max_points,51), created_at FROM tournaments WHERE id = ?`, id).
+		Scan(&t.ID, &t.Name, &t.Status, &t.BaseURL, &t.GameType, &t.MaxPoints, &t.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -455,6 +506,11 @@ func GetTournament(db *sql.DB, id string) (*models.Tournament, error) {
 
 func UpdateTournamentStatus(db *sql.DB, id, status string) error {
 	_, err := db.Exec(`UPDATE tournaments SET status = ? WHERE id = ?`, status, id)
+	return err
+}
+
+func UpdateTournamentGameType(db *sql.DB, id, gameType string, maxPoints int) error {
+	_, err := db.Exec(`UPDATE tournaments SET game_type = ?, max_points = ? WHERE id = ?`, gameType, maxPoints, id)
 	return err
 }
 
@@ -535,9 +591,12 @@ func GetTournamentMatches(db *sql.DB, tournamentID string) ([]models.TournamentM
 func GetTournamentRanking(db *sql.DB, tournamentID string) ([]models.TournamentRankEntry, error) {
 	const q = `
 	SELECT tp.unique_identifier, tp.name, tp.table_number, tp.match_id,
-	       COALESCE(p.total_score, 0) as score, COALESCE(p.status, 'active') as status
+	       COALESCE(p.total_score, 0) as score,
+	       COALESCE(m.max_points, 51) as max_points,
+	       COALESCE(p.status, 'active') as status
 	FROM tournament_players tp
 	LEFT JOIN players p ON p.match_id = tp.match_id AND p.unique_identifier = tp.unique_identifier
+	LEFT JOIN matches m ON m.id = tp.match_id
 	WHERE tp.tournament_id = ?
 	ORDER BY score ASC`
 
@@ -550,7 +609,7 @@ func GetTournamentRanking(db *sql.DB, tournamentID string) ([]models.TournamentR
 	var entries []models.TournamentRankEntry
 	for rows.Next() {
 		var e models.TournamentRankEntry
-		if err := rows.Scan(&e.UniqueIdentifier, &e.Name, &e.TableNumber, &e.MatchID, &e.Score, &e.Status); err != nil {
+		if err := rows.Scan(&e.UniqueIdentifier, &e.Name, &e.TableNumber, &e.MatchID, &e.Score, &e.MaxPoints, &e.Status); err != nil {
 			return nil, err
 		}
 		if e.Score < 0 {
@@ -910,7 +969,16 @@ func GetTurmasByMember(db *sql.DB, uniqueID string) ([]models.Turma, error) {
 }
 
 func GetTurmaMatches(db *sql.DB, turmaID string) ([]models.Match, error) {
-	rows, err := db.Query(`SELECT id, status, base_url, COALESCE(winner_player_id,''), COALESCE(turma_id,''), created_at FROM matches WHERE turma_id = ? ORDER BY created_at DESC`, turmaID)
+	rows, err := db.Query(`
+		SELECT m.id, m.status, m.base_url,
+		       COALESCE(m.winner_player_id,''), COALESCE(m.turma_id,''),
+		       COALESCE(m.game_type,'pontinho'), COALESCE(m.max_points,51),
+		       m.created_at, COUNT(p.id) AS player_count
+		FROM matches m
+		LEFT JOIN players p ON p.match_id = m.id
+		WHERE m.turma_id = ?
+		GROUP BY m.id
+		ORDER BY m.created_at DESC`, turmaID)
 	if err != nil {
 		return nil, err
 	}
@@ -918,7 +986,7 @@ func GetTurmaMatches(db *sql.DB, turmaID string) ([]models.Match, error) {
 	var matches []models.Match
 	for rows.Next() {
 		var m models.Match
-		if err := rows.Scan(&m.ID, &m.Status, &m.BaseURL, &m.WinnerPlayerID, &m.TurmaID, &m.CreatedAt); err != nil {
+		if err := rows.Scan(&m.ID, &m.Status, &m.BaseURL, &m.WinnerPlayerID, &m.TurmaID, &m.GameType, &m.MaxPoints, &m.CreatedAt, &m.PlayerCount); err != nil {
 			return nil, err
 		}
 		matches = append(matches, m)
@@ -926,8 +994,25 @@ func GetTurmaMatches(db *sql.DB, turmaID string) ([]models.Match, error) {
 	return matches, rows.Err()
 }
 
-func CreateMatchInTurma(db *sql.DB, id, baseURL, turmaID string) error {
-	_, err := db.Exec(`INSERT INTO matches (id, status, base_url, turma_id) VALUES (?, 'waiting', ?, ?)`, id, baseURL, turmaID)
+// DeleteMatch permanently removes a match and all associated data (cascade).
+// Only allowed for non-active matches to avoid disrupting live games.
+func DeleteMatch(db *sql.DB, matchID string) error {
+	// Cascade: hand_images → rounds → players → match
+	if _, err := db.Exec(`DELETE FROM hand_images WHERE round_id IN (SELECT id FROM rounds WHERE match_id = ?)`, matchID); err != nil {
+		return err
+	}
+	if _, err := db.Exec(`DELETE FROM rounds WHERE match_id = ?`, matchID); err != nil {
+		return err
+	}
+	if _, err := db.Exec(`DELETE FROM players WHERE match_id = ?`, matchID); err != nil {
+		return err
+	}
+	_, err := db.Exec(`DELETE FROM matches WHERE id = ?`, matchID)
+	return err
+}
+
+func CreateMatchInTurma(db *sql.DB, id, baseURL, turmaID, gameType string, maxPoints int) error {
+	_, err := db.Exec(`INSERT INTO matches (id, status, base_url, turma_id, game_type, max_points) VALUES (?, 'waiting', ?, ?, ?, ?)`, id, baseURL, turmaID, gameType, maxPoints)
 	return err
 }
 

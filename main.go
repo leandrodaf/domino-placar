@@ -100,6 +100,79 @@ func main() {
 }]`))
 	})
 
+	// SEO — robots.txt e sitemap.xml
+	mux.HandleFunc("GET /robots.txt", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		host := "https://dominoplacar.net"
+		if h := r.Host; h != "" {
+			scheme := "https"
+			if r.TLS == nil && r.Header.Get("X-Forwarded-Proto") != "https" {
+				scheme = "http"
+			}
+			host = scheme + "://" + h
+		}
+		_, _ = w.Write([]byte("User-agent: *\n" +
+			"Allow: /\n" +
+			"Allow: /global-ranking\n" +
+			"Allow: /privacy\n" +
+			"Allow: /data-deletion\n" +
+			"Allow: /static/\n" +
+			"Disallow: /match/\n" +
+			"Disallow: /tournament/\n" +
+			"Disallow: /turma/\n" +
+			"Disallow: /api/\n" +
+			"Disallow: /uploads/\n\n" +
+			"Sitemap: " + host + "/sitemap.xml\n"))
+	})
+
+	mux.HandleFunc("GET /sitemap.xml", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/xml; charset=utf-8")
+		host := "https://dominoplacar.net"
+		if h := r.Host; h != "" {
+			scheme := "https"
+			if r.TLS == nil && r.Header.Get("X-Forwarded-Proto") != "https" {
+				scheme = "http"
+			}
+			host = scheme + "://" + h
+		}
+		_, _ = w.Write([]byte(`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>` + host + `/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="` + host + `/?lang=pt"/>
+    <xhtml:link rel="alternate" hreflang="en"    href="` + host + `/?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="` + host + `/"/>
+  </url>
+  <url>
+    <loc>` + host + `/global-ranking</loc>
+    <changefreq>hourly</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="` + host + `/global-ranking?lang=pt"/>
+    <xhtml:link rel="alternate" hreflang="en"    href="` + host + `/global-ranking?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="` + host + `/global-ranking"/>
+  </url>
+  <url>
+    <loc>` + host + `/privacy</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.3</priority>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="` + host + `/privacy?lang=pt"/>
+    <xhtml:link rel="alternate" hreflang="en"    href="` + host + `/privacy?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="` + host + `/privacy"/>
+  </url>
+  <url>
+    <loc>` + host + `/data-deletion</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.2</priority>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="` + host + `/data-deletion?lang=pt"/>
+    <xhtml:link rel="alternate" hreflang="en"    href="` + host + `/data-deletion?lang=en"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="` + host + `/data-deletion"/>
+  </url>
+</urlset>`))
+	})
+
 	// Home
 	mux.HandleFunc("GET /", handler.HomeHandler(tmpl))
 
@@ -171,6 +244,7 @@ func main() {
 	mux.HandleFunc("GET /turma/{id}/ranking", handler.TurmaRankingHandler(store, tmpl))
 	mux.HandleFunc("GET /turma/{id}/qrcode", handler.TurmaQRCodeHandler(store))
 	mux.HandleFunc("POST /turma/{id}/match", handler.CreateMatchInTurmaHandler(store, hub))
+	mux.HandleFunc("POST /turma/{id}/match/{mid}/delete", handler.DeleteMatchFromTurmaHandler(store, hub))
 	mux.HandleFunc("POST /turma/{id}/remove-member/{uid}", handler.RemoveTurmaMemberHandler(store, hub))
 	mux.HandleFunc("GET /turma/{id}/events", handler.TurmaSSEHandler(hub))
 	mux.HandleFunc("GET /turma/{id}/online", handler.TurmaOnlineHandler(hub))
@@ -198,6 +272,23 @@ func main() {
 
 	// Push notifications (FCM token registration from Android app)
 	mux.HandleFunc("POST /api/push/register", pushMgr.RegisterHandler())
+
+	// Online Domino Game — /game/* routes
+	if sqlStore, ok := store.(*db.SQLiteStore); ok {
+		gameMgr := handler.NewGameSessionManager(db.NewGameSQLiteStore(sqlStore))
+		mux.HandleFunc("GET /game/new", handler.CreateGamePageHandler(tmpl))
+		mux.HandleFunc("POST /game", handler.CreateGameHandler(gameMgr, hub, tmpl))
+		mux.HandleFunc("GET /game/{id}/lobby", handler.GameLobbyHandler(gameMgr, tmpl))
+		mux.HandleFunc("POST /game/{id}/join", handler.GameJoinHandler(gameMgr, hub))
+		mux.HandleFunc("GET /game/{id}/join", handler.GameJoinPageHandler(gameMgr, tmpl))
+		mux.HandleFunc("POST /game/{id}/start", handler.GameStartHandler(gameMgr, hub))
+		mux.HandleFunc("GET /game/{id}/play", handler.GamePlayHandler(gameMgr, tmpl))
+		mux.HandleFunc("GET /game/{id}/state", handler.GameStateHandler(gameMgr))
+		mux.HandleFunc("POST /game/{id}/action", handler.GameActionHandler(gameMgr, hub))
+		mux.HandleFunc("GET /game/{id}/events", handler.GameSSEHandler(hub))
+	} else {
+		log.Println("Online game requires SQLite — /game/* routes not registered (Firebase mode)")
+	}
 
 	port := os.Getenv("PORT")
 	if port == "" {

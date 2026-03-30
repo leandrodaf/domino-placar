@@ -18,6 +18,8 @@
   "home.hero_subtitle_2": "Jogue em grupo ou organize um torneio.",
   "home.new_match": "Nova Partida",
   "home.new_match_desc": "Comece a marcar pontos agora",
+  "home.play_online": "Jogar Online",
+  "home.play_online_desc": "Dominó digital multiplayer com amigos",
   "home.create_tournament": "Criar Torneio",
   "home.create_tournament_desc": "Organize campeonatos épicos",
   "home.recent_matches": "🕹️ Partidas Recentes",
@@ -213,6 +215,7 @@
   "ranking.js.correct_score": "Corrigir pontuação",
   "ranking.js.save": "Salvar",
   "ranking.js.points_of_51": "pontos de 51",
+  "ranking.js.points_of_limit": "pontos do limite",
   "ranking.js.control_title": "Dominó — Controle",
   "ranking.js.control_text": "🎮 Controle da partida:",
   "ranking.js.control_copied": "Link de controle copiado!",
@@ -404,6 +407,9 @@
   "turma.code_not_found": "Turma não encontrada com este código.",
   "turma.invalid_code_error": "Código de convite inválido. Tente novamente.",
   "turma.confirm_remove": "Tem certeza que deseja remover este membro?",
+  "turma.confirm_cancel_match": "Cancelar esta partida? Os jogadores serão avisados.",
+  "turma.confirm_delete_match": "Excluir esta partida permanentemente? Esta ação não pode ser desfeita.",
+  "turma.view_match": "Ver Partida",
 
   "privacy.title": "Política de Privacidade — Dominó Placar",
   "privacy.heading": "Política de Privacidade",
@@ -478,5 +484,35 @@
   "deletion.form_submit": "Enviar solicitação",
   "deletion.back_privacy": "← Voltar para Política de Privacidade",
 
-  "privacy.back_home": "← Voltar ao início"
+  "privacy.back_home": "← Voltar ao início",
+
+  "game_type.pontinho": "Pontinho (51 pts)",
+  "game_type.cem": "Cem Pontos (100 pts)",
+  "game_type.cento_cinquenta": "Cento e Cinquenta (150 pts)",
+  "game_type.duzentos": "Duzentos (200 pts)",
+  "game_type.personalizado": "Personalizado",
+  "game_type.label": "Tipo de Jogo",
+  "game_type.max_points_label": "Limite de pontos",
+  "game_type.max_points_placeholder": "Ex: 75",
+
+  "match.create_title": "Nova Partida",
+  "match.create_subtitle": "Escolha as regras da partida",
+  "match.create_btn": "Criar Partida",
+  "match.bust_limit": "Limite",
+  "match.cancel_btn": "Cancelar Partida",
+  "match.delete_btn": "Excluir",
+  "match.status_active": "Em andamento",
+  "match.status_finished": "Finalizada",
+  "match.status_cancelled": "Cancelada",
+  "match.status_waiting": "Aguardando",
+
+  "lobby.game_type_badge": "Tipo de jogo",
+
+  "meta.og_image_alt": "Dominó Placar — Placar digital gratuito para dominó",
+  "meta.global_ranking_description": "Veja quem são os melhores jogadores de dominó. Ranking global com estatísticas de vitórias, pontuações e conquistas.",
+  "meta.global_ranking_og_title": "Hall da Fama — Dominó Placar",
+  "meta.global_ranking_og_description": "Os melhores jogadores de dominó. Ranking global com estatísticas de vitórias e pontuações.",
+  "meta.app_name": "Dominó Placar",
+  "meta.jsonld_description": "Placar digital gratuito para dominó. Crie partidas, organize torneios e registre pontos por foto. Sem cadastro.",
+  "meta.jsonld_app_category": "GameApplication"
 }

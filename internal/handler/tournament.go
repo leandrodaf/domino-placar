@@ -5,8 +5,10 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"strconv"
 
 	"github.com/leandrodaf/domino-placar/internal/db"
+	"github.com/leandrodaf/domino-placar/internal/models"
 	"github.com/leandrodaf/domino-placar/internal/service"
 
 	"github.com/google/uuid"
@@ -47,6 +49,28 @@ func CreateTournamentHandler(database db.Store) http.HandlerFunc {
 			return
 		}
 
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "invalid form", http.StatusBadRequest)
+			return
+		}
+
+		// Game type configuration (same validation as match creation)
+		gameType := r.FormValue("game_type")
+		validTypes := map[string]bool{
+			"pontinho": true, "cem": true, "cento_cinquenta": true, "duzentos": true, "personalizado": true,
+		}
+		if !validTypes[gameType] {
+			gameType = models.GameTypeDefault
+		}
+		maxPoints := models.DefaultMaxPoints(gameType)
+		if gameType == "personalizado" {
+			if v, err := strconv.Atoi(r.FormValue("max_points")); err == nil && v >= 10 && v <= 999 {
+				maxPoints = v
+			} else {
+				maxPoints = 51
+			}
+		}
+
 		scheme := "https"
 		if r.TLS == nil && r.Header.Get("X-Forwarded-Proto") != "https" {
 			scheme = "http"
@@ -55,7 +79,7 @@ func CreateTournamentHandler(database db.Store) http.HandlerFunc {
 
 		tournamentID := uuid.New().String()
 
-		if err := database.CreateTournament(tournamentID, "Tournament", baseURL); err != nil {
+		if err := database.CreateTournament(tournamentID, "Tournament", baseURL, gameType, maxPoints); err != nil {
 			log.Printf("CreateTournament error: %v", err)
 			http.Error(w, "failed to create tournament", http.StatusInternalServerError)
 			return
@@ -145,11 +169,32 @@ func StartTournamentHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 			http.Error(w, "too many requests, please wait", http.StatusTooManyRequests)
 			return
 		}
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "invalid form", http.StatusBadRequest)
+			return
+		}
 
 		tournament, err := database.GetTournament(tournamentID)
 		if err != nil {
 			http.Error(w, "tournament not found", http.StatusNotFound)
 			return
+		}
+
+		// Allow host to override game type at start time
+		if gt := r.FormValue("game_type"); gt != "" {
+			validTypes := map[string]bool{
+				"pontinho": true, "cem": true, "cento_cinquenta": true, "duzentos": true, "personalizado": true,
+			}
+			if validTypes[gt] {
+				tournament.GameType = gt
+				tournament.MaxPoints = models.DefaultMaxPoints(gt)
+				if gt == "personalizado" {
+					if v, err2 := strconv.Atoi(r.FormValue("max_points")); err2 == nil && v >= 10 && v <= 999 {
+						tournament.MaxPoints = v
+					}
+				}
+				_ = database.UpdateTournamentGameType(tournamentID, tournament.GameType, tournament.MaxPoints)
+			}
 		}
 
 		players, err := database.GetTournamentPlayers(tournamentID)
@@ -173,7 +218,7 @@ func StartTournamentHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 			tableNumber := tableNum + 1
 
 			matchID := uuid.New().String()
-			if err := database.CreateMatch(matchID, tournament.BaseURL); err != nil {
+			if err := database.CreateMatch(matchID, tournament.BaseURL, tournament.GameType, tournament.MaxPoints); err != nil {
 				log.Printf("CreateMatch error (table %d): %v", tableNumber, err)
 				http.Error(w, "failed to create match", http.StatusInternalServerError)
 				return

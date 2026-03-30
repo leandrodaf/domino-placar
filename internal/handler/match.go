@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/leandrodaf/domino-placar/internal/db"
+	"github.com/leandrodaf/domino-placar/internal/models"
 	"github.com/leandrodaf/domino-placar/internal/service"
 
 	"github.com/google/uuid"
@@ -19,15 +21,38 @@ func CreateMatchHandler(database db.Store) http.HandlerFunc {
 			return
 		}
 
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "invalid form", http.StatusBadRequest)
+			return
+		}
+
 		scheme := "https"
 		if r.TLS == nil && r.Header.Get("X-Forwarded-Proto") != "https" {
 			scheme = "http"
 		}
 		baseURL := fmt.Sprintf("%s://%s", scheme, r.Host)
 
+		// Parse game type and max points
+		gameType := r.FormValue("game_type")
+		if gameType == "" {
+			gameType = models.GameTypeDefault
+		}
+		// Validate game type
+		validGameTypes := map[string]bool{"pontinho": true, "cem": true, "cento_cinquenta": true, "duzentos": true, "personalizado": true}
+		if !validGameTypes[gameType] {
+			gameType = models.GameTypeDefault
+		}
+
+		maxPoints := models.DefaultMaxPoints(gameType)
+		if gameType == "personalizado" {
+			if v, err := strconv.Atoi(r.FormValue("max_points")); err == nil && v >= 10 && v <= 999 {
+				maxPoints = v
+			}
+		}
+
 		matchID := uuid.New().String()
 
-		if err := database.CreateMatch(matchID, baseURL); err != nil {
+		if err := database.CreateMatch(matchID, baseURL, gameType, maxPoints); err != nil {
 			log.Printf("CreateMatch error: %v", err)
 			http.Error(w, "failed to create match", http.StatusInternalServerError)
 			return

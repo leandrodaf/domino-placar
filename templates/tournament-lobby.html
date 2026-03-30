@@ -59,6 +59,49 @@
 {{end}}
 
 <form method="POST" action="/tournament/{{.Tournament.ID}}/start">
+  <!-- Game type configuration -->
+  <div class="card" style="border-color:rgba(245,197,24,0.3); background:rgba(245,197,24,0.03); margin-bottom:12px;">
+    <div style="font-weight:700; font-size:0.92rem; margin-bottom:10px; color:var(--text-1);">⚙️ {{T .Lang "match.create_subtitle"}}</div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
+      <label class="game-type-card game-type-card--selected" id="tl-gt-pontinho">
+        <input type="radio" name="game_type" value="pontinho" checked onchange="onTlGtChange(this)" style="display:none;">
+        <span class="game-type-icon">🎯</span>
+        <span class="game-type-name">Pontinho</span>
+        <span class="game-type-pts">51 pts</span>
+      </label>
+      <label class="game-type-card" id="tl-gt-cem">
+        <input type="radio" name="game_type" value="cem" onchange="onTlGtChange(this)" style="display:none;">
+        <span class="game-type-icon">💯</span>
+        <span class="game-type-name">Cem</span>
+        <span class="game-type-pts">100 pts</span>
+      </label>
+      <label class="game-type-card" id="tl-gt-cento_cinquenta">
+        <input type="radio" name="game_type" value="cento_cinquenta" onchange="onTlGtChange(this)" style="display:none;">
+        <span class="game-type-icon">🏅</span>
+        <span class="game-type-name">150</span>
+        <span class="game-type-pts">150 pts</span>
+      </label>
+      <label class="game-type-card" id="tl-gt-duzentos">
+        <input type="radio" name="game_type" value="duzentos" onchange="onTlGtChange(this)" style="display:none;">
+        <span class="game-type-icon">🔥</span>
+        <span class="game-type-name">200</span>
+        <span class="game-type-pts">200 pts</span>
+      </label>
+      <label class="game-type-card" id="tl-gt-personalizado" style="grid-column:1/-1;">
+        <input type="radio" name="game_type" value="personalizado" onchange="onTlGtChange(this)" style="display:none;">
+        <span class="game-type-icon">⚙️</span>
+        <span class="game-type-name">{{T .Lang "game_type.personalizado"}}</span>
+        <span class="game-type-pts">—</span>
+      </label>
+    </div>
+    <div id="tl-custom-pts-row" style="display:none;">
+      <label style="display:block; font-size:0.82rem; color:var(--muted); margin-bottom:6px;">{{T .Lang "game_type.max_points_label"}}</label>
+      <input type="number" name="max_points" min="10" max="999" value="51"
+             placeholder="{{T .Lang "game_type.max_points_placeholder"}}"
+             style="width:100%; background:rgba(255,255,255,0.06); border:1px solid var(--border); border-radius:8px; color:var(--text-1); padding:10px 12px; font-size:1rem;">
+    </div>
+  </div>
+
   <button
     type="submit"
     class="btn btn-primary"
@@ -70,6 +113,16 @@
     {{end}}
   </button>
 </form>
+
+<script>
+// eslint-disable-next-line no-unused-vars
+function onTlGtChange(radio) {
+  document.querySelectorAll('[id^="tl-gt-"] .game-type-card, [id^="tl-gt-"]').forEach(function(c) { c.classList.remove('game-type-card--selected'); });
+  document.querySelectorAll('label[id^="tl-gt-"]').forEach(function(c) { c.classList.remove('game-type-card--selected'); });
+  radio.closest('label').classList.add('game-type-card--selected');
+  document.getElementById('tl-custom-pts-row').style.display = radio.value === 'personalizado' ? 'block' : 'none';
+}
+</script>
 
 <div class="alert alert-info mt-16">
   <strong>{{T .Lang "tournament.host_info"}}</strong> {{T .Lang "tournament.host_desc"}}

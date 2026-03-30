@@ -1,0 +1,549 @@
+{{template "base" .}}
+
+{{define "title"}}Dominó Online — Jogando{{end}}
+
+{{define "content"}}
+<!-- Game play container — full-height layout -->
+<div id="game-root" style="display:flex; flex-direction:column; min-height:calc(100vh - 120px); gap:0; margin:-8px -16px; padding:0;">
+
+  <!-- ── Header: scores + turn indicator ── -->
+  <div id="game-header" style="background:rgba(0,0,0,0.35); border-bottom:1px solid var(--border); padding:10px 14px; flex-shrink:0;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+      <div style="font-size:0.8rem; color:var(--muted);">{{.VariantName}} · {{.Session.MaxPoints}} pts</div>
+      <div id="round-badge" style="font-size:0.75rem; color:var(--gold); font-weight:600;">Rodada 1</div>
+    </div>
+    <div id="players-scores" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:2px;">
+      {{range .Session.Participants}}
+      <div class="player-score-chip {{if eq $.MyParticipant.ID .ID}}player-score-chip--me{{end}}"
+           data-pid="{{.ID}}"
+           style="flex-shrink:0; border-radius:20px; padding:6px 12px; background:rgba(255,255,255,0.06); border:1px solid var(--border); display:flex; align-items:center; gap:6px; transition:border-color 0.3s, background 0.3s;">
+        <span>{{if .IsBot}}🤖{{else}}{{if eq $.MyParticipant.ID .ID}}⭐{{else}}👤{{end}}{{end}}</span>
+        <div>
+          <div style="font-size:0.78rem; font-weight:600; white-space:nowrap;">{{.Name}}</div>
+          <div class="score-value" style="font-size:0.7rem; color:var(--muted);" data-pid="{{.ID}}">{{.TotalScore}} pts</div>
+        </div>
+        <div class="hand-count-badge" data-pid="{{.ID}}" style="font-size:0.68rem; background:rgba(255,255,255,0.08); border-radius:10px; padding:2px 6px; margin-left:2px;">
+          🁣 {{len .Hand}}
+        </div>
+      </div>
+      {{end}}
+    </div>
+  </div>
+
+  <!-- ── Board area ── -->
+  <div style="flex:1; display:flex; flex-direction:column; overflow:hidden;">
+    <!-- Turn indicator -->
+    <div id="turn-indicator" style="text-align:center; padding:8px 14px; font-size:0.85rem; background:rgba(245,197,24,0.06); border-bottom:1px solid rgba(245,197,24,0.15);">
+      <span id="turn-text" style="color:var(--gold); font-weight:600;">Carregando...</span>
+      <span id="timer-display" style="display:none; margin-left:8px; font-size:0.75rem; color:var(--muted);"></span>
+    </div>
+
+    <!-- Boneyard count -->
+    <div id="boneyard-info" style="display:none; text-align:right; padding:4px 14px; font-size:0.72rem; color:var(--muted);">
+      Pedras no monte: <span id="boneyard-count">0</span>
+    </div>
+
+    <!-- Board chain -->
+    <div id="board-container" style="flex:1; overflow-x:auto; overflow-y:hidden; padding:12px 14px; display:flex; align-items:center; min-height:100px;">
+      <div id="board-chain" style="display:flex; align-items:center; gap:3px; min-height:76px; min-width:100%;">
+        <div id="board-empty" style="width:100%; text-align:center; color:var(--muted); font-size:0.85rem; padding:20px 0;">
+          🁣 Nenhuma peça jogada ainda
+        </div>
+      </div>
+    </div>
+
+    <!-- Open ends indicator -->
+    <div id="open-ends" style="display:none; text-align:center; padding:4px 14px 8px; font-size:0.78rem; color:var(--muted);">
+      Pontas abertas: <span id="left-open" style="color:var(--gold); font-weight:700;"></span> · <span id="right-open" style="color:var(--gold); font-weight:700;"></span>
+    </div>
+  </div>
+
+  <!-- ── My Hand ── -->
+  <div style="flex-shrink:0; border-top:1px solid var(--border); background:rgba(0,0,0,0.25); padding:10px 14px 14px;">
+    <!-- Side selector — shown when playing a tile on a non-empty board with different open ends -->
+    <div id="side-selector" style="display:none; text-align:center; margin-bottom:8px; gap:8px; justify-content:center;">
+      <div style="font-size:0.8rem; color:var(--muted); margin-bottom:6px;">Onde jogar <strong id="selected-tile-label"></strong>?</div>
+      <div style="display:flex; gap:8px; justify-content:center;">
+        <button id="btn-left" class="btn btn-secondary btn-sm" onclick="confirmPlay('left')" style="min-width:100px;">
+          ← Esquerda (<span id="left-end-val"></span>)
+        </button>
+        <button id="btn-right" class="btn btn-secondary btn-sm" onclick="confirmPlay('right')" style="min-width:100px;">
+          Direita (<span id="right-end-val"></span>) →
+        </button>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="cancelSelection()" style="margin-top:4px; font-size:0.78rem;">Cancelar</button>
+    </div>
+
+    <!-- My tiles -->
+    <div id="my-hand" style="display:flex; gap:6px; overflow-x:auto; padding-bottom:4px; min-height:76px; align-items:center;">
+      {{if .MyParticipant}}
+      {{range .MyParticipant.Hand}}
+      <div class="hand-tile" data-tile="{{.String}}" onclick="onTileClick('{{.String}}')">
+        <img src="{{tileImg .High .Low}}" alt="{{.String}}" width="38" height="60" style="display:block; border-radius:4px;">
+      </div>
+      {{end}}
+      {{else}}
+      <div style="width:100%; text-align:center; color:var(--muted); font-size:0.82rem; padding:16px 0;">
+        Você é espectador neste jogo
+      </div>
+      {{end}}
+    </div>
+
+    <!-- Action buttons -->
+    <div id="action-buttons" style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
+      <button id="btn-pass" class="btn btn-ghost btn-sm" onclick="doPass()" style="display:none; flex:1; min-height:40px; color:var(--muted);">
+        ⏭ Passar
+      </button>
+      <button id="btn-draw" class="btn btn-outline btn-sm" onclick="doDraw()" style="display:none; flex:1; min-height:40px;">
+        🎲 Comprar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Round End Overlay ── -->
+<div id="round-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.82); z-index:200; display:none; align-items:center; justify-content:center; padding:20px;">
+  <div style="background:var(--card); border:1px solid var(--border); border-radius:20px; padding:28px 24px; max-width:340px; width:100%; text-align:center;">
+    <div id="round-icon" style="font-size:3rem; margin-bottom:8px;">🏅</div>
+    <div id="round-title" style="font-size:1.3rem; font-weight:700; margin-bottom:6px;"></div>
+    <div id="round-pts" style="font-size:1rem; color:var(--muted); margin-bottom:20px;"></div>
+    <div id="round-scores" style="margin-bottom:20px;"></div>
+    <div style="font-size:0.82rem; color:var(--muted); animation: pulse 1.5s infinite;">Próxima rodada em breve...</div>
+  </div>
+</div>
+
+<!-- ── Game Over Overlay ── -->
+<div id="gameover-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.88); z-index:300; align-items:center; justify-content:center; padding:20px;">
+  <div style="background:var(--card); border:1px solid var(--gold); border-radius:20px; padding:32px 24px; max-width:340px; width:100%; text-align:center;">
+    <div style="font-size:3.5rem; margin-bottom:8px;">🏆</div>
+    <div id="winner-name" style="font-size:1.5rem; font-weight:700; color:var(--gold); margin-bottom:4px;"></div>
+    <div style="font-size:0.9rem; color:var(--muted); margin-bottom:20px;">venceu o jogo!</div>
+    <div id="final-scores" style="margin-bottom:24px;"></div>
+    <a href="/" class="btn btn-success" style="width:100%; min-height:48px; font-size:1rem;">🏠 Início</a>
+  </div>
+</div>
+
+<style>
+.hand-tile {
+  flex-shrink: 0;
+  cursor: default;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+  padding: 2px;
+}
+.hand-tile--playable {
+  cursor: pointer;
+  border-color: rgba(34,197,94,0.5);
+  box-shadow: 0 0 8px rgba(34,197,94,0.3);
+}
+.hand-tile--playable:hover, .hand-tile--playable:active {
+  border-color: var(--green);
+  transform: translateY(-6px);
+  box-shadow: 0 6px 20px rgba(34,197,94,0.4);
+}
+.hand-tile--selected {
+  border-color: var(--gold) !important;
+  transform: translateY(-8px);
+  box-shadow: 0 6px 20px rgba(245,197,24,0.5) !important;
+}
+.hand-tile--disabled img {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+.board-tile {
+  flex-shrink: 0;
+  border-radius: 4px;
+  width: 38px;
+  height: 60px;
+  display: block;
+}
+.board-tile.flip {
+  transform: rotate(180deg);
+}
+.player-score-chip--me {
+  border-color: rgba(245,197,24,0.5) !important;
+  background: rgba(245,197,24,0.07) !important;
+}
+.player-score-chip--active {
+  border-color: rgba(34,197,94,0.6) !important;
+  background: rgba(34,197,94,0.09) !important;
+}
+#round-overlay.show, #gameover-overlay.show {
+  display: flex !important;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+</style>
+
+<script>
+/* eslint-disable */
+var SESSION_ID = '{{.Session.ID}}';
+var MY_PID = '{{if .MyParticipant}}{{.MyParticipant.ID}}{{end}}';
+var HAS_BONEYARD = '{{if .Session.Rules.HasBoneyard}}1{{end}}' === '1';
+
+var selectedTile = null;
+var currentState = null;
+
+// ── State rendering ──────────────────────────────────────────────────────────
+
+function renderState(state) {
+  currentState = state;
+
+  // Round badge
+  var rb = document.getElementById('round-badge');
+  if (rb) rb.textContent = 'Rodada ' + state.round_number;
+
+  // Turn indicator
+  var myTurn = state.current_player === MY_PID;
+  var currentPlayerName = '';
+  (state.players || []).forEach(function(p) {
+    if (p.id === state.current_player) currentPlayerName = p.name;
+  });
+  var ti = document.getElementById('turn-text');
+  if (ti) {
+    if (state.status === 'finished') {
+      ti.textContent = '🏆 Jogo encerrado!';
+      ti.style.color = 'var(--gold)';
+    } else if (myTurn) {
+      ti.textContent = '⭐ Sua vez!';
+      ti.style.color = 'var(--green)';
+    } else {
+      ti.textContent = '⏳ Vez de ' + currentPlayerName;
+      ti.style.color = 'var(--muted)';
+    }
+  }
+
+  // Boneyard
+  var bi = document.getElementById('boneyard-info');
+  var bc = document.getElementById('boneyard-count');
+  if (state.boneyard_count > 0 && HAS_BONEYARD) {
+    if (bi) bi.style.display = 'block';
+    if (bc) bc.textContent = state.boneyard_count;
+  } else {
+    if (bi) bi.style.display = 'none';
+  }
+
+  // Player chips
+  (state.players || []).forEach(function(p) {
+    var chips = document.querySelectorAll('[data-pid="' + p.id + '"]');
+    chips.forEach(function(chip) {
+      chip.classList.toggle('player-score-chip--active', p.is_turn);
+    });
+    var scoreEl = document.querySelector('.score-value[data-pid="' + p.id + '"]');
+    if (scoreEl) scoreEl.textContent = p.total_score + ' pts';
+    var handEl = document.querySelector('.hand-count-badge[data-pid="' + p.id + '"]');
+    if (handEl) handEl.textContent = '🁣 ' + p.hand_count;
+  });
+
+  // Board
+  renderBoard(state.board);
+
+  // My hand
+  renderHand(state.my_hand || [], state.playable_tiles || [], myTurn);
+
+  // Action buttons
+  renderActions(state, myTurn);
+
+  // Cancel any pending selection when state updates
+  if (selectedTile) cancelSelection();
+}
+
+function renderBoard(board) {
+  var chain = board.tiles || [];
+  var container = document.getElementById('board-chain');
+  var empty = document.getElementById('board-empty');
+  var openEnds = document.getElementById('open-ends');
+
+  container.innerHTML = '';
+  if (chain.length === 0) {
+    if (empty) {
+      empty.style.display = 'block';
+      container.appendChild(empty);
+    }
+    if (openEnds) openEnds.style.display = 'none';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+
+  chain.forEach(function(pt) {
+    var parts = pt.tile.split('-');
+    var h = parseInt(parts[0], 10);
+    var l = parseInt(parts[1], 10);
+    var lo = Math.min(h, l), hi = Math.max(h, l);
+    var img = document.createElement('img');
+    img.src = '/static/tiles/tile_' + lo + '_' + hi + '.png';
+    img.alt = pt.tile;
+    img.className = 'board-tile' + (pt.flipped ? ' flip' : '');
+    container.appendChild(img);
+  });
+
+  // Scroll board to rightmost (latest) tile
+  var bc = document.getElementById('board-container');
+  if (bc) bc.scrollLeft = bc.scrollWidth;
+
+  // Open ends
+  if (openEnds) {
+    openEnds.style.display = 'block';
+    var lo = document.getElementById('left-open');
+    var ro = document.getElementById('right-open');
+    if (lo) lo.textContent = board.left_open;
+    if (ro) ro.textContent = board.right_open;
+  }
+}
+
+function renderHand(hand, playable, myTurn) {
+  var container = document.getElementById('my-hand');
+  if (!container || MY_PID === '') return;
+
+  var playableSet = {};
+  (playable || []).forEach(function(t) { playableSet[t] = true; });
+
+  container.innerHTML = '';
+  (hand || []).forEach(function(tStr) {
+    var parts = tStr.split('-');
+    var h = parseInt(parts[0], 10);
+    var l = parseInt(parts[1], 10);
+    var lo = Math.min(h, l), hi = Math.max(h, l);
+
+    var div = document.createElement('div');
+    div.className = 'hand-tile';
+    div.setAttribute('data-tile', tStr);
+
+    if (myTurn && playableSet[tStr]) {
+      div.classList.add('hand-tile--playable');
+      div.onclick = function() { onTileClick(tStr); };
+    } else if (!myTurn) {
+      div.classList.add('hand-tile--disabled');
+    }
+
+    var img = document.createElement('img');
+    img.src = '/static/tiles/tile_' + lo + '_' + hi + '.png';
+    img.alt = tStr;
+    img.width = 38;
+    img.height = 60;
+    img.style.display = 'block';
+    img.style.borderRadius = '4px';
+    div.appendChild(img);
+    container.appendChild(div);
+  });
+}
+
+function renderActions(state, myTurn) {
+  var btnPass = document.getElementById('btn-pass');
+  var btnDraw = document.getElementById('btn-draw');
+  if (!btnPass || !btnDraw) return;
+
+  var isBlocked = myTurn && (state.playable_tiles || []).length === 0;
+  btnPass.style.display = (isBlocked && !HAS_BONEYARD) ? 'flex' : 'none';
+  btnDraw.style.display = (isBlocked && HAS_BONEYARD && state.boneyard_count > 0) ? 'flex' : 'none';
+
+  // Also show pass button if player is truly blocked even with boneyard empty
+  if (isBlocked && HAS_BONEYARD && state.boneyard_count === 0) {
+    btnPass.style.display = 'flex';
+  }
+}
+
+// ── Tile interaction ─────────────────────────────────────────────────────────
+
+function onTileClick(tStr) {
+  if (!currentState) return;
+  var board = currentState.board;
+  var sideSelector = document.getElementById('side-selector');
+
+  // Deselect previous
+  document.querySelectorAll('.hand-tile--selected').forEach(function(el) {
+    el.classList.remove('hand-tile--selected');
+  });
+
+  var tileEl = document.querySelector('.hand-tile[data-tile="' + tStr + '"]');
+  if (tileEl) tileEl.classList.add('hand-tile--selected');
+  selectedTile = tStr;
+
+  // If board is empty, just play immediately
+  if (board.tile_count === 0) {
+    doPlay(tStr, 'right');
+    return;
+  }
+
+  // If both ends are equal, only one choice exists
+  if (board.left_open === board.right_open) {
+    doPlay(tStr, 'right');
+    return;
+  }
+
+  // Check which sides this tile fits
+  var parts = tStr.split('-');
+  var h = parseInt(parts[0], 10), l = parseInt(parts[1], 10);
+  var fitsLeft = (h === board.left_open || l === board.left_open);
+  var fitsRight = (h === board.right_open || l === board.right_open);
+
+  if (fitsLeft && fitsRight) {
+    // Show side selector
+    document.getElementById('selected-tile-label').textContent = tStr;
+    document.getElementById('left-end-val').textContent = board.left_open;
+    document.getElementById('right-end-val').textContent = board.right_open;
+    sideSelector.style.display = 'block';
+  } else if (fitsLeft) {
+    doPlay(tStr, 'left');
+  } else {
+    doPlay(tStr, 'right');
+  }
+}
+
+function confirmPlay(side) {
+  if (!selectedTile) return;
+  document.getElementById('side-selector').style.display = 'none';
+  doPlay(selectedTile, side);
+}
+
+function cancelSelection() {
+  selectedTile = null;
+  document.querySelectorAll('.hand-tile--selected').forEach(function(el) {
+    el.classList.remove('hand-tile--selected');
+  });
+  var ss = document.getElementById('side-selector');
+  if (ss) ss.style.display = 'none';
+}
+
+// ── Actions ──────────────────────────────────────────────────────────────────
+
+function doPlay(tileStr, side) {
+  selectedTile = null;
+  postAction({ type: 'play', tile: tileStr, side: side });
+}
+
+function doPass() {
+  postAction({ type: 'pass' });
+}
+
+function doDraw() {
+  postAction({ type: 'draw' });
+}
+
+function postAction(body) {
+  // Disable buttons during request
+  document.querySelectorAll('.hand-tile--playable').forEach(function(el) {
+    el.classList.remove('hand-tile--playable');
+    el.onclick = null;
+  });
+
+  fetch('/game/' + SESSION_ID + '/action', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  })
+  .then(function(r) {
+    if (!r.ok) {
+      return r.text().then(function(t) { throw new Error(t); });
+    }
+    return r.json();
+  })
+  .then(function(data) {
+    if (data.state) {
+      renderState(data.state); // draw action returns nested state
+    } else {
+      renderState(data);
+    }
+  })
+  .catch(function(err) {
+    showToast('Jogada inválida: ' + err.message, 'error');
+    // Refresh state
+    fetchState();
+  });
+}
+
+function fetchState() {
+  fetch('/game/' + SESSION_ID + '/state')
+    .then(function(r) { return r.json(); })
+    .then(function(s) { renderState(s); })
+    .catch(function() {});
+}
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+
+function showToast(msg, type) {
+  var toast = document.createElement('div');
+  toast.textContent = msg;
+  toast.style.cssText = 'position:fixed;bottom:100px;left:50%;transform:translateX(-50%);background:'
+    + (type === 'error' ? 'rgba(239,68,68,0.9)' : 'rgba(34,197,94,0.9)')
+    + ';color:#fff;padding:10px 18px;border-radius:20px;font-size:0.85rem;z-index:500;pointer-events:none;font-weight:600;';
+  document.body.appendChild(toast);
+  setTimeout(function() { toast.remove(); }, 2800);
+}
+
+// ── Round/Game end overlays ──────────────────────────────────────────────────
+
+function showRoundOverlay(state) {
+  var ov = document.getElementById('round-overlay');
+  if (!ov) return;
+  ov.classList.add('show');
+  setTimeout(function() { ov.classList.remove('show'); }, 4000);
+}
+
+function showGameOverOverlay(state) {
+  var ov = document.getElementById('gameover-overlay');
+  if (!ov) return;
+  // Find winner (highest score)
+  var winner = null;
+  (state.players || []).forEach(function(p) {
+    if (!winner || p.total_score > winner.total_score) winner = p;
+  });
+  var wn = document.getElementById('winner-name');
+  if (wn && winner) wn.textContent = winner.name;
+
+  var fs = document.getElementById('final-scores');
+  if (fs) {
+    var html = '';
+    (state.players || []).sort(function(a,b) { return b.total_score - a.total_score; }).forEach(function(p, i) {
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);">'
+        + '<div style="font-size:0.88rem;">' + (i===0?'🥇':i===1?'🥈':'🥉') + ' ' + p.name + '</div>'
+        + '<div style="font-weight:700;color:var(--gold);">' + p.total_score + ' pts</div>'
+        + '</div>';
+    });
+    fs.innerHTML = html;
+  }
+  ov.style.display = 'flex';
+}
+
+// ── SSE ───────────────────────────────────────────────────────────────────────
+
+(function() {
+  // Initial state load
+  fetchState();
+
+  if (typeof EventSource === 'undefined') return;
+  var uid = '';
+  try { uid = (JSON.parse(localStorage.getItem('domino_user') || '{}')).unique_id || ''; } catch(e) {}
+  var url = '/game/' + SESSION_ID + '/events' + (uid ? '?uid=' + encodeURIComponent(uid) : '');
+  var es = new EventSource(url);
+
+  es.addEventListener('update', function(e) {
+    var msg = e.data;
+    if (msg === 'game_move_played' || msg === 'game_turn_changed' || msg === 'game_started') {
+      fetchState();
+    } else if (msg === 'game_round_ended') {
+      fetchState().then ? fetchState().then(function(s) {
+        // fetchState is void, just do the fetch inline
+      }) : null;
+      fetch('/game/' + SESSION_ID + '/state')
+        .then(function(r) { return r.json(); })
+        .then(function(s) {
+          renderState(s);
+          showRoundOverlay(s);
+        });
+    } else if (msg === 'game_finished') {
+      fetch('/game/' + SESSION_ID + '/state')
+        .then(function(r) { return r.json(); })
+        .then(function(s) {
+          renderState(s);
+          showGameOverOverlay(s);
+        });
+    }
+  });
+  es.onerror = function() {};
+})();
+</script>
+{{end}}

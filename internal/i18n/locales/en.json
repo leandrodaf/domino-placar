@@ -18,6 +18,8 @@
   "home.hero_subtitle_2": "Play with friends or organize a tournament.",
   "home.new_match": "New Match",
   "home.new_match_desc": "Start scoring right now",
+  "home.play_online": "Play Online",
+  "home.play_online_desc": "Multiplayer digital domino with friends",
   "home.create_tournament": "Create Tournament",
   "home.create_tournament_desc": "Organize epic championships",
   "home.recent_matches": "🕹️ Recent Matches",
@@ -213,6 +215,7 @@
   "ranking.js.correct_score": "Correct score",
   "ranking.js.save": "Save",
   "ranking.js.points_of_51": "points of 51",
+  "ranking.js.points_of_limit": "points of limit",
   "ranking.js.control_title": "Domino — Control",
   "ranking.js.control_text": "🎮 Match control:",
   "ranking.js.control_copied": "Control link copied!",
@@ -404,6 +407,9 @@
   "turma.code_not_found": "No group found with this code.",
   "turma.invalid_code_error": "Invalid invite code. Please try again.",
   "turma.confirm_remove": "Are you sure you want to remove this member?",
+  "turma.confirm_cancel_match": "Cancel this match? Players will be notified.",
+  "turma.confirm_delete_match": "Permanently delete this match? This cannot be undone.",
+  "turma.view_match": "View Match",
 
   "privacy.title": "Privacy Policy — Domino Score",
   "privacy.heading": "Privacy Policy",
@@ -478,5 +484,35 @@
   "deletion.form_submit": "Submit request",
   "deletion.back_privacy": "← Back to Privacy Policy",
 
-  "privacy.back_home": "← Back to home"
+  "privacy.back_home": "← Back to home",
+
+  "game_type.pontinho": "Pontinho (51 pts)",
+  "game_type.cem": "One Hundred (100 pts)",
+  "game_type.cento_cinquenta": "One Fifty (150 pts)",
+  "game_type.duzentos": "Two Hundred (200 pts)",
+  "game_type.personalizado": "Custom",
+  "game_type.label": "Game Type",
+  "game_type.max_points_label": "Point limit",
+  "game_type.max_points_placeholder": "e.g. 75",
+
+  "match.create_title": "New Match",
+  "match.create_subtitle": "Choose the match rules",
+  "match.create_btn": "Create Match",
+  "match.bust_limit": "Limit",
+  "match.cancel_btn": "Cancel Match",
+  "match.delete_btn": "Delete",
+  "match.status_active": "In progress",
+  "match.status_finished": "Finished",
+  "match.status_cancelled": "Cancelled",
+  "match.status_waiting": "Waiting",
+
+  "lobby.game_type_badge": "Game type",
+
+  "meta.og_image_alt": "Domino Score — Free digital domino scoreboard",
+  "meta.global_ranking_description": "See the best domino players. Global ranking with win stats, scores and achievements.",
+  "meta.global_ranking_og_title": "Hall of Fame — Domino Score",
+  "meta.global_ranking_og_description": "The best domino players. Global ranking with win statistics and scores.",
+  "meta.app_name": "Domino Score",
+  "meta.jsonld_description": "Free digital scoreboard for domino. Create matches, organize tournaments and record scores by photo. No sign-up required.",
+  "meta.jsonld_app_category": "GameApplication"
 }

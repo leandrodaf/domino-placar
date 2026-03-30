@@ -16,8 +16,8 @@ func NewSQLiteStore(db *sql.DB) *SQLiteStore {
 	return &SQLiteStore{db: db}
 }
 
-func (s *SQLiteStore) CreateMatch(id, baseURL string) error {
-	return CreateMatch(s.db, id, baseURL)
+func (s *SQLiteStore) CreateMatch(id, baseURL, gameType string, maxPoints int) error {
+	return CreateMatch(s.db, id, baseURL, gameType, maxPoints)
 }
 
 func (s *SQLiteStore) GetMatch(id string) (*models.Match, error) {
@@ -61,8 +61,8 @@ func (s *SQLiteStore) UpdatePlayerName(playerID, name string) error {
 	return err
 }
 
-func (s *SQLiteStore) SetPlayerScore(playerID string, score int) error {
-	return SetPlayerScore(s.db, playerID, score)
+func (s *SQLiteStore) SetPlayerScore(playerID string, score, maxPoints int) error {
+	return SetPlayerScore(s.db, playerID, score, maxPoints)
 }
 
 func (s *SQLiteStore) CountPlayersByMatch(matchID string) (int, error) {
@@ -133,8 +133,8 @@ func (s *SQLiteStore) GetHandImages(roundID string) ([]models.HandImage, error) 
 	return GetHandImages(s.db, roundID)
 }
 
-func (s *SQLiteStore) CreateTournament(id, name, baseURL string) error {
-	return CreateTournament(s.db, id, name, baseURL)
+func (s *SQLiteStore) CreateTournament(id, name, baseURL, gameType string, maxPoints int) error {
+	return CreateTournament(s.db, id, name, baseURL, gameType, maxPoints)
 }
 
 func (s *SQLiteStore) GetTournament(id string) (*models.Tournament, error) {
@@ -143,6 +143,10 @@ func (s *SQLiteStore) GetTournament(id string) (*models.Tournament, error) {
 
 func (s *SQLiteStore) UpdateTournamentStatus(id, status string) error {
 	return UpdateTournamentStatus(s.db, id, status)
+}
+
+func (s *SQLiteStore) UpdateTournamentGameType(id, gameType string, maxPoints int) error {
+	return UpdateTournamentGameType(s.db, id, gameType, maxPoints)
 }
 
 func (s *SQLiteStore) CreateTournamentPlayer(id, tournamentID, name, uniqueID string) error {
@@ -267,6 +271,10 @@ func (s *SQLiteStore) GetTurmaRanking(turmaID string) ([]models.TurmaRankEntry, 
 	return GetTurmaRanking(s.db, turmaID)
 }
 
-func (s *SQLiteStore) CreateMatchInTurma(id, baseURL, turmaID string) error {
-	return CreateMatchInTurma(s.db, id, baseURL, turmaID)
+func (s *SQLiteStore) CreateMatchInTurma(id, baseURL, turmaID, gameType string, maxPoints int) error {
+	return CreateMatchInTurma(s.db, id, baseURL, turmaID, gameType, maxPoints)
+}
+
+func (s *SQLiteStore) DeleteMatch(id string) error {
+	return DeleteMatch(s.db, id)
 }

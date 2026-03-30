@@ -1,0 +1,51 @@
+{{template "base" .}}
+
+{{define "title"}}Entrar no Jogo — Dominó Online{{end}}
+
+{{define "content"}}
+<div style="text-align:center; margin-bottom:20px;">
+  <h1 style="margin-bottom:4px;">🎮 Entrar no Jogo</h1>
+  <p style="font-size:0.85rem; color:var(--muted);">{{.VariantName}} · até {{.Session.MaxPoints}} pts</p>
+</div>
+
+<div class="card">
+  <form method="POST" action="/game/{{.Session.ID}}/join" id="join-form">
+    <input type="hidden" name="unique_id" id="join-uid" value="">
+
+    <label style="display:block; font-size:0.82rem; color:var(--muted); margin-bottom:6px;">Seu nome</label>
+    <input type="text" name="player_name" id="join-name" required maxlength="24"
+           placeholder="Como você quer ser chamado?"
+           style="width:100%; background:rgba(255,255,255,0.06); border:1px solid var(--border); border-radius:8px;
+                  color:var(--text-1); padding:12px 14px; font-size:1rem; box-sizing:border-box; margin-bottom:16px;"
+           autocomplete="nickname">
+
+    <button type="submit" class="btn btn-success" style="width:100%; min-height:52px; font-size:1.05rem;">
+      Entrar no Jogo 🎯
+    </button>
+  </form>
+</div>
+
+<div style="text-align:center; margin-top:12px;">
+  <a href="/" class="btn btn-ghost" style="font-size:0.88rem;">← Início</a>
+</div>
+
+<script>
+(function() {
+  // Pre-fill name and unique_id from localStorage
+  var u = {};
+  try { u = JSON.parse(localStorage.getItem('domino_user') || '{}'); } catch(e) {}
+  var nameEl = document.getElementById('join-name');
+  var uidEl  = document.getElementById('join-uid');
+  if (nameEl && u.name) nameEl.value = u.name;
+  if (uidEl  && u.unique_id) uidEl.value = u.unique_id;
+
+  // Save to localStorage on submit
+  document.getElementById('join-form').addEventListener('submit', function() {
+    var name = (nameEl ? nameEl.value.trim() : '') || u.name || '';
+    var uid  = (uidEl  ? uidEl.value         : '') || u.unique_id || (Math.random().toString(36).substr(2,12));
+    localStorage.setItem('domino_user', JSON.stringify({ name: name, unique_id: uid }));
+    if (uidEl && !uidEl.value) uidEl.value = uid;
+  });
+})();
+</script>
+{{end}}

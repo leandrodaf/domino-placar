@@ -84,7 +84,7 @@ var eventMessages = map[string]struct {
 	"round_started":       {Title: "🃏 Nova Rodada", Body: "Uma nova rodada começou."},
 	"round_winner_set":    {Title: "🏆 Rodada Encerrada", Body: "O vencedor da rodada foi definido."},
 	"points_updated":      {Title: "📊 Placar Atualizado", Body: "Os pontos foram atualizados."},
-	"player_estourou":     {Title: "💥 Estourou!", Body: "Um jogador passou de 51 pontos."},
+	"player_estourou":     {Title: "💥 Estourou!", Body: "Um jogador ultrapassou o limite de pontos."},
 	"match_finished":      {Title: "🎯 Partida Finalizada!", Body: "A partida acabou. Confira o ranking!"},
 	"match_cancelled":     {Title: "❌ Partida Cancelada", Body: "A partida foi cancelada pelo organizador."},
 	"player_joined":       {Title: "👋 Novo Jogador", Body: "Um novo jogador entrou na partida!"},

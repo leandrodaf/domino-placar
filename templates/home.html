@@ -2,6 +2,28 @@
 
 {{define "title"}}{{T .Lang "home.title"}}{{end}}
 
+{{define "json-ld-extra"}}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "{{T .Lang "meta.app_name"}}",
+  "url": "{{.BaseURL}}/",
+  "applicationCategory": "{{T .Lang "meta.jsonld_app_category"}}",
+  "operatingSystem": "Web, Android",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "BRL"
+  },
+  "description": "{{T .Lang "meta.jsonld_description"}}",
+  "inLanguage": ["pt-BR", "en"],
+  "image": "{{.BaseURL}}/static/og-preview.png",
+  "screenshot": "{{.BaseURL}}/static/og-preview.png"
+}
+</script>
+{{end}}
+
 {{define "content"}}
 <div id="cancelled-msg" style="display:none; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:12px; padding:14px 16px; margin-bottom:16px; text-align:center;">
   <div style="font-size:1.4rem; margin-bottom:4px;">🗑️</div>
@@ -26,13 +48,21 @@
   </p>
 
   <div class="action-grid">
-    <form method="POST" action="/match" class="action-card action-card--primary">
-      <button type="submit" class="action-card-btn">
+    <!-- Jogar Online — new feature above the fold -->
+    <div onclick="toggleGameConfig()" class="action-card action-card--online" style="cursor:pointer; grid-column:1/-1; border-color:rgba(99,102,241,0.5); background:rgba(99,102,241,0.06);">
+      <div class="action-card-btn" style="pointer-events:none;">
+        <span class="action-card-icon">🎲</span>
+        <span class="action-card-label" style="color:#a5b4fc;">{{T .Lang "home.play_online"}}</span>
+        <span class="action-card-desc" style="color:var(--muted);">{{T .Lang "home.play_online_desc"}}</span>
+      </div>
+    </div>
+    <div class="action-card action-card--primary" id="new-match-card" onclick="toggleMatchConfig()" style="cursor:pointer;">
+      <div class="action-card-btn" style="pointer-events:none;">
         <span class="action-card-icon">🎮</span>
         <span class="action-card-label">{{T .Lang "home.new_match"}}</span>
         <span class="action-card-desc">{{T .Lang "home.new_match_desc"}}</span>
-      </button>
-    </form>
+      </div>
+    </div>
     <form method="POST" action="/tournament" class="action-card action-card--tournament">
       <button type="submit" class="action-card-btn">
         <span class="action-card-icon">🏆</span>
@@ -50,6 +80,164 @@
       <span class="action-card-label">{{T .Lang "turma.join_turma"}}</span>
       <span class="action-card-desc">{{T .Lang "turma.join_turma_desc"}}</span>
     </a>
+  </div>
+
+  <!-- Online game config panel -->
+  <div id="game-config-panel" style="display:none; margin-top:12px;">
+    <div class="card" style="border-color:rgba(99,102,241,0.4); background:rgba(99,102,241,0.04); padding:16px;">
+      <div style="font-weight:700; font-size:0.95rem; margin-bottom:14px; color:#a5b4fc;">🎲 {{T .Lang "home.play_online"}}</div>
+      <form method="POST" action="/game" id="online-game-form">
+        <input type="hidden" name="unique_id" id="og-uid" value="">
+
+        <label style="display:block; font-size:0.82rem; color:var(--muted); margin-bottom:6px;">Seu nome</label>
+        <input type="text" name="player_name" id="og-name" required maxlength="24"
+               placeholder="Como você quer ser chamado?"
+               style="width:100%; background:rgba(255,255,255,0.06); border:1px solid var(--border); border-radius:8px;
+                      color:var(--text-1); padding:10px 12px; font-size:0.95rem; box-sizing:border-box; margin-bottom:12px;">
+
+        <label style="display:block; font-size:0.82rem; color:var(--muted); margin-bottom:8px;">Variante de jogo</label>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">
+          <label class="game-type-card game-type-card--selected" id="og-v-pontinho">
+            <input type="radio" name="variant" value="pontinho" checked onchange="onOGVariantChange(this)" style="display:none;">
+            <span class="game-type-icon">🎯</span>
+            <span class="game-type-name">Pontinho</span>
+            <span class="game-type-pts">51 pts</span>
+          </label>
+          <label class="game-type-card" id="og-v-bloqueio">
+            <input type="radio" name="variant" value="bloqueio" onchange="onOGVariantChange(this)" style="display:none;">
+            <span class="game-type-icon">🛡️</span>
+            <span class="game-type-name">Bloqueio</span>
+            <span class="game-type-pts">100 pts</span>
+          </label>
+          <label class="game-type-card" id="og-v-all_fives">
+            <input type="radio" name="variant" value="all_fives" onchange="onOGVariantChange(this)" style="display:none;">
+            <span class="game-type-icon">⭐</span>
+            <span class="game-type-name">All Fives</span>
+            <span class="game-type-pts">150 pts</span>
+          </label>
+          <label class="game-type-card" id="og-v-com_pedra">
+            <input type="radio" name="variant" value="com_pedra" onchange="onOGVariantChange(this)" style="display:none;">
+            <span class="game-type-icon">🎲</span>
+            <span class="game-type-name">Com Pedra</span>
+            <span class="game-type-pts">100 pts</span>
+          </label>
+        </div>
+
+        <input type="hidden" name="max_points" id="og-max-pts" value="51">
+
+        <label style="display:flex; align-items:center; gap:10px; font-size:0.85rem; color:var(--text-2); margin-bottom:14px; cursor:pointer;">
+          <input type="checkbox" name="team_mode" value="1" id="og-teams" style="width:16px; height:16px;">
+          Modo dupla (2 times de 2)
+        </label>
+
+        <button type="submit" class="btn btn-success" style="width:100%; min-height:48px; font-size:1rem; background:rgba(99,102,241,0.9);">
+          Criar Sala 🚀
+        </button>
+      </form>
+      <script>
+      (function() {
+        var u = {};
+        try { u = JSON.parse(localStorage.getItem('domino_user') || '{}'); } catch(e) {}
+        var nm = document.getElementById('og-name');
+        var uid = document.getElementById('og-uid');
+        if (nm && u.name) nm.value = u.name;
+        if (uid && u.unique_id) uid.value = u.unique_id;
+        document.getElementById('online-game-form').addEventListener('submit', function() {
+          var name = nm ? nm.value.trim() : '';
+          var uidv = uid ? uid.value : '';
+          if (!uidv) { uidv = Math.random().toString(36).substr(2,12); if(uid) uid.value = uidv; }
+          localStorage.setItem('domino_user', JSON.stringify({ name: name || u.name, unique_id: uidv }));
+        });
+      })();
+
+      var OG_DEFAULTS = { pontinho:51, bloqueio:100, all_fives:150, com_pedra:100 };
+      // eslint-disable-next-line no-unused-vars
+      function onOGVariantChange(radio) {
+        document.querySelectorAll('#online-game-form .game-type-card').forEach(function(c) { c.classList.remove('game-type-card--selected'); });
+        radio.closest('.game-type-card').classList.add('game-type-card--selected');
+        var mp = document.getElementById('og-max-pts');
+        if (mp) mp.value = OG_DEFAULTS[radio.value] || 51;
+      }
+      function toggleGameConfig() {
+        var p = document.getElementById('game-config-panel');
+        var m = document.getElementById('match-config-panel');
+        if (m) m.style.display = 'none';
+        p.style.display = p.style.display === 'none' ? 'block' : 'none';
+        if (p.style.display !== 'none') setTimeout(function() { p.scrollIntoView({ behavior:'smooth', block:'nearest' }); }, 60);
+      }
+      </script>
+    </div>
+  </div>
+
+  <!-- Match config panel — shown when "Nova Partida" is clicked -->
+  <div id="match-config-panel" style="display:none; margin-top:12px;">
+    <div class="card" style="border-color:rgba(245,197,24,0.35); background:rgba(245,197,24,0.04); padding:16px 16px 12px;">
+      <div style="font-weight:700; font-size:0.95rem; margin-bottom:12px; color:var(--text-1);">{{T .Lang "match.create_subtitle"}}</div>
+      <form method="POST" action="/match" id="new-match-form">
+        <!-- Game type radio cards -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">
+
+          <label class="game-type-option" for="gt_pontinho">
+            <input type="radio" id="gt_pontinho" name="game_type" value="pontinho" checked onchange="onGameTypeChange(this)">
+            <span class="game-type-card">
+              <span class="game-type-icon">🎯</span>
+              <span class="game-type-name">Pontinho</span>
+              <span class="game-type-pts">51 pts</span>
+            </span>
+          </label>
+
+          <label class="game-type-option" for="gt_cem">
+            <input type="radio" id="gt_cem" name="game_type" value="cem" onchange="onGameTypeChange(this)">
+            <span class="game-type-card">
+              <span class="game-type-icon">💯</span>
+              <span class="game-type-name">Cem</span>
+              <span class="game-type-pts">100 pts</span>
+            </span>
+          </label>
+
+          <label class="game-type-option" for="gt_cento_cinquenta">
+            <input type="radio" id="gt_cento_cinquenta" name="game_type" value="cento_cinquenta" onchange="onGameTypeChange(this)">
+            <span class="game-type-card">
+              <span class="game-type-icon">🏅</span>
+              <span class="game-type-name">Cento e Cinquenta</span>
+              <span class="game-type-pts">150 pts</span>
+            </span>
+          </label>
+
+          <label class="game-type-option" for="gt_duzentos">
+            <input type="radio" id="gt_duzentos" name="game_type" value="duzentos" onchange="onGameTypeChange(this)">
+            <span class="game-type-card">
+              <span class="game-type-icon">🥇</span>
+              <span class="game-type-name">Duzentos</span>
+              <span class="game-type-pts">200 pts</span>
+            </span>
+          </label>
+
+          <label class="game-type-option" for="gt_personalizado" style="grid-column:span 2;">
+            <input type="radio" id="gt_personalizado" name="game_type" value="personalizado" onchange="onGameTypeChange(this)">
+            <span class="game-type-card">
+              <span class="game-type-icon">✏️</span>
+              <span class="game-type-name">{{T .Lang "game_type.personalizado"}}</span>
+              <span class="game-type-pts" id="custom-pts-label" style="color:var(--muted);">?</span>
+            </span>
+          </label>
+
+        </div>
+
+        <!-- Custom points input — only visible for "personalizado" -->
+        <div id="custom-points-row" style="display:none; margin-bottom:12px;">
+          <label style="display:block; font-size:0.82rem; color:var(--muted); margin-bottom:6px;">{{T .Lang "game_type.max_points_label"}}</label>
+          <input type="number" name="max_points" id="custom-points-input" min="10" max="999"
+                 placeholder="{{T .Lang "game_type.max_points_placeholder"}}"
+                 style="width:100%; font-size:1rem; padding:10px 12px; border-radius:10px; border:1px solid var(--border); background:var(--surface-2); color:var(--text-1);"
+                 oninput="onCustomPtsChange(this)">
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width:100%; min-height:48px; font-size:1rem; font-weight:700;">
+          {{T .Lang "match.create_btn"}}
+        </button>
+      </form>
+    </div>
   </div>
 </div>
 
@@ -187,13 +375,68 @@ function recoverMatch2() {
   if (id) window.location.href = '/match/' + id;
 }
 
+// eslint-disable-next-line no-unused-vars
+function toggleMatchConfig() {
+  var panel = document.getElementById('match-config-panel');
+  var card  = document.getElementById('new-match-card');
+  var open  = panel.style.display !== 'none';
+  panel.style.display = open ? 'none' : 'block';
+  card.style.borderColor = open ? '' : 'rgba(245,197,24,0.6)';
+  card.style.background  = open ? '' : 'rgba(245,197,24,0.08)';
+  if (!open) {
+    // Scroll into view
+    setTimeout(function() { panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 80);
+  }
+}
+
+// eslint-disable-next-line no-unused-vars
+function onGameTypeChange(radio) {
+  var isCustom = radio.value === 'personalizado';
+  document.getElementById('custom-points-row').style.display = isCustom ? 'block' : 'none';
+  if (isCustom) {
+    var inp = document.getElementById('custom-points-input');
+    inp.focus();
+  }
+}
+
+// eslint-disable-next-line no-unused-vars
+function onCustomPtsChange(inp) {
+  var lbl = document.getElementById('custom-pts-label');
+  var v = parseInt(inp.value, 10);
+  lbl.textContent = (!isNaN(v) && v >= 10 && v <= 999) ? v + ' pts' : '?';
+}
+
+// Highlight selected game type card
+document.addEventListener('change', function(e) {
+  if (e.target && e.target.name === 'game_type') {
+    document.querySelectorAll('.game-type-card').forEach(function(c) {
+      c.classList.remove('game-type-card--selected');
+    });
+    var label = e.target.closest('label');
+    if (label) {
+      var card = label.querySelector('.game-type-card');
+      if (card) card.classList.add('game-type-card--selected');
+    }
+  }
+});
+// Init first selection
+(function() {
+  var checked = document.querySelector('input[name="game_type"]:checked');
+  if (checked) {
+    var label = checked.closest('label');
+    if (label) {
+      var card = label.querySelector('.game-type-card');
+      if (card) card.classList.add('game-type-card--selected');
+    }
+  }
+})();
+
 // Turmas — carrega via API se o user tem unique_id
 (function() {
   var user;
   try { user = JSON.parse(localStorage.getItem('domino_user') || '{}'); } catch(e) { user = {}; }
   var uid = user.unique_id || '';
   if (!uid) return;
-
   fetch('/turma/my?unique_id=' + encodeURIComponent(uid))
     .then(function(r) { return r.json(); })
     .then(function(turmas) {
@@ -217,5 +460,10 @@ function recoverMatch2() {
     })
     .catch(function() {});
 })();
+
+// Auto-open game panel if ?game=1 in URL
+if (new URLSearchParams(window.location.search).get('game') === '1') {
+  toggleGameConfig();
+}
 </script>
 {{end}}

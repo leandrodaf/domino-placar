@@ -1,12 +1,15 @@
 package db
 
-import "github.com/leandrodaf/domino-placar/internal/models"
+import (
+	"github.com/leandrodaf/domino-placar/internal/game"
+	"github.com/leandrodaf/domino-placar/internal/models"
+)
 
 // Store define a interface de acesso ao banco de dados.
 // Implementada por SQLiteStore e FirebaseStore.
 type Store interface {
 	// Match
-	CreateMatch(id, baseURL string) error
+	CreateMatch(id, baseURL, gameType string, maxPoints int) error
 	GetMatch(id string) (*models.Match, error)
 	UpdateMatchStatus(id, status string) error
 	SetMatchWinner(matchID, playerID string) error
@@ -19,7 +22,7 @@ type Store interface {
 	UpdatePlayerScore(playerID string, additionalPoints int) error
 	UpdatePlayerStatus(playerID, status string) error
 	UpdatePlayerName(playerID, name string) error
-	SetPlayerScore(playerID string, score int) error
+	SetPlayerScore(playerID string, score, maxPoints int) error
 	CountPlayersByMatch(matchID string) (int, error)
 	GetRanking(matchID string) ([]models.Player, error)
 
@@ -43,9 +46,10 @@ type Store interface {
 	GetHandImages(roundID string) ([]models.HandImage, error)
 
 	// Tournament
-	CreateTournament(id, name, baseURL string) error
+	CreateTournament(id, name, baseURL, gameType string, maxPoints int) error
 	GetTournament(id string) (*models.Tournament, error)
 	UpdateTournamentStatus(id, status string) error
+	UpdateTournamentGameType(id, gameType string, maxPoints int) error
 	CreateTournamentPlayer(id, tournamentID, name, uniqueID string) error
 	GetTournamentPlayers(tournamentID string) ([]models.TournamentPlayer, error)
 	GetTournamentPlayerByUniqueID(tournamentID, uniqueID string) (*models.TournamentPlayer, error)
@@ -82,5 +86,19 @@ type Store interface {
 	GetTurmasByMember(uniqueID string) ([]models.Turma, error)
 	GetTurmaMatches(turmaID string) ([]models.Match, error)
 	GetTurmaRanking(turmaID string) ([]models.TurmaRankEntry, error)
-	CreateMatchInTurma(id, baseURL, turmaID string) error
+	CreateMatchInTurma(id, baseURL, turmaID, gameType string, maxPoints int) error
+	DeleteMatch(id string) error
+}
+
+// GameStore defines the persistence interface for online game sessions.
+// It is implemented separately from Store to keep concerns isolated.
+type GameStore interface {
+	CreateGameSession(gs *game.GameSession) error
+	LoadGameSession(id string) (*game.GameSession, error)
+	SaveGameSession(gs *game.GameSession) error
+	UpsertGameParticipant(sessionID string, p *game.Participant) error
+	GetGameParticipants(sessionID string) ([]*game.Participant, error)
+	RecordGameMove(id, sessionID, participantID string, roundNumber int, move game.Move, moveNum int) error
+	GetGameSessionInfo(id string) (*GameSessionInfo, error)
+	GetActiveGameSessions() ([]string, error)
 }

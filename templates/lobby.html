@@ -9,6 +9,22 @@
   <span class="badge badge-waiting">{{T .Lang "lobby.badge_waiting"}}</span>
 </div>
 
+<!-- Game type badge -->
+<div style="display:flex; align-items:center; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+  {{if eq .Match.GameType "pontinho"}}
+    <span class="badge" style="background:rgba(245,197,24,0.15); color:var(--gold); border:1px solid rgba(245,197,24,0.3);">🎯 Pontinho</span>
+  {{else if eq .Match.GameType "cem"}}
+    <span class="badge" style="background:rgba(245,197,24,0.15); color:var(--gold); border:1px solid rgba(245,197,24,0.3);">💯 Cem Pontos</span>
+  {{else if eq .Match.GameType "cento_cinquenta"}}
+    <span class="badge" style="background:rgba(245,197,24,0.15); color:var(--gold); border:1px solid rgba(245,197,24,0.3);">🏅 Cento e Cinquenta</span>
+  {{else if eq .Match.GameType "duzentos"}}
+    <span class="badge" style="background:rgba(245,197,24,0.15); color:var(--gold); border:1px solid rgba(245,197,24,0.3);">🥇 Duzentos</span>
+  {{else}}
+    <span class="badge" style="background:rgba(245,197,24,0.15); color:var(--gold); border:1px solid rgba(245,197,24,0.3);">✏️ {{T .Lang "game_type.personalizado"}}</span>
+  {{end}}
+  <span style="font-size:0.8rem; color:var(--muted);">{{T .Lang "match.bust_limit"}}: <strong style="color:var(--text-1);">{{.Match.MaxPoints}} pts</strong></span>
+</div>
+
 {{if .Turma}}
 <div class="alert alert-info" style="margin-bottom:12px; padding:8px 12px; font-size:0.88rem;">
   👥 <strong>{{T .Lang "turma.match_badge"}}</strong> — <a href="/turma/{{.Turma.ID}}" style="color:var(--accent);">{{.Turma.Name}}</a>

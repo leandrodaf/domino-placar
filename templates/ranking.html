@@ -30,6 +30,24 @@
 </div>
 {{end}}
 
+<!-- Game type info strip -->
+{{if ne .Match.Status "waiting"}}
+<div style="display:flex; align-items:center; gap:8px; margin-bottom:12px; flex-wrap:wrap;">
+  {{if eq .Match.GameType "pontinho"}}
+    <span class="badge" style="background:rgba(245,197,24,0.12); color:var(--gold); border:1px solid rgba(245,197,24,0.25);">🎯 Pontinho</span>
+  {{else if eq .Match.GameType "cem"}}
+    <span class="badge" style="background:rgba(245,197,24,0.12); color:var(--gold); border:1px solid rgba(245,197,24,0.25);">💯 Cem</span>
+  {{else if eq .Match.GameType "cento_cinquenta"}}
+    <span class="badge" style="background:rgba(245,197,24,0.12); color:var(--gold); border:1px solid rgba(245,197,24,0.25);">🏅 Cento e Cinquenta</span>
+  {{else if eq .Match.GameType "duzentos"}}
+    <span class="badge" style="background:rgba(245,197,24,0.12); color:var(--gold); border:1px solid rgba(245,197,24,0.25);">🥇 Duzentos</span>
+  {{else}}
+    <span class="badge" style="background:rgba(245,197,24,0.12); color:var(--gold); border:1px solid rgba(245,197,24,0.25);">✏️ {{T .Lang "game_type.personalizado"}}</span>
+  {{end}}
+  <span style="font-size:0.78rem; color:var(--muted);">{{T .Lang "match.bust_limit"}}: <strong style="color:var(--text-1);">{{.Match.MaxPoints}} pts</strong></span>
+</div>
+{{end}}
+
 {{if eq .Match.Status "finished"}}
 <div id="winner-banner" style="border-radius:16px; padding:20px 18px; margin-bottom:16px; background:linear-gradient(135deg, rgba(245,197,24,0.12), rgba(245,197,24,0.04)); border:2px solid rgba(245,197,24,0.4); text-align:center;">
   <div style="font-size:3rem; line-height:1; margin-bottom:8px;">🐂</div>
@@ -77,22 +95,22 @@
         {{if ne $p.Status "estourou"}}
         <div class="score-bar" style="margin-top: 6px; width: 120px;">
           <div class="score-bar-fill
-            {{if gt $p.TotalScore 40}}danger
-            {{else if gt $p.TotalScore 30}}warning
+            {{if ge (percent $p.TotalScore $.Match.MaxPoints) 80}}danger
+            {{else if ge (percent $p.TotalScore $.Match.MaxPoints) 60}}warning
             {{end}}"
-            style="width: {{if gt $p.TotalScore 51}}100{{else}}{{mul $p.TotalScore 2}}{{end}}%;">
+            style="width: {{percent $p.TotalScore $.Match.MaxPoints}}%;">
           </div>
         </div>
         {{end}}
       </div>
       <div class="rank-score
         {{if eq $p.Status "estourou"}}eliminated
-        {{else if gt $p.TotalScore 40}}danger
-        {{else if gt $p.TotalScore 30}}warning
+        {{else if ge (percent $p.TotalScore $.Match.MaxPoints) 80}}danger
+        {{else if ge (percent $p.TotalScore $.Match.MaxPoints) 60}}warning
         {{else}}safe
         {{end}}">
         {{$p.TotalScore}}
-        <span style="font-size: 0.6rem; color: var(--muted);">/ 51</span>
+        <span style="font-size: 0.6rem; color: var(--muted);">/ {{$.Match.MaxPoints}}</span>
       </div>
     </li>
     {{else}}
@@ -203,6 +221,7 @@
 var IS_HOST    = {{if .IsHost}}true{{else}}false{{end}};
 var CSRF_TOKEN = '{{.CSRFToken}}';
 var MATCH_ID   = '{{.Match.ID}}';
+var MAX_POINTS = {{.Match.MaxPoints}};
 var ROUND_ID   = '{{if .Round}}{{.Round.ID}}{{end}}';
 
 // Confetti de vencedor da rodada no page-load (ranking também exibe durante a partida)
@@ -245,7 +264,8 @@ function openPlayerSheet(el) {
 
   var scoreEl = document.getElementById('ps-score');
   scoreEl.textContent = score;
-  scoreEl.style.color = bust ? 'var(--muted)' : score > 40 ? 'var(--red)' : score > 30 ? 'var(--orange)' : 'var(--green)';
+  var pct = MAX_POINTS > 0 ? score / MAX_POINTS : 0;
+  scoreEl.style.color = bust ? 'var(--muted)' : pct >= 0.8 ? 'var(--red)' : pct >= 0.6 ? 'var(--orange)' : 'var(--green)';
 
   var matchFinished = '{{.Match.Status}}' === 'finished';
   document.getElementById('ps-badge').innerHTML = bust
@@ -268,7 +288,7 @@ function openPlayerSheet(el) {
   } else {
     s = '<div class="sheet-row sheet-row-muted" style="cursor:default;">'
       + '<span class="sheet-row-icon">🎯</span>'
-      + '<span class="sheet-row-label">'+score+' {{T .Lang "ranking.js.points_of_51"}}</span>'
+      + '<span class="sheet-row-label">'+score+' {{T .Lang "ranking.js.points_of_limit"}} '+MAX_POINTS+'</span>'
       + '</div>';
   }
   document.getElementById('ps-actions').innerHTML = s;

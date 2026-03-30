@@ -618,6 +618,16 @@ func ManualScoreHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 			return
 		}
 
+		match, err := database.GetMatch(matchID)
+		if err != nil {
+			http.Error(w, "match not found", http.StatusNotFound)
+			return
+		}
+		maxPoints := match.MaxPoints
+		if maxPoints <= 0 {
+			maxPoints = models.DefaultMaxPoints(models.GameTypeDefault)
+		}
+
 		scoreStr := r.FormValue("score")
 		score, err := strconv.Atoi(scoreStr)
 		if err != nil || score < 0 || score > maxScore {
@@ -625,10 +635,15 @@ func ManualScoreHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 			return
 		}
 
-		if err := database.SetPlayerScore(playerID, score); err != nil {
+		if err := database.SetPlayerScore(playerID, score, maxPoints); err != nil {
 			log.Printf("SetPlayerScore error: %v", err)
 			http.Error(w, "failed to save score", http.StatusInternalServerError)
 			return
+		}
+
+		// Broadcast bust event if the player exceeded the limit after manual correction
+		if score > maxPoints {
+			hub.Broadcast(matchID, "player_estourou")
 		}
 
 		hub.Broadcast(matchID, "points_updated")
@@ -661,6 +676,12 @@ func CancelMatchHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
 		}
 
 		hub.Broadcast(matchID, "match_cancelled")
+
+		// Redirect back to the turma dashboard when the match belongs to one
+		if match, err := database.GetMatch(matchID); err == nil && match.TurmaID != "" {
+			http.Redirect(w, r, "/turma/"+match.TurmaID, http.StatusSeeOther)
+			return
+		}
 		http.Redirect(w, r, "/?msg=cancelled", http.StatusSeeOther)
 	}
 }

@@ -194,6 +194,15 @@ func checkRoundComplete(database db.Store, hub *SSEHub, matchID, roundID string)
 		return nil
 	}
 
+	match, err := database.GetMatch(matchID)
+	if err != nil {
+		return err
+	}
+	maxPoints := match.MaxPoints
+	if maxPoints <= 0 {
+		maxPoints = models.DefaultMaxPoints(models.GameTypeDefault)
+	}
+
 	players, err := database.GetPlayers(matchID)
 	if err != nil {
 		return err
@@ -242,7 +251,7 @@ func checkRoundComplete(database db.Store, hub *SSEHub, matchID, roundID string)
 			log.Printf("UpdatePlayerScore error for player %s: %v", playerID, err)
 			return
 		}
-		if updated, err := database.GetPlayer(playerID); err == nil && updated.TotalScore > 51 {
+		if updated, err := database.GetPlayer(playerID); err == nil && updated.TotalScore > maxPoints {
 			if err2 := database.UpdatePlayerStatus(playerID, "estourou"); err2 != nil {
 				log.Printf("UpdatePlayerStatus error: %v", err2)
 			}

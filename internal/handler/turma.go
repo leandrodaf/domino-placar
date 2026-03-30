@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -136,18 +137,30 @@ func TurmaDashboardHandler(database db.Store, tmpl *Templates) http.HandlerFunc 
 		if len(ranking) > 5 {
 			ranking = ranking[:5]
 		}
-		// Limit matches to recent 5
-		if len(matches) > 5 {
-			matches = matches[:5]
+		// Limit matches to recent 10 for dashboard
+		if len(matches) > 10 {
+			matches = matches[:10]
+		}
+
+		// Build per-match host info and CSRF tokens so the template can show action buttons
+		hostMatchIDs := map[string]bool{}
+		matchCSRF := map[string]string{}
+		for _, m := range matches {
+			if IsHost(r, m.ID) {
+				hostMatchIDs[m.ID] = true
+				matchCSRF[m.ID] = GenerateCSRFToken(m.ID)
+			}
 		}
 
 		tmpl.Render(w, r, "turma-dashboard.html", map[string]any{
-			"Turma":     turma,
-			"Members":   members,
-			"Matches":   matches,
-			"Ranking":   ranking,
-			"IsHost":    IsHost(r, turmaID),
-			"CSRFToken": GenerateCSRFToken(turmaID),
+			"Turma":        turma,
+			"Members":      members,
+			"Matches":      matches,
+			"Ranking":      ranking,
+			"IsHost":       IsHost(r, turmaID),
+			"CSRFToken":    GenerateCSRFToken(turmaID),
+			"HostMatchIDs": hostMatchIDs,
+			"MatchCSRF":    matchCSRF,
 		})
 	}
 }
@@ -322,7 +335,23 @@ func CreateMatchInTurmaHandler(database db.Store, hub *SSEHub) http.HandlerFunc 
 		baseURL := fmt.Sprintf("%s://%s", scheme, r.Host)
 
 		matchID := uuid.New().String()
-		if err := database.CreateMatchInTurma(matchID, baseURL, turmaID); err != nil {
+		// Read game type configuration from form (same validation as match creation)
+		gameType := r.FormValue("game_type")
+		validTypes := map[string]bool{
+			"pontinho": true, "cem": true, "cento_cinquenta": true, "duzentos": true, "personalizado": true,
+		}
+		if !validTypes[gameType] {
+			gameType = models.GameTypeDefault
+		}
+		maxPoints := models.DefaultMaxPoints(gameType)
+		if gameType == "personalizado" {
+			if v, err := strconv.Atoi(r.FormValue("max_points")); err == nil && v >= 10 && v <= 999 {
+				maxPoints = v
+			} else {
+				maxPoints = 51
+			}
+		}
+		if err := database.CreateMatchInTurma(matchID, baseURL, turmaID, gameType, maxPoints); err != nil {
 			log.Printf("CreateMatchInTurma error: %v", err)
 			http.Error(w, "failed to create match", http.StatusInternalServerError)
 			return
@@ -511,5 +540,48 @@ func TurmaOnlineHandler(hub *SSEHub) http.HandlerFunc {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(uids)
+	}
+}
+
+// DeleteMatchFromTurmaHandler handles POST /turma/{id}/match/{mid}/delete.
+// Only the match host can delete; active matches must be cancelled first.
+func DeleteMatchFromTurmaHandler(database db.Store, hub *SSEHub) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		turmaID := r.PathValue("id")
+		matchID := r.PathValue("mid")
+
+		// Verify host of the match
+		if !IsHost(r, matchID) {
+			http.Error(w, "access denied", http.StatusForbidden)
+			return
+		}
+		if !CheckActionRateLimit(r) {
+			http.Error(w, "too many requests, please wait", http.StatusTooManyRequests)
+			return
+		}
+		if err := r.ParseForm(); err != nil || !ValidateCSRFToken(r.FormValue("_csrf"), matchID) {
+			http.Error(w, "invalid security token", http.StatusForbidden)
+			return
+		}
+
+		// Fetch match to validate it belongs to this turma and is not active
+		match, err := database.GetMatch(matchID)
+		if err != nil || match.TurmaID != turmaID {
+			http.Error(w, "match not found", http.StatusNotFound)
+			return
+		}
+		if match.Status == "active" {
+			http.Error(w, "cancel the match before deleting it", http.StatusConflict)
+			return
+		}
+
+		if err := database.DeleteMatch(matchID); err != nil {
+			log.Printf("DeleteMatch error: %v", err)
+			http.Error(w, "failed to delete match", http.StatusInternalServerError)
+			return
+		}
+
+		hub.Broadcast(turmaID, "match_deleted")
+		http.Redirect(w, r, "/turma/"+turmaID, http.StatusSeeOther)
 	}
 }

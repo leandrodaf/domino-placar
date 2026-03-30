@@ -1680,3 +1680,58 @@ footer {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ─── Game Type Selector ────────────────────────────────────────────────────── */
+.game-type-option {
+  display: block;
+  cursor: pointer;
+}
+.game-type-option input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.game-type-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 12px 8px;
+  border-radius: 12px;
+  border: 1.5px solid var(--border);
+  background: var(--surface-2);
+  text-align: center;
+  transition: border-color 0.15s, background 0.15s;
+  cursor: pointer;
+  user-select: none;
+  min-height: 80px;
+}
+.game-type-card:hover {
+  border-color: rgba(245,197,24,0.4);
+  background: rgba(245,197,24,0.05);
+}
+.game-type-card--selected,
+.game-type-option input[type="radio"]:checked + .game-type-card {
+  border-color: rgba(245,197,24,0.7);
+  background: rgba(245,197,24,0.1);
+  box-shadow: 0 0 0 1px rgba(245,197,24,0.3);
+}
+.game-type-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+.game-type-name {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-1);
+  line-height: 1.2;
+}
+.game-type-pts {
+  font-size: 0.7rem;
+  color: var(--gold);
+  font-weight: 700;
+  font-family: 'Rajdhani', sans-serif;
+  letter-spacing: 0.04em;
+}

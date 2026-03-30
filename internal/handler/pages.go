@@ -23,12 +23,44 @@ type Templates struct {
 
 func NewTemplates() (*Templates, error) {
 	funcMap := template.FuncMap{
-		"add":      func(a, b int) int { return a + b },
-		"mul":      func(a, b int) int { return a * b },
-		"sub":      func(a, b int) int { return a - b },
+		"add":     func(a, b int) int { return a + b },
+		"mul":     func(a, b int) int { return a * b },
+		"sub":     func(a, b int) int { return a - b },
+		"percent": func(score, max int) int {
+			if max <= 0 {
+				return 0
+			}
+			p := score * 100 / max
+			if p > 100 {
+				return 100
+			}
+			return p
+		},
 		"T":        i18n.T,
 		"TH":       i18n.TH,
 		"LangAttr": i18n.LangHTMLAttr,
+		"fmtDate": func(t time.Time) string {
+			return t.Format("02/01 15:04")
+		},
+		"tileImg": func(high, low int) string {
+			// Normalize so smaller value is first in filename
+			if high < low {
+				high, low = low, high
+			}
+			return fmt.Sprintf("/static/tiles/tile_%d_%d.png", low, high)
+		},
+		"minInt": func(a, b int) int {
+			if a < b {
+				return a
+			}
+			return b
+		},
+		"maxInt": func(a, b int) int {
+			if a > b {
+				return a
+			}
+			return b
+		},
 	}
 
 	pages := make(map[string]*template.Template)
@@ -76,7 +108,7 @@ func (tmpl *Templates) Render(w http.ResponseWriter, r *http.Request, name strin
 		http.Error(w, "template error", http.StatusInternalServerError)
 		return
 	}
-	data = injectLang(data, i18n.DetectLang(r))
+	data = injectSEO(data, r)
 	if err := t.ExecuteTemplate(w, "base", data); err != nil {
 		log.Printf("template exec %s error: %v", name, err)
 	}
@@ -96,7 +128,45 @@ func (tmpl *Templates) RenderPartial(w http.ResponseWriter, r *http.Request, nam
 	}
 }
 
-// injectLang adds the Lang key to the template data map.
+// injectSEO injects language, canonical URL, robots directive, and other SEO metadata into the template context.
+func injectSEO(data any, r *http.Request) any {
+	lang := i18n.DetectLang(r)
+
+	scheme := "https"
+	if r.TLS == nil && r.Header.Get("X-Forwarded-Proto") != "https" {
+		scheme = "http"
+	}
+	baseURL := scheme + "://" + r.Host
+	p := r.URL.Path
+	canonicalURL := baseURL + p
+
+	// Only public informational pages are indexed by search engines.
+	// Game, match, lobby, round, turma, tournament pages are private sessions.
+	isPublic := p == "/" || p == "/global-ranking" || p == "/privacy" || p == "/data-deletion"
+	robots := "index, follow, max-snippet:-1, max-image-preview:large"
+	if !isPublic {
+		robots = "noindex, nofollow"
+	}
+
+	var m map[string]any
+	if data == nil {
+		m = map[string]any{}
+	} else if existing, ok := data.(map[string]any); ok {
+		m = existing
+	} else {
+		// Non-map data — can't inject, return as-is with lang
+		return data
+	}
+	m["Lang"] = lang
+	m["CanonicalURL"] = canonicalURL
+	m["BaseURL"] = baseURL
+	m["RequestPath"] = p
+	m["RobotsDirective"] = robots
+	m["IsPublicPage"] = isPublic
+	return m
+}
+
+// injectLang adds the Lang key to the template data map (used for partial renders).
 func injectLang(data any, lang string) any {
 	if data == nil {
 		return map[string]any{"Lang": lang}

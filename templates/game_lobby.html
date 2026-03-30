@@ -1,0 +1,120 @@
+{{template "base" .}}
+
+{{define "title"}}Sala de Espera — Dominó Online{{end}}
+
+{{define "content"}}
+<div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+  <div>
+    <h1 style="margin-bottom:2px;">🎮 Dominó Online</h1>
+    <p style="font-size:0.82rem; color:var(--muted); margin:0;">{{.VariantName}} · até {{.Session.MaxPoints}} pts</p>
+  </div>
+  <span class="badge badge-waiting" style="font-size:0.78rem;">Sala</span>
+</div>
+
+<!-- Seats grid -->
+<div class="card">
+  <div class="card-title" style="margin-bottom:12px;">Jogadores ({{len .Participants}}/4)</div>
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+    {{range .Seats}}
+    {{if .}}
+    <div style="border-radius:12px; padding:12px; background:rgba(34,197,94,0.07); border:1px solid rgba(34,197,94,0.25); display:flex; align-items:center; gap:8px;">
+      <span style="font-size:1.4rem;">{{if .IsBot}}🤖{{else}}👤{{end}}</span>
+      <div>
+        <div style="font-weight:600; font-size:0.9rem; color:var(--text-1);">{{.Name}}</div>
+        <div style="font-size:0.72rem; color:var(--muted); margin-top:2px;">
+          Assento {{add .Seat 1}}{{if $.Session.TeamMode}} · Time {{add .Team 1}}{{end}}{{if .IsBot}} · Bot{{end}}
+        </div>
+      </div>
+    </div>
+    {{else}}
+    <div style="border-radius:12px; padding:12px; background:rgba(255,255,255,0.02); border:1px dashed var(--border); display:flex; align-items:center; gap:8px; opacity:0.5;">
+      <span style="font-size:1.4rem; opacity:0.4;">➕</span>
+      <div style="font-size:0.82rem; color:var(--muted);">Aguardando...</div>
+    </div>
+    {{end}}
+    {{end}}
+  </div>
+</div>
+
+<!-- Share link -->
+<div class="card">
+  <div class="card-title" style="margin-bottom:10px;">Convidar jogadores</div>
+  <div style="background:rgba(245,197,24,0.08); border:1px solid rgba(245,197,24,0.25); border-radius:10px; padding:12px; margin-bottom:12px;">
+    <div style="font-size:0.7rem; color:var(--muted); margin-bottom:4px;">Link de acesso:</div>
+    <div id="join-link" style="font-size:0.75rem; color:var(--gold); word-break:break-all; font-family:monospace; line-height:1.4;">
+      {{.Session.BaseURL}}/game/{{.Session.ID}}/join
+    </div>
+  </div>
+  <div style="display:flex; gap:8px;">
+    <button onclick="copyGameLink()" class="btn btn-secondary" style="flex:1; min-height:44px;">📋 Copiar</button>
+    <button onclick="shareGameLink()" class="btn btn-outline" style="flex:1; min-height:44px;">📤 Compartilhar</button>
+  </div>
+</div>
+
+<!-- Host: start button -->
+{{if .IsHost}}
+<div class="card" style="border-color:rgba(34,197,94,0.3); background:rgba(34,197,94,0.03);">
+  <form method="POST" action="/game/{{.Session.ID}}/start">
+    <input type="hidden" name="_csrf" value="{{.CSRFToken}}">
+    {{if ge (len .Participants) 2}}
+    <input type="hidden" name="add_bots" value="0">
+    {{else}}
+    <input type="hidden" name="add_bots" value="1">
+    {{end}}
+    <button type="submit" class="btn btn-success" style="width:100%; min-height:52px; font-size:1.05rem;">
+      🚀 Iniciar Jogo
+      {{if lt (len .Participants) 2}}
+      <div style="font-size:0.75rem; font-weight:400; opacity:0.8; margin-top:2px;">Bots completarão a mesa</div>
+      {{end}}
+    </button>
+  </form>
+</div>
+{{else}}
+<div class="card" style="text-align:center; padding:24px 16px;">
+  <div style="font-size:2.2rem; margin-bottom:8px; animation: pulse 2s infinite;">⏳</div>
+  <div style="font-weight:600; font-size:1rem;">Aguardando o anfitrião iniciar...</div>
+  <div style="font-size:0.82rem; color:var(--muted); margin-top:6px;">Você será redirecionado automaticamente</div>
+</div>
+{{end}}
+
+<div style="text-align:center; margin-top:12px;">
+  <a href="/" class="btn btn-ghost" style="font-size:0.88rem;">← Início</a>
+</div>
+
+<script>
+var SESSION_ID = '{{.Session.ID}}';
+var BASE_URL = '{{.Session.BaseURL}}';
+
+function copyGameLink() {
+  var link = BASE_URL + '/game/' + SESSION_ID + '/join';
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(link).then(function() { alert('Link copiado!'); });
+  } else {
+    prompt('Link de convite:', link);
+  }
+}
+// eslint-disable-next-line no-unused-vars
+function shareGameLink() {
+  var link = BASE_URL + '/game/' + SESSION_ID + '/join';
+  if (navigator.share) {
+    navigator.share({ title: 'Jogo de Dominó', text: 'Joga comigo!', url: link });
+  } else {
+    copyGameLink();
+  }
+}
+
+// SSE listener
+(function() {
+  if (typeof EventSource === 'undefined') return;
+  var es = new EventSource('/game/' + SESSION_ID + '/events');
+  es.addEventListener('update', function(e) {
+    if (e.data === 'game_joined') {
+      window.location.reload();
+    } else if (e.data === 'game_started') {
+      window.location.href = '/game/' + SESSION_ID + '/play';
+    }
+  });
+  es.onerror = function() {};
+})();
+</script>
+{{end}}

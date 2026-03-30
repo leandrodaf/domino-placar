@@ -37,12 +37,66 @@
 
 <!-- Nova Partida -->
 <div class="card" style="border-color:rgba(34,197,94,0.3); background:rgba(34,197,94,0.03);">
-  <form method="POST" action="/turma/{{.Turma.ID}}/match">
+  <form method="POST" action="/turma/{{.Turma.ID}}/match" id="turma-match-form">
     <input type="hidden" name="_csrf" value="{{.CSRFToken}}">
     <input type="hidden" name="unique_id" id="turma-uid" value="">
-    <button type="submit" class="btn btn-success" style="font-size:1.05rem; min-height:52px; width:100%;">
+
+    <!-- Botão principal que expande config -->
+    <button type="button" class="btn btn-success" style="font-size:1.05rem; min-height:52px; width:100%;"
+            onclick="toggleTurmaMatchConfig()">
       {{T .Lang "turma.new_match"}}
     </button>
+
+    <!-- Painel de configuração colapsável -->
+    <div id="turma-match-config" style="display:none; margin-top:14px;">
+      <p style="font-size:0.82rem; color:var(--muted); margin-bottom:10px; text-align:center;">{{T .Lang "match.create_subtitle"}}</p>
+
+      <div class="game-type-options" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;">
+        <label class="game-type-card game-type-card--selected" id="turma-gt-pontinho">
+          <input type="radio" name="game_type" value="pontinho" checked onchange="onTurmaGtChange(this)" style="display:none;">
+          <span class="game-type-icon">🎯</span>
+          <span class="game-type-name">Pontinho</span>
+          <span class="game-type-pts">51 pts</span>
+        </label>
+        <label class="game-type-card" id="turma-gt-cem">
+          <input type="radio" name="game_type" value="cem" onchange="onTurmaGtChange(this)" style="display:none;">
+          <span class="game-type-icon">💯</span>
+          <span class="game-type-name">Cem</span>
+          <span class="game-type-pts">100 pts</span>
+        </label>
+        <label class="game-type-card" id="turma-gt-cento_cinquenta">
+          <input type="radio" name="game_type" value="cento_cinquenta" onchange="onTurmaGtChange(this)" style="display:none;">
+          <span class="game-type-icon">🏅</span>
+          <span class="game-type-name">150</span>
+          <span class="game-type-pts">150 pts</span>
+        </label>
+        <label class="game-type-card" id="turma-gt-duzentos">
+          <input type="radio" name="game_type" value="duzentos" onchange="onTurmaGtChange(this)" style="display:none;">
+          <span class="game-type-icon">🔥</span>
+          <span class="game-type-name">200</span>
+          <span class="game-type-pts">200 pts</span>
+        </label>
+        <label class="game-type-card" id="turma-gt-personalizado" style="grid-column:1/-1;">
+          <input type="radio" name="game_type" value="personalizado" onchange="onTurmaGtChange(this)" style="display:none;">
+          <span class="game-type-icon">⚙️</span>
+          <span class="game-type-name">{{T .Lang "game_type.personalizado"}}</span>
+          <span class="game-type-pts">—</span>
+        </label>
+      </div>
+
+      <div id="turma-custom-pts-row" style="display:none; margin-bottom:12px;">
+        <label style="display:block; font-size:0.82rem; color:var(--muted); margin-bottom:6px;">{{T .Lang "game_type.max_points_label"}}</label>
+        <input type="number" name="max_points" id="turma-custom-pts"
+               min="10" max="999" value="51"
+               placeholder="{{T .Lang "game_type.max_points_placeholder"}}"
+               style="width:100%; background:rgba(255,255,255,0.06); border:1px solid var(--border); border-radius:8px; color:var(--text-1); padding:10px 12px; font-size:1rem;"
+               oninput="onTurmaCustomPtsChange(this)">
+      </div>
+
+      <button type="submit" class="btn btn-success" style="width:100%; min-height:48px;">
+        {{T .Lang "match.create_btn"}}
+      </button>
+    </div>
   </form>
   <script>
   (function() {
@@ -50,6 +104,28 @@
     var el = document.getElementById('turma-uid');
     if (el && u.unique_id) el.value = u.unique_id;
   })();
+
+  // eslint-disable-next-line no-unused-vars
+  function toggleTurmaMatchConfig() {
+    var panel = document.getElementById('turma-match-config');
+    var open = panel.style.display === 'none';
+    panel.style.display = open ? 'block' : 'none';
+    if (open) setTimeout(function() { panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 80);
+  }
+
+  // eslint-disable-next-line no-unused-vars
+  function onTurmaGtChange(radio) {
+    document.querySelectorAll('#turma-match-form .game-type-card').forEach(function(c) { c.classList.remove('game-type-card--selected'); });
+    radio.closest('.game-type-card').classList.add('game-type-card--selected');
+    document.getElementById('turma-custom-pts-row').style.display = radio.value === 'personalizado' ? 'block' : 'none';
+  }
+
+  // eslint-disable-next-line no-unused-vars
+  function onTurmaCustomPtsChange(inp) {
+    var v = parseInt(inp.value, 10);
+    if (isNaN(v) || v < 10) inp.value = 10;
+    if (v > 999) inp.value = 999;
+  }
   </script>
 </div>
 
@@ -130,18 +206,68 @@
 <div class="card">
   <div class="card-title">{{T .Lang "turma.matches_title"}}</div>
   {{if .Matches}}
-  <div style="display:flex; flex-direction:column; gap:6px;">
+  <div style="display:flex; flex-direction:column; gap:8px;">
     {{range .Matches}}
-    <a href="/match/{{.ID}}" style="display:flex; align-items:center; justify-content:space-between; gap:10px;
-       padding:10px 12px; border-radius:10px; background:rgba(255,255,255,0.04); border:1px solid var(--border);
-       text-decoration:none; color:var(--text-1);">
-      <div>
-        <span class="badge {{if eq .Status "active"}}badge-active{{else if eq .Status "finished"}}badge-estourou{{else}}badge-waiting{{end}}" style="font-size:0.72rem;">
-          {{.Status}}
-        </span>
+    {{$isHost := index $.HostMatchIDs .ID}}
+    {{$csrf := index $.MatchCSRF .ID}}
+    <div style="border-radius:12px; background:rgba(255,255,255,0.04); border:1px solid var(--border); overflow:hidden;">
+      <!-- Match header row -->
+      <a href="/match/{{.ID}}/ranking" style="display:flex; align-items:center; gap:10px;
+         padding:10px 12px; text-decoration:none; color:var(--text-1);">
+        <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap; flex:1; min-width:0;">
+          <span class="badge
+            {{- if eq .Status "active"}} badge-active
+            {{- else if eq .Status "finished"}} badge-estourou
+            {{- else if eq .Status "cancelled"}} badge-waiting
+            {{- else}} badge-waiting{{end}}" style="font-size:0.72rem;">
+            {{- if eq .Status "active"}}▶ {{T $.Lang "match.status_active"}}
+            {{- else if eq .Status "finished"}}✔ {{T $.Lang "match.status_finished"}}
+            {{- else if eq .Status "cancelled"}}✕ {{T $.Lang "match.status_cancelled"}}
+            {{- else}}◌ {{T $.Lang "match.status_waiting"}}{{end}}
+          </span>
+          {{if eq .GameType "pontinho"}}<span class="badge" style="font-size:0.68rem;background:rgba(99,102,241,0.12);color:#818cf8;border-color:rgba(99,102,241,0.25);">🎯 Pontinho</span>
+          {{else if eq .GameType "cem"}}<span class="badge" style="font-size:0.68rem;background:rgba(34,197,94,0.1);color:#4ade80;border-color:rgba(34,197,94,0.25);">💯 Cem</span>
+          {{else if eq .GameType "cento_cinquenta"}}<span class="badge" style="font-size:0.68rem;background:rgba(251,191,36,0.1);color:#fbbf24;border-color:rgba(251,191,36,0.25);">🏅 150</span>
+          {{else if eq .GameType "duzentos"}}<span class="badge" style="font-size:0.68rem;background:rgba(239,68,68,0.1);color:#f87171;border-color:rgba(239,68,68,0.25);">🔥 200</span>
+          {{else if .MaxPoints}}<span class="badge" style="font-size:0.68rem;background:rgba(156,163,175,0.1);color:#9ca3af;border-color:rgba(156,163,175,0.25);">⚙️ {{.MaxPoints}}pts</span>
+          {{end}}
+        </div>
+        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:2px; flex-shrink:0;">
+          {{if gt .PlayerCount 0}}
+          <span style="font-size:0.72rem; color:var(--text-2);">👥 {{.PlayerCount}}</span>
+          {{end}}
+          <span style="font-size:0.68rem; color:var(--muted);">{{fmtDate .CreatedAt}}</span>
+        </div>
+      </a>
+      <!-- Action buttons — only shown to the match host -->
+      {{if $isHost}}
+      <div style="display:flex; gap:6px; padding:0 12px 10px; border-top:1px solid var(--border); padding-top:8px; flex-wrap:wrap;">
+        {{if or (eq .Status "waiting") (eq .Status "active")}}
+        <form method="POST" action="/match/{{.ID}}/cancel" style="margin:0;"
+              onsubmit="return confirm('{{T $.Lang "turma.confirm_cancel_match"}}');">
+          <input type="hidden" name="_csrf" value="{{$csrf}}">
+          <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--gold); font-size:0.78rem; padding:5px 10px; min-height:32px;">
+            ⏹ {{T $.Lang "match.cancel_btn"}}
+          </button>
+        </form>
+        {{end}}
+        {{if or (eq .Status "cancelled") (eq .Status "finished") (eq .Status "waiting")}}
+        <form method="POST" action="/turma/{{$.Turma.ID}}/match/{{.ID}}/delete" style="margin:0;"
+              onsubmit="return confirm('{{T $.Lang "turma.confirm_delete_match"}}');">
+          <input type="hidden" name="_csrf" value="{{$csrf}}">
+          <button type="submit" class="btn btn-ghost btn-sm" style="color:var(--red); font-size:0.78rem; padding:5px 10px; min-height:32px;">
+            🗑 {{T $.Lang "match.delete_btn"}}
+          </button>
+        </form>
+        {{end}}
+        {{if eq .Status "active"}}
+        <a href="/match/{{.ID}}/ranking" class="btn btn-ghost btn-sm" style="font-size:0.78rem; padding:5px 10px; min-height:32px; color:var(--green);">
+          👁 {{T $.Lang "turma.view_match"}}
+        </a>
+        {{end}}
       </div>
-      <span style="font-size:0.75rem; color:var(--muted);">→</span>
-    </a>
+      {{end}}
+    </div>
     {{end}}
   </div>
   {{else}}
@@ -220,7 +346,7 @@ function shareLink() {
     var msg = e.data;
     if (msg === 'presence_update') {
       fetchOnline();
-    } else if (msg === 'member_joined' || msg === 'member_removed' || msg === 'match_created') {
+    } else if (msg === 'member_joined' || msg === 'member_removed' || msg === 'match_created' || msg === 'match_deleted' || msg === 'match_cancelled') {
       window.location.reload();
     }
   });
