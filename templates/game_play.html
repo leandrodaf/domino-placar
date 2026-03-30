@@ -282,23 +282,22 @@
 }
 #board-scroll {
   flex: 1;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding: 16px 20px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 10px 14px;
   height: 100%;
   display: flex;
-  align-items: center;       /* tiles vertically centred in the table area */
+  flex-direction: column;
   scrollbar-width: thin;
   scrollbar-color: rgba(34,197,94,0.2) transparent;
   position: relative;
   z-index: 1;
 }
 #board-chain {
-  display: flex;
-  align-items: flex-end;     /* tiles share the same bottom baseline */
-  gap: 2px;
-  min-width: max-content;
-  padding: 8px 4px;
+  position: relative;
+  padding: 4px 0;
+  margin: 0 auto;   /* centre inside board-scroll */
+  /* width and height set dynamically via JS */
 }
 #board-empty {
   display: flex;
@@ -315,21 +314,23 @@
 /*
  * Tile wrappers & images
  * ──────────────────────
- * All tile PNGs are 500×790 (portrait / standing upright).
+ * All tile PNGs are 500×790 (portrait / standing upright), ratio ~1:1.58
  *
- * Normal tiles in the chain lie on their SIDE → landscape display (70×44 px).
- *   The img keeps its natural portrait size (44×70) and is rotated 90°;
- *   flex centering in the 70×44 wrapper makes it fill exactly — no distortion.
+ * Normal tiles in the chain lie on their SIDE → landscape display (57×36 px).
+ *   The img keeps its natural portrait size (36×57) and is rotated 270°;
+ *   flex centering in the 57×36 wrapper makes it fill exactly.
  *
- * Doubles (carroça) stand PERPENDICULAR to the chain → portrait display (44×70 px).
+ * Doubles (carroça) stand PERPENDICULAR to the chain → portrait display (36×57 px).
  *   The img is shown as-is; the wrapper matches the natural image proportions.
+ *   align-items:center on .chain-row ensures carroça tiles are vertically centred
+ *   relative to the shorter horizontal neighbours.
  */
 
 /* --- horizontal tile wrapper (default) ------------------------------------ */
 .board-tile-wrap {
   flex-shrink: 0;
-  width: 70px;
-  height: 44px;
+  width: 57px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -337,30 +338,29 @@
   position: relative;
 }
 .board-tile {
-  /* Keep natural portrait proportions so rotation is NOT distorted */
-  width: 44px;
-  height: 70px;
+  width: 36px;
+  height: 57px;
   flex-shrink: 0;
-  border-radius: 5px;
+  border-radius: 4px;
   image-rendering: crisp-edges;
   display: block;
-  /* Rotate to landscape — perfectly fills the 70×44 wrapper */
-  transform: rotate(90deg);
-  filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.75));
+  /* lo=top → after 270° CCW: lo goes LEFT, hi goes RIGHT — matches LeftOpen/RightOpen */
+  transform: rotate(270deg);
+  filter: drop-shadow(1px 3px 5px rgba(0,0,0,0.8));
 }
 .board-tile.flip {
-  transform: rotate(270deg);
+  transform: rotate(90deg);
 }
 
 /* --- vertical / carroça wrapper ------------------------------------------- */
 .board-tile-wrap.wrap-v {
-  width: 44px;
-  height: 70px;
-  overflow: visible;          /* allow the drop-shadow to bleed out */
+  width: 36px;
+  height: 57px;
+  overflow: visible;
 }
 .board-tile.vertical {
-  width: 44px;
-  height: 70px;
+  width: 36px;
+  height: 57px;
   transform: none;            /* portrait as-is */
 }
 .board-tile.vertical.flip {
@@ -372,8 +372,8 @@
   animation: tile-drop 0.28s cubic-bezier(0.22,1,0.36,1);
 }
 @keyframes tile-drop {
-  from { opacity: 0; filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.75)) brightness(1.4); transform: rotate(90deg) scale(0.8); }
-  to   { opacity: 1; filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.75)); transform: rotate(90deg) scale(1); }
+  from { opacity: 0; filter: drop-shadow(1px 3px 5px rgba(0,0,0,0.8)) brightness(1.4); transform: rotate(270deg) scale(0.8); }
+  to   { opacity: 1; filter: drop-shadow(1px 3px 5px rgba(0,0,0,0.8)); transform: rotate(270deg) scale(1); }
 }
 .board-tile.vertical.board-tile--new {
   animation: tile-drop-v 0.28s cubic-bezier(0.22,1,0.36,1);
@@ -386,8 +386,20 @@
   animation: tile-drop-flip 0.28s cubic-bezier(0.22,1,0.36,1);
 }
 @keyframes tile-drop-flip {
-  from { opacity: 0; transform: rotate(270deg) scale(0.8); }
-  to   { opacity: 1; transform: rotate(270deg) scale(1); }
+  from { opacity: 0; transform: rotate(90deg) scale(0.8); }
+  to   { opacity: 1; transform: rotate(90deg) scale(1); }
+}
+
+/* ── Snake turn indicator ── */
+.chain-turn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  color: rgba(34,197,94,0.45);
+  padding: 0 4px;
+  user-select: none;
+  pointer-events: none;
 }
 
 /* ── End markers ── */
@@ -717,7 +729,61 @@ var HAS_BONEYARD = '{{if .Session.Rules.HasBoneyard}}1{{end}}' === '1';
 
 var selectedTile = null;
 var currentState = null;
-var prevTileCount = 0;
+// ── Board layout state (absolute-position snake) ──────────────────────────
+var BOARD_TILE_STEP = 59;  // 57px wide + 2px gap (horizontal tile slot)
+var BOARD_ROW_H    = 62;  // row-slot height: fits vertical tiles (57px) + gap
+var BOARD_LEFT_ROWS = 4;  // rows pre-allocated above the first tile for left-end plays
+
+var boardCols     = null;  // tiles per row — set once on first tile, never changes
+var boardStartIdx = null;  // sequential index of the very first tile placed
+var boardLeftIdx  = null;  // next left-end index (decrements on each left-end play)
+var boardRightIdx = null;  // next right-end index (increments on each right-end play)
+var boardTileEls  = {};    // tile_str → .board-tile-wrap DOM element
+var boardPrevKeys = [];    // previous chain tile strings (change detection)
+
+function _boardReset() {
+  boardCols = null; boardStartIdx = null;
+  boardLeftIdx = null; boardRightIdx = null;
+  boardTileEls = {}; boardPrevKeys = [];
+}
+
+// Convert sequential snake index → absolute pixel position (x, y).
+// Implements the standard L→R / R→L serpentine layout.
+function _boardXY(idx, isVertical) {
+  var row      = Math.floor(idx / boardCols);
+  var colInRow = idx % boardCols;
+  var col      = (row % 2 === 0) ? colInRow : (boardCols - 1 - colInRow);
+  var tileH    = isVertical ? 57 : 36;
+  return {
+    x: col * BOARD_TILE_STEP,
+    y: row * BOARD_ROW_H + Math.floor((BOARD_ROW_H - tileH) / 2)
+  };
+}
+
+function _boardPlace(container, pt, idx, isNew) {
+  var isVertical = pt.orientation === 'v';
+  var pos = _boardXY(idx, isVertical);
+  var el  = makeTileWrap(pt, isNew);
+  el.style.position = 'absolute';
+  el.style.left     = pos.x + 'px';
+  el.style.top      = pos.y + 'px';
+  container.appendChild(el);
+  boardTileEls[pt.tile] = el;
+  return el;
+}
+
+function _boardUpdateHeight(container) {
+  var maxBottom = 0;
+  for (var key in boardTileEls) {
+    var el  = boardTileEls[key];
+    var top = parseInt(el.style.top, 10) || 0;
+    var h   = el.classList.contains('wrap-v') ? 57 : 36;
+    if (top + h > maxBottom) maxBottom = top + h;
+  }
+  var newH = maxBottom + 4;
+  var curH = parseInt(container.style.height, 10) || 0;
+  if (newH > curH) container.style.height = newH + 'px';  // only grows, never shrinks
+}
 
 // ── State rendering ──────────────────────────────────────────────────────────
 
@@ -795,59 +861,106 @@ function renderState(state) {
   if (selectedTile) cancelSelection();
 }
 
+function makeTileWrap(pt, isNew) {
+  var parts = pt.tile.split('-');
+  var h = parseInt(parts[0], 10);
+  var l = parseInt(parts[1], 10);
+  var lo = Math.min(h, l), hi = Math.max(h, l);
+  var isVertical = pt.orientation === 'v';
+
+  var wrap = document.createElement('div');
+  wrap.className = 'board-tile-wrap' + (isVertical ? ' wrap-v' : '');
+
+  var img = document.createElement('img');
+  img.src = '/static/tiles/tile_' + lo + '_' + hi + '.png';
+  img.alt = pt.tile;
+  var cls = 'board-tile';
+  if (isVertical) cls += ' vertical';
+  if (pt.flipped) cls += ' flip';
+  if (isNew) cls += ' board-tile--new';
+  img.className = cls;
+  wrap.appendChild(img);
+  return wrap;
+}
+
 function renderBoard(board) {
-  var chain = board.tiles || [];
-  var container = document.getElementById('board-chain');
-  var scroll = document.getElementById('board-scroll');
+  var chain   = board.tiles || [];
+  var cont    = document.getElementById('board-chain');
+  var scroll  = document.getElementById('board-scroll');
   var emptyEl = document.getElementById('board-empty');
   var lm = document.getElementById('left-marker');
   var rm = document.getElementById('right-marker');
   var lv = document.getElementById('left-marker-val');
   var rv = document.getElementById('right-marker-val');
 
-  var newTileCount = chain.length;
-  container.innerHTML = '';
-
+  // ── Empty board ────────────────────────────────────────────────────────────
   if (chain.length === 0) {
-    if (emptyEl) { emptyEl.style.display = 'flex'; container.appendChild(emptyEl); }
+    if (emptyEl) emptyEl.style.display = 'flex';
     if (lm) lm.style.display = 'none';
     if (rm) rm.style.display = 'none';
-    prevTileCount = 0;
+    for (var key in boardTileEls) {
+      var el = boardTileEls[key];
+      if (el && el.parentNode) el.parentNode.removeChild(el);
+    }
+    _boardReset();
+    if (emptyEl && !cont.contains(emptyEl)) cont.appendChild(emptyEl);
+    cont.style.height = '';
+    cont.style.width  = '';
     return;
   }
+
   if (emptyEl) emptyEl.style.display = 'none';
 
-  chain.forEach(function(pt, idx) {
-    var parts = pt.tile.split('-');
-    var h = parseInt(parts[0], 10);
-    var l = parseInt(parts[1], 10);
-    var lo = Math.min(h, l), hi = Math.max(h, l);
-    var isVertical = pt.orientation === 'v';
+  // ── Initialise snake grid on first tile ────────────────────────────────────
+  if (boardCols === null) {
+    var availW = Math.max(200, (scroll.clientWidth || 320) - 28);
+    boardCols     = Math.max(3, Math.floor(availW / BOARD_TILE_STEP));
+    // First tile goes to the CENTRE column of row BOARD_LEFT_ROWS so the chain
+    // can grow to both sides before hitting an edge.
+    boardStartIdx = BOARD_LEFT_ROWS * boardCols + Math.floor(boardCols / 2);
+    boardLeftIdx  = boardStartIdx - 1;
+    boardRightIdx = boardStartIdx;
+    cont.style.position = 'relative';
+    cont.style.width    = (boardCols * BOARD_TILE_STEP) + 'px';
+    // Pre-size the container so the first tile (at row BOARD_LEFT_ROWS) can be
+    // scrolled to the centre of the viewport right from the start.
+    cont.style.height   = ((BOARD_LEFT_ROWS * 2 + 1) * BOARD_ROW_H + 8) + 'px';
+  }
 
-    var wrap = document.createElement('div');
-    wrap.className = 'board-tile-wrap' + (isVertical ? ' wrap-v' : '');
+  var newKeys   = chain.map(function(p) { return p.tile; });
+  var newTileEl = null;
 
-    var img = document.createElement('img');
-    img.src = '/static/tiles/tile_' + lo + '_' + hi + '.png';
-    img.alt = pt.tile;
-    var cls = 'board-tile';
-    if (isVertical) cls += ' vertical';
-    if (pt.flipped) cls += ' flip';
-    img.className = cls;
-    if (idx === newTileCount - 1 && newTileCount > prevTileCount) {
-      img.classList.add('board-tile--new');
+  if (boardPrevKeys.length === 0 && newKeys.length > 0) {
+    // ── First render: place all tiles sequentially ─────────────────────────
+    for (var i = 0; i < chain.length; i++) {
+      if (!boardTileEls[chain[i].tile]) {
+        _boardPlace(cont, chain[i], boardRightIdx++, i === chain.length - 1);
+      }
     }
-    wrap.appendChild(img);
-    container.appendChild(wrap);
-  });
-  prevTileCount = newTileCount;
+    // Scroll to show the last tile (most recently played)
+    newTileEl = boardTileEls[chain[chain.length - 1].tile];
+  } else if (newKeys.length > boardPrevKeys.length) {
+    // ── Incremental: one new tile at left or right end ─────────────────────
+    if (!boardTileEls[newKeys[0]]) {
+      newTileEl = _boardPlace(cont, chain[0], boardLeftIdx--, true);
+    }
+    if (!boardTileEls[newKeys[newKeys.length - 1]]) {
+      newTileEl = _boardPlace(cont, chain[chain.length - 1], boardRightIdx++, true);
+    }
+  }
 
-  // Scroll to end after paint
-  requestAnimationFrame(function() {
-    if (scroll) scroll.scrollLeft = scroll.scrollWidth;
-  });
+  boardPrevKeys = newKeys.slice();
+  _boardUpdateHeight(cont);
 
-  // End markers
+  // ── Scroll to show the new tile ────────────────────────────────────────────
+  if (newTileEl) {
+    requestAnimationFrame(function() {
+      var top = parseInt(newTileEl.style.top, 10) || 0;
+      scroll.scrollTop = Math.max(0, top - Math.floor(scroll.clientHeight / 2));
+    });
+  }
+
+  // ── End markers ────────────────────────────────────────────────────────────
   if (lm) { lm.style.display = 'flex'; if (lv) lv.textContent = board.left_open; }
   if (rm) { rm.style.display = 'flex'; if (rv) rv.textContent = board.right_open; }
 }
@@ -945,7 +1058,6 @@ function openSelector(tStr, showSideBtns, forcedSide) {
 function onTileClick(tStr) {
   if (!currentState) return;
   var board = currentState.board;
-  var dbl   = isDouble(tStr);
 
   document.querySelectorAll('.hand-tile--selected').forEach(function(el) {
     el.classList.remove('hand-tile--selected');
@@ -954,13 +1066,9 @@ function onTileClick(tStr) {
   if (tileEl) tileEl.classList.add('hand-tile--selected');
   selectedTile = tStr;
 
-  var orient = dbl ? 'v' : 'h';
-  void orient; // orient is computed inside doPlay now
-
-  // Empty board — first play
+  // Empty board — only one possible placement, no choice needed
   if (board.tile_count === 0) {
-    if (dbl) { openSelector(tStr, false, 'right'); }
-    else     { doPlay(tStr, 'right'); }
+    doPlay(tStr, 'right');
     return;
   }
 
@@ -969,21 +1077,19 @@ function onTileClick(tStr) {
   var fitsLeft  = (hi === board.left_open  || lo === board.left_open);
   var fitsRight = (hi === board.right_open || lo === board.right_open);
 
-  // Both ends equal — side doesn't matter
+  // Both ends have the same value — side doesn't matter
   if (board.left_open === board.right_open) {
-    if (dbl) { openSelector(tStr, false, 'right'); }
-    else     { doPlay(tStr, 'right'); }
+    doPlay(tStr, 'right');
     return;
   }
 
   if (fitsLeft && fitsRight) {
-    openSelector(tStr, true, null);       // player must choose side
+    // Tile fits both sides: only possible for non-doubles, player must choose
+    openSelector(tStr, true, null);
   } else if (fitsLeft) {
-    if (dbl) { openSelector(tStr, false, 'left'); }
-    else     { doPlay(tStr, 'left'); }
+    doPlay(tStr, 'left');
   } else {
-    if (dbl) { openSelector(tStr, false, 'right'); }
-    else     { doPlay(tStr, 'right'); }
+    doPlay(tStr, 'right');
   }
 }
 
