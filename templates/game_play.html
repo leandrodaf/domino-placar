@@ -272,40 +272,39 @@
   overflow: hidden;
   min-height: 0;
   position: relative;
-  /* Dark green felt table */
   background:
-    radial-gradient(ellipse 140% 80% at 50% 30%, rgba(22,60,30,0.85) 0%, transparent 70%),
-    radial-gradient(ellipse 60% 40% at 20% 60%, rgba(10,40,20,0.4) 0%, transparent 50%),
-    radial-gradient(ellipse 60% 40% at 80% 60%, rgba(10,40,20,0.4) 0%, transparent 50%),
-    linear-gradient(180deg, #091a0d 0%, #0b2010 60%, #071408 100%);
-  border-top: 1px solid rgba(34,197,94,0.12);
-  border-bottom: 1px solid rgba(34,197,94,0.12);
-  /* 2.5D perspective */
-  perspective: 900px;
-  perspective-origin: 50% 15%;
+    radial-gradient(ellipse 90% 60% at 50% 40%, #1a4a25 0%, #0f3018 55%, #071408 100%);
+  border-top: 1px solid rgba(34,197,94,0.10);
+  border-bottom: 1px solid rgba(34,197,94,0.10);
+}
+/* Subtle inner vignette to give depth to the table */
+#board-area::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 100% 100% at 50% 50%, transparent 40%, rgba(0,0,0,0.45) 100%);
 }
 #board-scroll {
   flex: 1;
   overflow-x: auto;
-  overflow-y: visible;
-  padding: 18px 16px 32px;
+  overflow-y: hidden;
+  padding: 16px 20px;
   height: 100%;
   display: flex;
-  align-items: flex-end;
+  align-items: center;       /* tiles vertically centred in the table area */
   scrollbar-width: thin;
   scrollbar-color: rgba(34,197,94,0.2) transparent;
+  position: relative;
+  z-index: 1;
 }
 #board-chain {
   display: flex;
-  align-items: flex-end;
-  gap: 1px;
-  min-height: 100px;
+  align-items: flex-end;     /* tiles share the same bottom baseline */
+  gap: 2px;
   min-width: max-content;
-  padding: 4px 0;
-  /* 2.5D tilt — top recedes, bottom is nearest */
-  transform: rotateX(14deg);
-  transform-origin: 50% 100%;
-  transform-style: preserve-3d;
+  padding: 8px 4px;
 }
 #board-empty {
   display: flex;
@@ -317,67 +316,84 @@
   color: rgba(34,197,94,0.4);
   font-size: 0.85rem;
   padding: 16px;
-  transform: none;
 }
-.board-tile {
+
+/*
+ * Tile wrappers & images
+ * ──────────────────────
+ * All tile PNGs are 500×790 (portrait / standing upright).
+ *
+ * Normal tiles in the chain lie on their SIDE → landscape display (70×44 px).
+ *   The img keeps its natural portrait size (44×70) and is rotated 90°;
+ *   flex centering in the 70×44 wrapper makes it fill exactly — no distortion.
+ *
+ * Doubles (carroça) stand PERPENDICULAR to the chain → portrait display (44×70 px).
+ *   The img is shown as-is; the wrapper matches the natural image proportions.
+ */
+
+/* --- horizontal tile wrapper (default) ------------------------------------ */
+.board-tile-wrap {
   flex-shrink: 0;
-  border-radius: 6px;
-  width: 44px;
-  height: 70px;
-  display: block;
-  image-rendering: crisp-edges;
-  /* 3D tile thickness: right + bottom dark edges */
-  box-shadow:
-    0 0 0 1.5px rgba(255,255,255,0.13),
-    4px 0px 0 rgba(0,0,0,0.8),
-    0px 5px 0 rgba(0,0,0,0.7),
-    5px 6px 0 rgba(0,0,0,0.9),
-    6px 9px 14px rgba(0,0,0,0.65);
-  position: relative;
-  z-index: 1;
-}
-/* Vertical/carroça — standing upright (perpendicular) */
-.board-tile-wrap.wrap-v {
-  width: 78px;   /* space it needs in the chain */
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-}
-.board-tile.vertical {
-  /* Physically narrower + taller: rotate the image and show pip-top stacked */
   width: 70px;
   height: 44px;
-  transform: rotate(90deg) translateY(2px);
-  transform-origin: center center;
-  box-shadow:
-    0 0 0 1.5px rgba(255,255,255,0.13),
-    0px 5px 0 rgba(0,0,0,0.8),
-    5px 0px 0 rgba(0,0,0,0.7),
-    5px 6px 0 rgba(0,0,0,0.9),
-    6px 9px 14px rgba(0,0,0,0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
 }
-.board-tile.flip { transform: rotate(180deg); }
-.board-tile.vertical.flip { transform: rotate(270deg) translateY(2px); }
+.board-tile {
+  /* Keep natural portrait proportions so rotation is NOT distorted */
+  width: 44px;
+  height: 70px;
+  flex-shrink: 0;
+  border-radius: 5px;
+  image-rendering: crisp-edges;
+  display: block;
+  /* Rotate to landscape — perfectly fills the 70×44 wrapper */
+  transform: rotate(90deg);
+  filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.75));
+}
+.board-tile.flip {
+  transform: rotate(270deg);
+}
+
+/* --- vertical / carroça wrapper ------------------------------------------- */
+.board-tile-wrap.wrap-v {
+  width: 44px;
+  height: 70px;
+  overflow: visible;          /* allow the drop-shadow to bleed out */
+}
+.board-tile.vertical {
+  width: 44px;
+  height: 70px;
+  transform: none;            /* portrait as-is */
+}
+.board-tile.vertical.flip {
+  transform: rotate(180deg);
+}
+
+/* --- animation ------------------------------------------------------------ */
 .board-tile--new {
   animation: tile-drop 0.28s cubic-bezier(0.22,1,0.36,1);
 }
 @keyframes tile-drop {
-  from { opacity: 0; transform: translateY(-14px) scale(0.88); }
-  to   { opacity: 1; transform: translateY(0)     scale(1); }
+  from { opacity: 0; filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.75)) brightness(1.4); transform: rotate(90deg) scale(0.8); }
+  to   { opacity: 1; filter: drop-shadow(2px 4px 6px rgba(0,0,0,0.75)); transform: rotate(90deg) scale(1); }
+}
+.board-tile.vertical.board-tile--new {
+  animation: tile-drop-v 0.28s cubic-bezier(0.22,1,0.36,1);
+}
+@keyframes tile-drop-v {
+  from { opacity: 0; transform: scale(0.8); }
+  to   { opacity: 1; transform: none; }
 }
 .board-tile.flip.board-tile--new {
   animation: tile-drop-flip 0.28s cubic-bezier(0.22,1,0.36,1);
 }
 @keyframes tile-drop-flip {
-  from { opacity: 0; transform: rotate(180deg) translateY(-14px) scale(0.88); }
-  to   { opacity: 1; transform: rotate(180deg) translateY(0)     scale(1); }
-}
-/* Wrapper for layout alignment */
-.board-tile-wrap {
-  flex-shrink: 0;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
+  from { opacity: 0; transform: rotate(270deg) scale(0.8); }
+  to   { opacity: 1; transform: rotate(270deg) scale(1); }
 }
 
 /* ── End markers ── */
