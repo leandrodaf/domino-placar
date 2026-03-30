@@ -42,7 +42,7 @@
   <div style="background:rgba(245,197,24,0.08); border:1px solid rgba(245,197,24,0.25); border-radius:10px; padding:12px; margin-bottom:12px;">
     <div style="font-size:0.7rem; color:var(--muted); margin-bottom:4px;">Link de acesso:</div>
     <div id="join-link" style="font-size:0.75rem; color:var(--gold); word-break:break-all; font-family:monospace; line-height:1.4;">
-      {{.Session.BaseURL}}/game/{{.Session.ID}}/join
+      <span id="join-link-text">carregando...</span>
     </div>
   </div>
   <div style="display:flex; gap:8px;">
@@ -83,7 +83,13 @@
 
 <script>
 var SESSION_ID = '{{.Session.ID}}';
-var BASE_URL = '{{.Session.BaseURL}}';
+var BASE_URL = window.location.origin;
+
+// Fill the join link display
+(function() {
+  var el = document.getElementById('join-link-text');
+  if (el) el.textContent = BASE_URL + '/game/' + SESSION_ID + '/join';
+})();
 
 function copyGameLink() {
   var link = BASE_URL + '/game/' + SESSION_ID + '/join';
