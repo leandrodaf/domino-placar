@@ -92,9 +92,10 @@ func GameActionHandler(mgr *GameSessionManager, hub *SSEHub) http.HandlerFunc {
 		}
 
 		var body struct {
-			Type string `json:"type"`
-			Tile string `json:"tile"`
-			Side string `json:"side"`
+			Type        string `json:"type"`
+			Tile        string `json:"tile"`
+			Side        string `json:"side"`
+			Orientation string `json:"orientation"`
 		}
 
 		// Support both JSON body and form data
@@ -111,6 +112,7 @@ func GameActionHandler(mgr *GameSessionManager, hub *SSEHub) http.HandlerFunc {
 			body.Type = r.FormValue("type")
 			body.Tile = r.FormValue("tile")
 			body.Side = r.FormValue("side")
+			body.Orientation = r.FormValue("orientation")
 		}
 
 		if body.Side == "" {
@@ -144,7 +146,8 @@ func GameActionHandler(mgr *GameSessionManager, hub *SSEHub) http.HandlerFunc {
 			}
 			move.Tile = tile
 			move.Side = body.Side
-			result, actionErr = gs.PlayTile(participantID, tile, body.Side)
+			move.Orientation = body.Orientation
+			result, actionErr = gs.PlayTile(participantID, tile, body.Side, body.Orientation)
 			if actionErr == nil {
 				hub.Broadcast(channel, "game_move_played")
 			}

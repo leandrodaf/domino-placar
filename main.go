@@ -278,6 +278,7 @@ func main() {
 		gameMgr := handler.NewGameSessionManager(db.NewGameSQLiteStore(sqlStore))
 		mux.HandleFunc("GET /game/new", handler.CreateGamePageHandler(tmpl))
 		mux.HandleFunc("POST /game", handler.CreateGameHandler(gameMgr, hub, tmpl))
+		mux.HandleFunc("POST /game/quickplay", handler.QuickPlayHandler(gameMgr, hub))
 		mux.HandleFunc("GET /game/{id}/lobby", handler.GameLobbyHandler(gameMgr, tmpl))
 		mux.HandleFunc("POST /game/{id}/join", handler.GameJoinHandler(gameMgr, hub))
 		mux.HandleFunc("GET /game/{id}/join", handler.GameJoinPageHandler(gameMgr, tmpl))

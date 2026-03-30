@@ -150,6 +150,8 @@ func (gs *GameSession) StartGame(addBots bool) error {
 }
 
 // dealRound distributes tiles and sets the starting player.
+// Round 1: player with the highest double starts.
+// Round 2+: winner of the previous round starts.
 func (gs *GameSession) dealRound() {
 	n := len(gs.Participants)
 	hands, boneyard := Deal(n, gs.Rules.TilesPerPlayer)
@@ -161,11 +163,22 @@ func (gs *GameSession) dealRound() {
 	gs.PassCount = 0
 	gs.BlockedIDs = map[string]bool{}
 
-	handSlice := make([]Hand, n)
-	for i, p := range gs.Participants {
-		handSlice[i] = p.Hand
+	if gs.RoundNumber == 1 {
+		// First round: player holding the highest double starts
+		handSlice := make([]Hand, n)
+		for i, p := range gs.Participants {
+			handSlice[i] = p.Hand
+		}
+		gs.TurnIdx = FindFirstPlayer(handSlice)
+	} else if gs.LastRound != nil {
+		// Subsequent rounds: winner of the previous round starts
+		for i, p := range gs.Participants {
+			if p.ID == gs.LastRound.WinnerID {
+				gs.TurnIdx = i
+				break
+			}
+		}
 	}
-	gs.TurnIdx = FindFirstPlayer(handSlice)
 }
 
 // CurrentPlayer returns the participant whose turn it is.
@@ -179,7 +192,7 @@ func (gs *GameSession) CurrentPlayer() *Participant {
 }
 
 // PlayTile executes a play move. Returns RoundEndResult.
-func (gs *GameSession) PlayTile(participantID string, tile Tile, side string) (RoundEndResult, error) {
+func (gs *GameSession) PlayTile(participantID string, tile Tile, side string, orientation string) (RoundEndResult, error) {
 	gs.mu.Lock()
 	defer gs.mu.Unlock()
 
@@ -197,7 +210,7 @@ func (gs *GameSession) PlayTile(participantID string, tile Tile, side string) (R
 		return RoundEndResult{}, fmt.Errorf("invalid move: tile %s does not fit on %s", tile, side)
 	}
 
-	gs.Board = ApplyMove(gs.Board, tile, side)
+	gs.Board = ApplyMove(gs.Board, tile, side, orientation)
 	p.Hand = p.Hand.Remove(tile)
 	gs.PassCount = 0
 	delete(gs.BlockedIDs, participantID)
@@ -320,11 +333,20 @@ func (gs *GameSession) StateForPlayer(uniqueID string) map[string]any {
 
 	boardTiles := make([]map[string]any, 0, len(gs.Board.Chain))
 	for _, pt := range gs.Board.Chain {
+		orient := pt.Orientation
+		if orient == "" {
+			if pt.Tile.IsDouble() {
+				orient = "v"
+			} else {
+				orient = "h"
+			}
+		}
 		boardTiles = append(boardTiles, map[string]any{
-			"tile":    pt.Tile.String(),
-			"high":    pt.Tile.High,
-			"low":     pt.Tile.Low,
-			"flipped": pt.Flipped,
+			"tile":        pt.Tile.String(),
+			"high":        pt.Tile.High,
+			"low":         pt.Tile.Low,
+			"flipped":     pt.Flipped,
+			"orientation": orient,
 		})
 	}
 

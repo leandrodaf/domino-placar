@@ -14,9 +14,13 @@ func (t Tile) IsDouble() bool { return t.High == t.Low }
 
 // PlacedTile is a tile on the board with display orientation.
 type PlacedTile struct {
-	Tile    Tile
-	Flipped bool // display Low on top
+	Tile        Tile
+	Flipped     bool   // display Low on top
+	Orientation string // "h" = horizontal (default), "v" = vertical (doubles/carroça)
 }
+
+// Move includes orientation for placing doubles.
+
 
 // BoardState is the current board.
 type BoardState struct {
@@ -71,7 +75,8 @@ const (
 
 // Move is a player action.
 type Move struct {
-	Type MoveType
-	Tile Tile   // only for MovePlay
-	Side string // "left" or "right"
+	Type        MoveType
+	Tile        Tile   // only for MovePlay
+	Side        string // "left" or "right"
+	Orientation string // "h" or "v"; "v" default for doubles
 }

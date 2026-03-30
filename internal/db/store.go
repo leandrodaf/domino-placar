@@ -101,4 +101,7 @@ type GameStore interface {
 	RecordGameMove(id, sessionID, participantID string, roundNumber int, move game.Move, moveNum int) error
 	GetGameSessionInfo(id string) (*GameSessionInfo, error)
 	GetActiveGameSessions() ([]string, error)
+	// FindOpenSession returns the ID of a waiting session with open seats
+	// that excludeUID has not already joined, or "" if none found.
+	FindOpenSession(excludeUID string) (string, error)
 }

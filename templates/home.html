@@ -48,8 +48,20 @@
   </p>
 
   <div class="action-grid">
-    <!-- Jogar Online — new feature above the fold -->
-    <div onclick="toggleGameConfig()" class="action-card action-card--online" style="cursor:pointer; grid-column:1/-1; border-color:rgba(99,102,241,0.5); background:rgba(99,102,241,0.06);">
+    <!-- Jogar Agora — quick matchmaking (full width) -->
+    <form method="POST" action="/game/quickplay" id="quickplay-form"
+          class="action-card action-card--online"
+          style="grid-column:1/-1; border-color:rgba(99,102,241,0.55); background:rgba(99,102,241,0.07); cursor:pointer; text-decoration:none; display:flex;">
+      <input type="hidden" name="unique_id" id="qp-uid" value="">
+      <input type="hidden" name="player_name" id="qp-name" value="">
+      <button type="submit" class="action-card-btn" style="width:100%; background:none; border:none; cursor:pointer;">
+        <span class="action-card-icon">⚡</span>
+        <span class="action-card-label" style="color:#a5b4fc;">{{T .Lang "home.quick_play"}}</span>
+        <span class="action-card-desc" style="color:var(--muted);">{{T .Lang "home.quick_play_desc"}}</span>
+      </button>
+    </form>
+    <!-- Criar Sala com configurações -->
+    <div onclick="toggleGameConfig()" class="action-card action-card--online" style="cursor:pointer; border-color:rgba(99,102,241,0.3); background:rgba(99,102,241,0.04);">
       <div class="action-card-btn" style="pointer-events:none;">
         <span class="action-card-icon">🎲</span>
         <span class="action-card-label" style="color:#a5b4fc;">{{T .Lang "home.play_online"}}</span>
@@ -147,6 +159,24 @@
           var uidv = uid ? uid.value : '';
           if (!uidv) { uidv = Math.random().toString(36).substr(2,12); if(uid) uid.value = uidv; }
           localStorage.setItem('domino_user', JSON.stringify({ name: name || u.name, unique_id: uidv }));
+        });
+        // Quick-play form — fill from localStorage too
+        var qpName = document.getElementById('qp-name');
+        var qpUid  = document.getElementById('qp-uid');
+        if (qpName && u.name) qpName.value = u.name;
+        if (qpUid  && u.unique_id) qpUid.value = u.unique_id;
+        // If user has no name yet, quick-play form asks for name before submitting
+        document.getElementById('quickplay-form').addEventListener('submit', function(e) {
+          var n = qpName ? qpName.value.trim() : '';
+          var id = qpUid ? qpUid.value.trim() : '';
+          if (!id) { id = Math.random().toString(36).substr(2,12); if(qpUid) qpUid.value = id; }
+          if (!n) {
+            // Prompt for name if missing
+            n = prompt('Como você quer ser chamado no jogo?', 'Jogador');
+            if (!n) { e.preventDefault(); return; }
+            if (qpName) qpName.value = n;
+          }
+          localStorage.setItem('domino_user', JSON.stringify({ name: n, unique_id: id }));
         });
       })();
 

@@ -152,6 +152,29 @@ func GetActiveGameSessions(db *sql.DB) ([]string, error) {
 	return ids, rows.Err()
 }
 
+// FindOpenSession returns the ID of a waiting session with fewer than 4 players
+// that excludeUID has not already joined. Returns "" if none is found.
+func FindOpenSession(db *sql.DB, excludeUID string) (string, error) {
+	row := db.QueryRow(`
+		SELECT gs.id
+		FROM game_sessions gs
+		LEFT JOIN game_participants gp ON gs.id = gp.session_id
+		WHERE gs.status = 'waiting'
+		  AND NOT EXISTS (
+		      SELECT 1 FROM game_participants
+		      WHERE session_id = gs.id AND unique_id = ?
+		  )
+		GROUP BY gs.id
+		HAVING COUNT(gp.id) < 4
+		ORDER BY COUNT(gp.id) DESC, gs.created_at ASC
+		LIMIT 1`, excludeUID)
+	var id string
+	if err := row.Scan(&id); err != nil {
+		return "", nil // no open session found
+	}
+	return id, nil
+}
+
 func boolToInt(b bool) int {
 	if b {
 		return 1

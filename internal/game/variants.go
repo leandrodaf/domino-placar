@@ -22,7 +22,7 @@ type VariantRules struct {
 // Variants is the registry of supported game variants.
 var Variants = map[string]VariantRules{
 	"pontinho": {
-		Name: "Pontinho", HasBoneyard: false, TilesPerPlayer: 7,
+		Name: "Pontinho", HasBoneyard: true, TilesPerPlayer: 7,
 		PointMode: PointModeWinnerSum, BlockWinByLowest: true, MaxPip: 6,
 	},
 	"bloqueio": {

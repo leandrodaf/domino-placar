@@ -59,16 +59,27 @@
     </div>
   </div>
 
-  <!-- Boneyard count -->
-  <div id="boneyard-bar" style="display:none;">
-    🎲 Monte: <strong id="boneyard-count">0</strong> pedras disponíveis
+  <!-- ── Boneyard draw pile ── -->
+  <div id="boneyard-area" style="display:none;">
+    <div id="boneyard-label">Monte de compra</div>
+    <div id="boneyard-pile" onclick="doDraw()" title="Clique para comprar uma peça">
+      <div id="boneyard-stack"></div>
+      <div id="boneyard-count-badge"><span id="boneyard-count">0</span></div>
+      <div id="boneyard-hint">Clique para comprar</div>
+    </div>
   </div>
 
   <!-- ── My Hand ── -->
   <div id="hand-area">
-    <!-- Side selector -->
+    <!-- Side + orientation selector -->
     <div id="side-selector" style="display:none;">
       <div id="side-selector-title">Onde jogar <strong id="sel-tile-label"></strong>?</div>
+      <!-- Orientation toggle — shown only for doubles -->
+      <div id="orient-row" style="display:none; margin-bottom:8px;">
+        <span style="font-size:0.78rem; color:var(--muted); margin-right:8px;">Posição da carroça:</span>
+        <button id="btn-orient-h" class="btn-orient btn-orient--active" onclick="setOrient('h')">— Deitada</button>
+        <button id="btn-orient-v" class="btn-orient" onclick="setOrient('v')">| Em pé</button>
+      </div>
       <div id="side-selector-btns">
         <button id="btn-side-left" class="btn-side" onclick="confirmPlay('left')">
           <span class="side-arrow">◀</span>
@@ -108,7 +119,6 @@
     <!-- Action buttons -->
     <div id="action-row">
       <button id="btn-pass" onclick="doPass()" style="display:none;">⏭ Passar</button>
-      <button id="btn-draw" onclick="doDraw()" style="display:none;">🎲 Comprar peça</button>
     </div>
   </div>
 </div>
@@ -300,7 +310,15 @@
   transition: transform 0.15s;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
 }
+/* Vertical/carroça: rotate 90°, swap visual dimensions */
+.board-tile.vertical {
+  width: 70px;
+  height: 44px;
+  transform: rotate(90deg);
+  margin: 0 -13px; /* compensate for visual size change */
+}
 .board-tile.flip { transform: rotate(180deg); }
+.board-tile.vertical.flip { transform: rotate(270deg); }
 .board-tile--new {
   animation: tile-drop 0.25s ease-out;
 }
@@ -314,6 +332,13 @@
 @keyframes tile-drop-flip {
   from { opacity: 0; transform: rotate(180deg) translateY(-10px) scale(0.9); }
   to   { opacity: 1; transform: rotate(180deg) translateY(0) scale(1); }
+}
+/* Wrapper to hold vertical tile with correct spacing in chain */
+.board-tile-wrap {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* ── End markers ── */
@@ -343,17 +368,80 @@
   line-height: 1;
 }
 
-/* ── Boneyard bar ── */
-#boneyard-bar {
+/* ── Boneyard draw pile ── */
+#boneyard-area {
   flex-shrink: 0;
-  text-align: center;
-  font-size: 0.72rem;
-  color: var(--muted);
-  padding: 3px 14px;
-  background: rgba(255,255,255,0.02);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 14px 4px;
+  background: rgba(0,0,0,0.18);
   border-top: 1px solid var(--border-2);
 }
-#boneyard-bar strong { color: var(--text-2); }
+#boneyard-label {
+  font-size: 0.66rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+}
+#boneyard-pile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 6px 14px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(99,102,241,0.3);
+  background: rgba(99,102,241,0.07);
+  transition: background 0.15s, border-color 0.15s, transform 0.12s;
+  user-select: none;
+}
+#boneyard-pile:hover, #boneyard-pile:active {
+  background: rgba(99,102,241,0.18);
+  border-color: rgba(99,102,241,0.65);
+  transform: scale(1.03);
+}
+#boneyard-pile.boneyard--disabled {
+  opacity: 0.35;
+  pointer-events: none;
+  cursor: default;
+}
+#boneyard-stack {
+  display: flex;
+  position: relative;
+  width: 52px;
+  height: 32px;
+}
+#boneyard-stack::before,
+#boneyard-stack::after,
+#boneyard-stack span {
+  content: '';
+  position: absolute;
+  width: 30px;
+  height: 18px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #1e1b4b 100%);
+  border: 1.5px solid rgba(99,102,241,0.45);
+}
+#boneyard-stack::before { top: 0; left: 0; transform: rotate(-5deg); }
+#boneyard-stack::after  { top: 4px; left: 8px; transform: rotate(2deg); }
+#boneyard-count-badge {
+  background: rgba(99,102,241,0.85);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 800;
+  min-width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#boneyard-hint {
+  font-size: 0.72rem;
+  color: #a5b4fc;
+}
 
 /* ── Hand area ── */
 #hand-area {
@@ -495,7 +583,7 @@
   gap: 8px;
   margin-top: 8px;
 }
-#btn-pass, #btn-draw {
+#btn-pass {
   flex: 1;
   min-height: 44px;
   border-radius: 10px;
@@ -504,11 +592,35 @@
   font-weight: 600;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
+  background: rgba(255,255,255,0.04);
+  color: var(--muted);
 }
-#btn-pass { background: rgba(255,255,255,0.04); color: var(--muted); }
 #btn-pass:hover { background: rgba(255,255,255,0.08); border-color: var(--border); color: var(--text); }
-#btn-draw { background: rgba(99,102,241,0.12); color: #a5b4fc; border-color: rgba(99,102,241,0.3); }
-#btn-draw:hover { background: rgba(99,102,241,0.22); border-color: rgba(99,102,241,0.6); }
+
+/* ── Orientation toggle (for doubles) ── */
+#orient-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.btn-orient {
+  padding: 4px 12px;
+  border-radius: 8px;
+  border: 1.5px solid var(--border-2);
+  background: rgba(255,255,255,0.04);
+  color: var(--muted);
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.btn-orient--active {
+  background: rgba(245,197,24,0.14);
+  border-color: var(--gold);
+  color: var(--gold);
+  font-weight: 600;
+}
+.btn-orient:hover { border-color: var(--border); color: var(--text); }
 
 /* ── Overlays ── */
 .overlay {
@@ -616,14 +728,19 @@ function renderState(state) {
     }
   }
 
-  // Boneyard
-  var bb = document.getElementById('boneyard-bar');
+  // Boneyard pile
+  var ba = document.getElementById('boneyard-area');
   var bc = document.getElementById('boneyard-count');
-  if (HAS_BONEYARD && state.boneyard_count > 0) {
-    if (bb) bb.style.display = 'block';
+  var pile = document.getElementById('boneyard-pile');
+  var myTurnBlocked = myTurn && (state.playable_tiles || []).length === 0;
+  var hasStock = state.boneyard_count > 0;
+  if (HAS_BONEYARD && hasStock) {
+    if (ba) ba.style.display = 'flex';
     if (bc) bc.textContent = state.boneyard_count;
+    // Pile is clickable only when it's my turn and I'm blocked
+    if (pile) pile.classList.toggle('boneyard--disabled', !(myTurn && myTurnBlocked));
   } else {
-    if (bb) bb.style.display = 'none';
+    if (ba) ba.style.display = 'none';
   }
 
   // Board
@@ -666,15 +783,29 @@ function renderBoard(board) {
     var h = parseInt(parts[0], 10);
     var l = parseInt(parts[1], 10);
     var lo = Math.min(h, l), hi = Math.max(h, l);
+    var isVertical = pt.orientation === 'v';
+
+    var wrap = document.createElement('div');
+    wrap.className = 'board-tile-wrap';
+    if (isVertical) {
+      // For vertical tiles the img is rotated 90°, so the wrap
+      // needs to be tall enough to contain the rotated tile
+      wrap.style.cssText = 'width:44px; height:90px;';
+    }
+
     var img = document.createElement('img');
     img.src = '/static/tiles/tile_' + lo + '_' + hi + '.png';
     img.alt = pt.tile;
-    img.className = 'board-tile' + (pt.flipped ? ' flip' : '');
+    var cls = 'board-tile';
+    if (isVertical) cls += ' vertical';
+    if (pt.flipped) cls += ' flip';
+    img.className = cls;
     // Animate newly added tile
     if (idx === newTileCount - 1 && newTileCount > prevTileCount) {
       img.classList.add('board-tile--new');
     }
-    container.appendChild(img);
+    wrap.appendChild(img);
+    container.appendChild(wrap);
   });
   prevTileCount = newTileCount;
 
@@ -737,20 +868,28 @@ function renderHand(hand, playable, myTurn) {
 
 function renderActions(state, myTurn) {
   var btnPass = document.getElementById('btn-pass');
-  var btnDraw = document.getElementById('btn-draw');
-  if (!btnPass || !btnDraw) return;
+  if (!btnPass) return;
   var isBlocked = myTurn && (state.playable_tiles || []).length === 0;
   var hasStock = HAS_BONEYARD && state.boneyard_count > 0;
+  // Pass only allowed when truly stuck (no playable tiles AND boneyard empty)
   btnPass.style.display = (isBlocked && !hasStock) ? 'block' : 'none';
-  btnDraw.style.display = (isBlocked && hasStock) ? 'block' : 'none';
-  // Truly blocked: boneyard empty too
-  if (isBlocked && HAS_BONEYARD && state.boneyard_count === 0) {
-    btnPass.style.display = 'block';
-    btnDraw.style.display = 'none';
-  }
 }
 
 // ── Tile interaction ─────────────────────────────────────────────────────────
+
+var selectedOrientation = 'v'; // default for doubles
+
+function isDouble(tStr) {
+  var p = tStr.split('-');
+  return p[0] === p[1];
+}
+
+function setOrient(o) {
+  selectedOrientation = o;
+  document.querySelectorAll('.btn-orient').forEach(function(b) {
+    b.classList.toggle('btn-orient--active', b.id === 'btn-orient-' + o);
+  });
+}
 
 function onTileClick(tStr) {
   if (!currentState) return;
@@ -766,11 +905,40 @@ function onTileClick(tStr) {
   if (tileEl) tileEl.classList.add('hand-tile--selected');
   selectedTile = tStr;
 
+  // Set default orientation: vertical for doubles, horizontal otherwise
+  selectedOrientation = isDouble(tStr) ? 'v' : 'h';
+  setOrient(selectedOrientation);
+
+  // Show/hide orientation toggle
+  var orientRow = document.getElementById('orient-row');
+  if (orientRow) orientRow.style.display = isDouble(tStr) ? 'flex' : 'none';
+
   // Empty board — play anywhere
-  if (board.tile_count === 0) { doPlay(tStr, 'right'); return; }
+  if (board.tile_count === 0) {
+    // Show side selector with orientation if it's a double
+    if (isDouble(tStr)) {
+      document.getElementById('sel-tile-label').textContent = tStr.replace('-', '|');
+      document.getElementById('left-end-val').textContent  = '—';
+      document.getElementById('right-end-val').textContent = '—';
+      if (sideSelector) sideSelector.style.display = 'block';
+      return;
+    }
+    doPlay(tStr, 'right', 'h');
+    return;
+  }
 
   // Both ends equal — any side is equivalent
-  if (board.left_open === board.right_open) { doPlay(tStr, 'right'); return; }
+  if (board.left_open === board.right_open) {
+    if (isDouble(tStr)) {
+      document.getElementById('sel-tile-label').textContent = tStr.replace('-', '|');
+      document.getElementById('left-end-val').textContent  = board.left_open;
+      document.getElementById('right-end-val').textContent = board.right_open;
+      if (sideSelector) sideSelector.style.display = 'block';
+      return;
+    }
+    doPlay(tStr, 'right', 'h');
+    return;
+  }
 
   var parts = tStr.split('-');
   var h = parseInt(parts[0], 10), l = parseInt(parts[1], 10);
@@ -784,9 +952,24 @@ function onTileClick(tStr) {
     document.getElementById('right-end-val').textContent = board.right_open;
     if (sideSelector) sideSelector.style.display = 'block';
   } else if (fitsLeft) {
-    doPlay(tStr, 'left');
+    if (isDouble(tStr)) {
+      // Show orientation only (side is forced)
+      document.getElementById('sel-tile-label').textContent = tStr.replace('-', '|');
+      document.getElementById('left-end-val').textContent  = board.left_open;
+      document.getElementById('right-end-val').textContent = '—';
+      if (sideSelector) sideSelector.style.display = 'block';
+    } else {
+      doPlay(tStr, 'left', 'h');
+    }
   } else {
-    doPlay(tStr, 'right');
+    if (isDouble(tStr)) {
+      document.getElementById('sel-tile-label').textContent = tStr.replace('-', '|');
+      document.getElementById('left-end-val').textContent  = '—';
+      document.getElementById('right-end-val').textContent = board.right_open;
+      if (sideSelector) sideSelector.style.display = 'block';
+    } else {
+      doPlay(tStr, 'right', 'h');
+    }
   }
 }
 
@@ -794,7 +977,7 @@ function confirmPlay(side) {
   if (!selectedTile) return;
   var ss = document.getElementById('side-selector');
   if (ss) ss.style.display = 'none';
-  doPlay(selectedTile, side);
+  doPlay(selectedTile, side, selectedOrientation);
 }
 
 function cancelSelection() {
@@ -808,12 +991,13 @@ function cancelSelection() {
 
 // ── Actions ──────────────────────────────────────────────────────────────────
 
-function doPlay(tileStr, side) {
+function doPlay(tileStr, side, orientation) {
   // Animate the played tile out before posting
   var tileEl = document.querySelector('.hand-tile[data-tile="' + tileStr + '"]');
   if (tileEl) tileEl.classList.add('hand-tile--played');
   selectedTile = null;
-  setTimeout(function() { postAction({ type: 'play', tile: tileStr, side: side }); }, 200);
+  var orient = orientation || (isDouble(tileStr) ? 'v' : 'h');
+  setTimeout(function() { postAction({ type: 'play', tile: tileStr, side: side, orientation: orient }); }, 200);
 }
 
 function doPass() { postAction({ type: 'pass' }); }
@@ -826,8 +1010,13 @@ function postAction(body) {
     el.classList.remove('hand-tile--playable');
     el.onclick = null;
   });
-  document.getElementById('btn-pass').style.display = 'none';
-  document.getElementById('btn-draw').style.display = 'none';
+  var bp = document.getElementById('btn-pass');
+  if (bp) bp.style.display = 'none';
+  var ba = document.getElementById('boneyard-area');
+  if (ba) {
+    var pile = document.getElementById('boneyard-pile');
+    if (pile) pile.classList.add('boneyard--disabled');
+  }
 
   fetch('/game/' + SESSION_ID + '/action', {
     method: 'POST',

@@ -47,11 +47,19 @@ func IsBlocked(hand Hand, board BoardState, hasBoneyard bool, boneyardLen int) b
 }
 
 // ApplyMove places a tile on the board, updating LeftOpen/RightOpen.
+// orientation can be "h" (horizontal) or "v" (vertical); defaults to "v" for doubles.
 // Returns the updated board state.
-func ApplyMove(board BoardState, tile Tile, side string) BoardState {
+func ApplyMove(board BoardState, tile Tile, side string, orientation string) BoardState {
+	if orientation == "" {
+		if tile.IsDouble() {
+			orientation = "v"
+		} else {
+			orientation = "h"
+		}
+	}
 	var placed PlacedTile
 	if board.IsEmpty() {
-		placed = PlacedTile{Tile: tile, Flipped: false}
+		placed = PlacedTile{Tile: tile, Flipped: false, Orientation: orientation}
 		board.Chain = append(board.Chain, placed)
 		board.LeftOpen = tile.Low
 		board.RightOpen = tile.High
@@ -59,19 +67,19 @@ func ApplyMove(board BoardState, tile Tile, side string) BoardState {
 	}
 	if side == "left" {
 		if tile.High == board.LeftOpen {
-			placed = PlacedTile{Tile: tile, Flipped: false}
+			placed = PlacedTile{Tile: tile, Flipped: false, Orientation: orientation}
 			board.LeftOpen = tile.Low
 		} else {
-			placed = PlacedTile{Tile: tile, Flipped: true}
+			placed = PlacedTile{Tile: tile, Flipped: true, Orientation: orientation}
 			board.LeftOpen = tile.High
 		}
 		board.Chain = append([]PlacedTile{placed}, board.Chain...)
 	} else {
 		if tile.Low == board.RightOpen {
-			placed = PlacedTile{Tile: tile, Flipped: false}
+			placed = PlacedTile{Tile: tile, Flipped: false, Orientation: orientation}
 			board.RightOpen = tile.High
 		} else {
-			placed = PlacedTile{Tile: tile, Flipped: true}
+			placed = PlacedTile{Tile: tile, Flipped: true, Orientation: orientation}
 			board.RightOpen = tile.Low
 		}
 		board.Chain = append(board.Chain, placed)

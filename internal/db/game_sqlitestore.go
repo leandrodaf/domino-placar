@@ -47,3 +47,7 @@ func (s *GameSQLiteStore) GetGameSessionInfo(id string) (*GameSessionInfo, error
 func (s *GameSQLiteStore) GetActiveGameSessions() ([]string, error) {
 	return GetActiveGameSessions(s.db)
 }
+
+func (s *GameSQLiteStore) FindOpenSession(excludeUID string) (string, error) {
+return FindOpenSession(s.db, excludeUID)
+}

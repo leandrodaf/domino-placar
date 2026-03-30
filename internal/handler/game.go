@@ -110,7 +110,7 @@ func scheduleBotMoves(gs *game.GameSession, mgr *GameSessionManager, hub *SSEHub
 
 			switch move.Type {
 			case game.MovePlay:
-				result, err = gs.PlayTile(cp.ID, move.Tile, move.Side)
+				result, err = gs.PlayTile(cp.ID, move.Tile, move.Side, move.Orientation)
 				if err != nil {
 					log.Printf("bot play error: %v", err)
 					return
@@ -398,6 +398,92 @@ func defaultGameMaxPoints(variant string) int {
 		return 100
 	}
 	return 51
+}
+
+// ─── Quick Play (matchmaking) ─────────────────────────────────────────────────
+
+// QuickPlayHandler handles POST /game/quickplay.
+// It finds an open waiting session and joins it, or creates a new one.
+func QuickPlayHandler(mgr *GameSessionManager, hub *SSEHub) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !CheckActionRateLimit(r) {
+			http.Error(w, "too many requests", http.StatusTooManyRequests)
+			return
+		}
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+
+		name := r.FormValue("player_name")
+		if name == "" {
+			name = "Jogador"
+		}
+		uniqueID := r.FormValue("unique_id")
+		if uniqueID == "" {
+			uniqueID = uuid.New().String()
+		}
+
+		// Try to find an open session to join
+		openID, err := mgr.store.FindOpenSession(uniqueID)
+		if err != nil {
+			log.Printf("FindOpenSession: %v", err)
+		}
+
+		if openID != "" {
+			// Join the existing session
+			gs := mgr.Get(openID)
+			if gs != nil && gs.Status == game.SessionWaiting {
+				// Already joined? Just restore
+				if ex := gs.FindParticipant(uniqueID); ex != nil {
+					setGamePlayerCookie(w, openID, ex.ID)
+					http.Redirect(w, r, "/game/"+openID+"/lobby", http.StatusSeeOther)
+					return
+				}
+				seat := len(gs.Participants)
+				p := &game.Participant{
+					ID:       uuid.New().String(),
+					Name:     name,
+					UniqueID: uniqueID,
+					Seat:     seat,
+					Team:     seat % 2,
+				}
+				if addErr := gs.AddParticipant(p); addErr == nil {
+					_ = mgr.store.UpsertGameParticipant(openID, p)
+					setGamePlayerCookie(w, openID, p.ID)
+					hub.Broadcast("game:"+openID, "game_joined")
+					http.Redirect(w, r, "/game/"+openID+"/lobby", http.StatusSeeOther)
+					return
+				}
+			}
+			// Session disappeared or full — fall through to create new
+		}
+
+		// Create a new session (default: pontinho, 51 pts)
+		sessionID := uuid.New().String()
+		gs := game.NewGameSession(sessionID, "pontinho", 51, false, uniqueID)
+		host := &game.Participant{
+			ID:       uuid.New().String(),
+			Name:     name,
+			UniqueID: uniqueID,
+			Seat:     0,
+			Team:     0,
+		}
+		if addErr := gs.AddParticipant(host); addErr != nil {
+			http.Error(w, "failed to create game", http.StatusInternalServerError)
+			return
+		}
+		if err := mgr.store.CreateGameSession(gs); err != nil {
+			log.Printf("QuickPlay CreateGameSession: %v", err)
+			http.Error(w, "failed to create game", http.StatusInternalServerError)
+			return
+		}
+		_ = mgr.store.UpsertGameParticipant(sessionID, host)
+		mgr.Set(gs)
+		SetHostCookie(w, sessionID)
+		setGamePlayerCookie(w, sessionID, host.ID)
+		http.Redirect(w, r, "/game/"+sessionID+"/lobby", http.StatusSeeOther)
+	}
 }
 
 // GameSSEHandler handles GET /game/{id}/events — SSE stream for game events.

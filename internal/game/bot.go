@@ -24,7 +24,11 @@ func BotMove(hand Hand, board BoardState, hasBoneyard bool, boneyardLen int) Mov
 		}
 	}
 
-	return Move{Type: MovePlay, Tile: best, Side: chooseSide(board, best)}
+	orient := "h"
+	if best.IsDouble() {
+		orient = "v"
+	}
+	return Move{Type: MovePlay, Tile: best, Side: chooseSide(board, best), Orientation: orient}
 }
 
 func chooseSide(board BoardState, tile Tile) string {
