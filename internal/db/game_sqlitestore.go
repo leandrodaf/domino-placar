@@ -48,6 +48,26 @@ func (s *GameSQLiteStore) GetActiveGameSessions() ([]string, error) {
 	return GetActiveGameSessions(s.db)
 }
 
-func (s *GameSQLiteStore) FindOpenSession(excludeUID string) (string, error) {
-return FindOpenSession(s.db, excludeUID)
+func (s *GameSQLiteStore) FindOpenSession(excludeUID, variant string) (string, error) {
+	return FindOpenSession(s.db, excludeUID, variant)
+}
+
+func (s *GameSQLiteStore) FindMyWaitingSession(uid, variant string) (string, error) {
+	return FindMyWaitingSession(s.db, uid, variant)
+}
+
+func (s *GameSQLiteStore) FindMyActiveSession(uid string) (string, error) {
+	return FindMyActiveSession(s.db, uid)
+}
+
+func (s *GameSQLiteStore) RemoveGameParticipant(sessionID, uniqueID string) error {
+	return RemoveGameParticipant(s.db, sessionID, uniqueID)
+}
+
+func (s *GameSQLiteStore) CleanupZombieWaitingSessions() (int, error) {
+	return CleanupZombieWaitingSessions(s.db)
+}
+
+func (s *GameSQLiteStore) CleanupZombieActiveSessions() (int, error) {
+	return CleanupZombieActiveSessions(s.db)
 }

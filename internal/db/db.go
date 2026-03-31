@@ -188,11 +188,14 @@ func CreateTables(db *sql.DB) error {
 		team INTEGER NOT NULL DEFAULT 0,
 		is_bot INTEGER NOT NULL DEFAULT 0,
 		total_score INTEGER NOT NULL DEFAULT 0,
+		eliminated INTEGER NOT NULL DEFAULT 0,
 		hand_json TEXT NOT NULL DEFAULT '[]',
 		FOREIGN KEY (session_id) REFERENCES game_sessions(id)
 	)`); err != nil {
 		return err
 	}
+	// Migration: add eliminated column to existing databases.
+	_, _ = db.Exec(`ALTER TABLE game_participants ADD COLUMN eliminated INTEGER NOT NULL DEFAULT 0`)
 	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS game_moves (
 		id TEXT PRIMARY KEY,
 		session_id TEXT NOT NULL,

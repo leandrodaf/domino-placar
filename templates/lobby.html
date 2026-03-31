@@ -190,7 +190,7 @@ function shareControlLink() {
     navigator.share({ title: '{{T .Lang "lobby.js.control_title"}}', text: '{{T .Lang "lobby.js.control_text"}}', url: url }).catch(function(){});
   } else {
     navigator.clipboard.writeText(url).then(function() {
-      alert('{{T .Lang "lobby.js.control_copied"}}');
+      showToast('{{T .Lang "lobby.js.control_copied"}}');
     }).catch(function() { prompt('{{T .Lang "lobby.js.copy_control_prompt"}}', url); });
   }
 }
@@ -204,7 +204,7 @@ function shareJoinLink() {
     navigator.share({ title: '{{T .Lang "lobby.js.share_title"}}', text: '{{T .Lang "lobby.js.share_text"}}', url: url }).catch(function(){});
   } else {
     navigator.clipboard.writeText(url).then(function() {
-      alert('{{T .Lang "lobby.js.link_copied"}}');
+      showToast('{{T .Lang "lobby.js.link_copied"}}');
     }).catch(function() {
       prompt('{{T .Lang "lobby.js.copy_prompt"}}', url);
     });

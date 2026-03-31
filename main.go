@@ -22,6 +22,16 @@ var (
 	date    = "unknown"
 )
 
+// canonicalHost returns the public base URL for this server.
+// Set CANONICAL_HOST env var (e.g. "https://dominoplacar.net") to override
+// the default. Never derived from request headers to prevent Host header injection.
+func canonicalHost() string {
+	if h := os.Getenv("CANONICAL_HOST"); h != "" {
+		return h
+	}
+	return "https://dominoplacar.net"
+}
+
 func main() {
 	log.Printf("domino-placar %s (commit=%s built=%s)", version, commit, date)
 	// Ensure uploads directory exists
@@ -103,14 +113,7 @@ func main() {
 	// SEO — robots.txt e sitemap.xml
 	mux.HandleFunc("GET /robots.txt", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		host := "https://dominoplacar.net"
-		if h := r.Host; h != "" {
-			scheme := "https"
-			if r.TLS == nil && r.Header.Get("X-Forwarded-Proto") != "https" {
-				scheme = "http"
-			}
-			host = scheme + "://" + h
-		}
+		host := canonicalHost()
 		_, _ = w.Write([]byte("User-agent: *\n" +
 			"Allow: /\n" +
 			"Allow: /global-ranking\n" +
@@ -127,14 +130,7 @@ func main() {
 
 	mux.HandleFunc("GET /sitemap.xml", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/xml; charset=utf-8")
-		host := "https://dominoplacar.net"
-		if h := r.Host; h != "" {
-			scheme := "https"
-			if r.TLS == nil && r.Header.Get("X-Forwarded-Proto") != "https" {
-				scheme = "http"
-			}
-			host = scheme + "://" + h
-		}
+		host := canonicalHost()
 		_, _ = w.Write([]byte(`<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
@@ -279,14 +275,17 @@ func main() {
 		mux.HandleFunc("GET /game/new", handler.CreateGamePageHandler(tmpl))
 		mux.HandleFunc("POST /game", handler.CreateGameHandler(gameMgr, hub, tmpl))
 		mux.HandleFunc("POST /game/quickplay", handler.QuickPlayHandler(gameMgr, hub))
+		mux.HandleFunc("POST /game/solo", handler.SoloPlayHandler(gameMgr, hub))
 		mux.HandleFunc("GET /game/{id}/lobby", handler.GameLobbyHandler(gameMgr, tmpl))
 		mux.HandleFunc("POST /game/{id}/join", handler.GameJoinHandler(gameMgr, hub))
 		mux.HandleFunc("GET /game/{id}/join", handler.GameJoinPageHandler(gameMgr, tmpl))
 		mux.HandleFunc("POST /game/{id}/start", handler.GameStartHandler(gameMgr, hub))
+		mux.HandleFunc("POST /game/{id}/leave", handler.GameLeaveHandler(gameMgr, hub))
 		mux.HandleFunc("GET /game/{id}/play", handler.GamePlayHandler(gameMgr, tmpl))
 		mux.HandleFunc("GET /game/{id}/state", handler.GameStateHandler(gameMgr))
 		mux.HandleFunc("POST /game/{id}/action", handler.GameActionHandler(gameMgr, hub))
-		mux.HandleFunc("GET /game/{id}/events", handler.GameSSEHandler(hub))
+		mux.HandleFunc("GET /game/{id}/events", handler.GameSSEHandler(hub, gameMgr))
+		mux.HandleFunc("POST /game/{id}/bots-preview", handler.GameBotsPreviewHandler(gameMgr, hub))
 	} else {
 		log.Println("Online game requires SQLite — /game/* routes not registered (Firebase mode)")
 	}
@@ -299,8 +298,15 @@ func main() {
 	addr := ":" + port
 	log.Printf("Domino scorekeeping server starting on %s", addr)
 
-	// Apply security middleware to all routes
-	if err := http.ListenAndServe(addr, handler.SecurityHeaders(mux)); err != nil {
+	srv := &http.Server{
+		Addr:    addr,
+		Handler: handler.SecurityHeaders(mux),
+		// ReadHeaderTimeout prevents Slowloris attacks.
+		// WriteTimeout is intentionally omitted: SSE connections are long-lived.
+		ReadHeaderTimeout: 10 * time.Second,
+		IdleTimeout:       120 * time.Second,
+	}
+	if err := srv.ListenAndServe(); err != nil {
 		log.Fatalf("Server failed: %v", err)
 	}
 }

@@ -1,5 +1,7 @@
 package game
 
+import "math/rand"
+
 // ValidateMove returns true if the tile can be placed on the given side.
 func ValidateMove(board BoardState, tile Tile, side string) bool {
 	if board.IsEmpty() {
@@ -63,6 +65,7 @@ func ApplyMove(board BoardState, tile Tile, side string, orientation string) Boa
 		board.Chain = append(board.Chain, placed)
 		board.LeftOpen = tile.Low
 		board.RightOpen = tile.High
+		board.LayoutRotation = [4]int{0, 90, 180, 270}[rand.Intn(4)]
 		return board
 	}
 	if side == "left" {
@@ -74,6 +77,7 @@ func ApplyMove(board BoardState, tile Tile, side string, orientation string) Boa
 			board.LeftOpen = tile.High
 		}
 		board.Chain = append([]PlacedTile{placed}, board.Chain...)
+		board.ChainCenter++
 	} else {
 		if tile.Low == board.RightOpen {
 			placed = PlacedTile{Tile: tile, Flipped: false, Orientation: orientation}
@@ -102,24 +106,50 @@ type RoundEndResult struct {
 	Reason        RoundEndReason
 	PointsAwarded int
 	HandPoints    map[string]int // participantID -> hand points at end
+
+	// Snapshotted under the session lock so callers never read gs fields directly.
+	SessionFinished bool // true when the whole game ended (gs.Status == SessionFinished)
+	RoundNumber     int  // round number at the time of the action
+}
+
+// roundPoints rounds raw pip-sum to the nearest multiple of 5 for All-Fives
+// scoring, or returns it unchanged for other modes.
+func roundPoints(raw int, mode PointMode) int {
+	if mode != PointModeAllFives {
+		return raw
+	}
+	// nearest multiple of 5 (round half-up)
+	return ((raw + 2) / 5) * 5
+}
+
+// handEffectivePoints returns the hand's pip sum, applying the blank-blank bonus
+// rule when applicable: if the hand contains exactly [0|0] and blankBlankBonus
+// is true, returns 12 instead of 0.
+func handEffectivePoints(h Hand, blankBlankBonus bool) int {
+	if blankBlankBonus && len(h) == 1 && h[0] == (Tile{High: 0, Low: 0}) {
+		return 12
+	}
+	return h.Points()
 }
 
 // CheckRoundEnd checks if the round should end.
 // hands maps participantID → Hand. allBlocked is true when all players are blocked.
-func CheckRoundEnd(hands map[string]Hand, allBlocked bool) RoundEndResult {
+// pointMode controls how PointsAwarded is calculated.
+// blankBlankBonus enables the pontinho rule: a lone 0|0 tile counts as 12 points.
+func CheckRoundEnd(hands map[string]Hand, allBlocked bool, pointMode PointMode, blankBlankBonus bool) RoundEndResult {
 	// Any player emptied their hand?
 	for id, h := range hands {
 		if len(h) == 0 {
-			sum := 0
+			raw := 0
 			hpts := map[string]int{}
 			for pid, ph := range hands {
-				p := ph.Points()
+				p := handEffectivePoints(ph, blankBlankBonus)
 				hpts[pid] = p
 				if pid != id {
-					sum += p
+					raw += p
 				}
 			}
-			return RoundEndResult{Ended: true, WinnerID: id, Reason: ReasonEmptyHand, PointsAwarded: sum, HandPoints: hpts}
+			return RoundEndResult{Ended: true, WinnerID: id, Reason: ReasonEmptyHand, PointsAwarded: roundPoints(raw, pointMode), HandPoints: hpts}
 		}
 	}
 	// All blocked?
@@ -129,7 +159,7 @@ func CheckRoundEnd(hands map[string]Hand, allBlocked bool) RoundEndResult {
 		minPts := -1
 		total := 0
 		for id, h := range hands {
-			p := h.Points()
+			p := handEffectivePoints(h, blankBlankBonus)
 			hpts[id] = p
 			total += p
 			if minPts < 0 || p < minPts {
@@ -137,7 +167,7 @@ func CheckRoundEnd(hands map[string]Hand, allBlocked bool) RoundEndResult {
 				minID = id
 			}
 		}
-		return RoundEndResult{Ended: true, WinnerID: minID, Reason: ReasonBlocked, PointsAwarded: total, HandPoints: hpts}
+		return RoundEndResult{Ended: true, WinnerID: minID, Reason: ReasonBlocked, PointsAwarded: roundPoints(total, pointMode), HandPoints: hpts}
 	}
 	return RoundEndResult{Ended: false}
 }

@@ -4,9 +4,15 @@ package game
 type PointMode string
 
 const (
+	// PointModeWinnerSum: round winner earns the sum of all opponents' hands.
 	PointModeWinnerSum PointMode = "winner_sum"
-	PointModeAllFives  PointMode = "all_fives"
-	PointModeLowest    PointMode = "lowest"
+	// PointModeAllFives: winner earns rounded-to-5 sum of opponents' hands.
+	PointModeAllFives PointMode = "all_fives"
+	// PointModeLowest: used in blocked rounds — lowest hand wins; PointsAwarded = total.
+	PointModeLowest PointMode = "lowest"
+	// PointModeLosersPay: each non-winner adds their OWN hand value to their score.
+	// Used by Pontinho: bad to accumulate points; reach MaxPoints → eliminated.
+	PointModeLosersPay PointMode = "losers_pay"
 )
 
 // VariantRules defines the rules for one game variant.
@@ -17,13 +23,15 @@ type VariantRules struct {
 	PointMode        PointMode
 	BlockWinByLowest bool // true = lowest hand wins block
 	MaxPip           int  // 6 for standard set
+	BlankBlankBonus  bool // true = the 0|0 tile counts as 12 when it's the only tile in hand
 }
 
 // Variants is the registry of supported game variants.
 var Variants = map[string]VariantRules{
 	"pontinho": {
 		Name: "Pontinho", HasBoneyard: true, TilesPerPlayer: 7,
-		PointMode: PointModeWinnerSum, BlockWinByLowest: true, MaxPip: 6,
+		PointMode: PointModeLosersPay, BlockWinByLowest: true, MaxPip: 6,
+		BlankBlankBonus: true,
 	},
 	"bloqueio": {
 		Name: "Bloqueio Clássico", HasBoneyard: false, TilesPerPlayer: 7,
