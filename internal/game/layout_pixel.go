@@ -4,34 +4,29 @@ package game
 // Pixel-Space Snake Layout — UI rendering engine.
 //
 // Calculates absolute (X, Y) pixel positions and rotation angles for every
-// domino tile so the chain serpentines ("ferradura / cobra") within the canvas
-// without overflowing the screen. The frontend performs no calculations: it
-// just reads X, Y, Rotation from each RenderedTile and applies them directly
-// as CSS/SVG transforms (translate + rotate).
+// domino tile so the chain serpentines ("ferradura / cobra") within the canvas.
+// The frontend just reads X, Y, Rotation from each RenderedTile and applies
+// them directly as CSS transforms: translate(X, Y) rotate(Rotation°).
 //
 // Coordinate contract
-//   • (X, Y)   = centre of the tile in pixels.
-//   • Rotation = clockwise degrees: 0, 90, 180, 270.
-//   • Horizontal tile (0°/180°): TileLength wide, TileWidth tall.
-//   • Vertical tile  (90°/270°): TileWidth  wide, TileLength tall.
+//   - (X, Y) = centre of the tile in pixels.
+//   - Rotation = clockwise degrees: 0, 90, 180, 270.
+//   - Horizontal tile (0°/180°): TileLength wide, TileWidth tall.
+//   - Vertical tile  (90°/270°): TileWidth  wide, TileLength tall.
 //
-// Rotation semantics
-//   0°   → horizontal, East flow (left→right, normal reading order).
-//   90°  → vertical; perpendicular double OR right-border curve corner.
-//   180° → horizontal, West flow (right→left; pips visually correct).
-//   270° → vertical; left-border curve corner.
+// Bidirectional vertical growth
+//   The chain grows from a centre tile in two directions:
+//     • Right side (East)  → curves go DOWN when hitting borders.
+//     • Left side  (West)  → curves go UP   when hitting borders.
+//   This prevents the two sides from colliding vertically.
 //
 // Snake / U-turn rules
-//   Before placing a tile in direction D, we check whether a full-length
-//   horizontal tile would overflow (tipX ± TileLength crosses the border).
-//   If it would:
-//     a. If the new tile is a double (carroça): render it flat/horizontal as
-//        the "lateral wall", saving TileLength-TileWidth of vertical space.
-//     b. Otherwise: rotate it vertical (90° right / 270° left), snap its
-//        outer edge to the border.
-//   Either way, the direction is inverted (East ↔ West).
-//   The row drop is implicit: connectionTip() returns the next-row Y for any
-//   tile that is snapped to a border, so no explicit row counter is needed.
+//   The U-turn uses TWO vertical tiles to create a natural curve:
+//     1. CurveEnter: first vertical tile, connected to last horizontal tile.
+//        Direction is NOT inverted yet.
+//     2. CurveExit: second vertical tile, placed directly above or below
+//        CurveEnter depending on growDown. Direction IS inverted.
+//   CurveExit rotation is INVERTED from CurveEnter so pips face the new row.
 // ──────────────────────────────────────────────────────────────────────────────
 
 const (
@@ -39,101 +34,80 @@ const (
 	DirWest = "W"
 )
 
+// CurveType identifies a tile's role in the U-turn sequence.
+const (
+	CurveNone  = 0
+	CurveEnter = 1
+	CurveExit  = 2
+)
+
 // BoardConfig describes the screen canvas and physical tile dimensions (pixels).
 type BoardConfig struct {
-	ScreenWidth  float64 // total canvas width
-	ScreenHeight float64 // total canvas height
-	TileLength   float64 // long  dimension of one tile face
-	TileWidth    float64 // short dimension of one tile face
-	Padding      float64 // minimum margin from each screen edge
+	ScreenWidth  float64
+	ScreenHeight float64
+	TileLength   float64
+	TileWidth    float64
+	Padding      float64
 }
 
 // RenderedTile holds the computed pixel position and rotation for one tile.
-// (X, Y) is the tile's centre. The game-logic layer uses PlacedTile (tile.go);
-// RenderedTile is exclusively for the UI/render pipeline.
 type RenderedTile struct {
-	Tile     Tile
-	X        float64
-	Y        float64
-	Rotation int // 0 | 90 | 180 | 270
+	Tile       Tile
+	X          float64
+	Y          float64
+	Rotation   int // 0 | 90 | 180 | 270
+	CurveType  int // CurveNone | CurveEnter | CurveExit
+	RowCount   int // tiles placed in current row (resets after curve)
+	RowDoubles int // doubles in current row (for max-tile adjustment)
+}
+
+// IsCurve returns true for any tile that is part of a U-turn.
+func (rt RenderedTile) IsCurve() bool {
+	return rt.CurveType == CurveEnter || rt.CurveType == CurveExit
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Internal helpers
 // ──────────────────────────────────────────────────────────────────────────────
 
-// borderEps is the floating-point tolerance for edge-alignment checks.
 const borderEps = 0.5
 
 func isVerticalRT(t RenderedTile) bool {
 	return t.Rotation == 90 || t.Rotation == 270
 }
 
-// isVerticalCurveCorner returns true when a vertical tile is snapped flush
-// against the right or left screen border — meaning it is a U-turn corner
-// piece, not a regular perpendicular double in the middle of the row.
-//
-// This distinction drives the row-drop logic in connectionTip.
-func isVerticalCurveCorner(t RenderedTile, b BoardConfig) bool {
-	if !isVerticalRT(t) {
-		return false
-	}
-	rightEdge := t.X + b.TileWidth/2
-	leftEdge := t.X - b.TileWidth/2
-	return rightEdge >= b.ScreenWidth-b.Padding-borderEps ||
-		leftEdge <= b.Padding+borderEps
-}
-
-// isHorizontalWallDouble returns true when a non-rotated double tile is
-// snapped against a border, acting as the "lateral wall" of the U-turn.
-func isHorizontalWallDouble(t RenderedTile, b BoardConfig) bool {
-	if !t.Tile.IsDouble() || isVerticalRT(t) {
-		return false
-	}
-	rightEdge := t.X + b.TileLength/2
-	leftEdge := t.X - b.TileLength/2
-	return rightEdge >= b.ScreenWidth-b.Padding-borderEps ||
-		leftEdge <= b.Padding+borderEps
-}
-
 // connectionTip returns the (x, y) pixel where the next tile will snap to the
 // current tile when extending in direction dir.
 //
-// Four cases:
+// growDown controls the vertical direction of curves:
 //
-//	1. Vertical curve corner at border →
-//	   next row is (TileLength + Padding) below; tip points there.
-//	2. Horizontal wall-double at border (special carroça rule) →
-//	   next row is only (TileWidth + Padding) below (space saving).
-//	3. Vertical double mid-row →
-//	   tip is the centre of the tile's leading edge at the same Y.
-//	4. Regular horizontal tile →
-//	   tip is the centre of its leading edge at the same Y.
-func connectionTip(t RenderedTile, dir string, b BoardConfig) (x, y float64) {
+//	true  → curves descend (right side of chain)
+//	false → curves ascend  (left side of chain)
+func connectionTip(t RenderedTile, dir string, b BoardConfig, growDown bool) (x, y float64) {
 	switch {
-	case isVerticalCurveCorner(t, b):
-		nextRowY := t.Y + b.TileLength + b.Padding
-		if dir == DirEast {
-			return t.X + b.TileWidth/2, nextRowY
+	case t.CurveType == CurveExit:
+		rowDrop := b.TileLength/2 + b.TileWidth/2 + b.Padding
+		var nextRowY float64
+		if growDown {
+			nextRowY = t.Y + rowDrop - b.TileWidth/2 + b.Padding/4
+		} else {
+			nextRowY = t.Y - rowDrop + b.TileWidth/2 - b.Padding/4
 		}
-		return t.X - b.TileWidth/2, nextRowY
 
-	case isHorizontalWallDouble(t, b):
-		nextRowY := t.Y + b.TileWidth + b.Padding
+		halfEdge := b.TileWidth / 2
+
 		if dir == DirEast {
-			return t.X + b.TileLength/2, nextRowY
+			return t.X - halfEdge, nextRowY
 		}
-		return t.X - b.TileLength/2, nextRowY
+		return t.X + halfEdge, nextRowY
 
 	case isVerticalRT(t):
-		// Perpendicular double in the middle of a row — horizontal flow continues.
 		if dir == DirEast {
 			return t.X + b.TileWidth/2, t.Y
 		}
 		return t.X - b.TileWidth/2, t.Y
 
 	default:
-		// Standard horizontal tile.
 		if dir == DirEast {
 			return t.X + b.TileLength/2, t.Y
 		}
@@ -142,10 +116,7 @@ func connectionTip(t RenderedTile, dir string, b BoardConfig) (x, y float64) {
 }
 
 // wouldOverflow reports whether a full-length horizontal tile placed from tipX
-// would breach the screen border. Matches the spec formula:
-//
-//	East : tipX + TileLength > ScreenWidth  − Padding
-//	West : tipX − TileLength < Padding
+// would breach the screen border.
 func wouldOverflow(tipX float64, dir string, b BoardConfig) bool {
 	if dir == DirEast {
 		return tipX+b.TileLength > b.ScreenWidth-b.Padding
@@ -165,10 +136,6 @@ func invertDir(dir string) string {
 // ──────────────────────────────────────────────────────────────────────────────
 
 // placeRegular places a tile straight ahead — no U-turn needed.
-//
-//   - Doubles → vertical (90°), centred on the connection point.
-//   - Normal tiles → horizontal; 180° flip applied when flowing West so that
-//     the pip values face the correct adjacent tile visually.
 func placeRegular(b BoardConfig, t Tile, tipX, tipY float64, dir string) (RenderedTile, string) {
 	if t.IsDouble() {
 		halfW := b.TileWidth / 2
@@ -195,90 +162,185 @@ func placeRegular(b BoardConfig, t Tile, tipX, tipY float64, dir string) (Render
 	return RenderedTile{Tile: t, X: x, Y: tipY, Rotation: rotation}, dir
 }
 
-// placeCurveOrWall places a tile at the border, executing the U-turn.
+// placeCurveEnter places the FIRST tile of the U-turn.
+// The tile is shifted vertically by TileWidth/2 so it starts flush with the
+// edge of the horizontal row instead of being center-aligned.
 //
-// Doubles (carroças): laid flat as the lateral wall (saves vertical space).
-// Normal tiles     : rotated vertical, snapped flush to the border.
-//
-// The row drop is NOT applied here — it surfaces automatically on the next call
-// when connectionTip detects the tile as a curve corner or wall double.
-func placeCurveOrWall(b BoardConfig, t Tile, tipX, tipY float64, dir string) (RenderedTile, string) {
-	newDir := invertDir(dir)
+// Non-doubles: vertical (90°/270°) — parallel to the curve column.
+// Doubles:     horizontal (0°/180°) — perpendicular to the curve direction,
+// keeping the domino convention that doubles are always perpendicular.
+func placeCurveEnter(b BoardConfig, t Tile, tipX, tipY float64, dir string, growDown bool) (RenderedTile, string) {
+	halfW := b.TileWidth / 2
+	halfL := b.TileLength / 2
 
-	if t.IsDouble() {
-		// ── Special rule: carroça na borda → horizontal wall ─────────────
-		var x float64
-		rotation := 0
-		if dir == DirEast {
-			x = b.ScreenWidth - b.Padding - b.TileLength/2
-			rotation = 0
-		} else {
-			x = b.Padding + b.TileLength/2
-			rotation = 180
-		}
-		return RenderedTile{Tile: t, X: x, Y: tipY, Rotation: rotation}, newDir
+	y := tipY
+	if growDown {
+		y += halfW + halfL
+	} else {
+		y -= halfW + halfL
 	}
 
-	// ── Normal curve corner ───────────────────────────────────────────────
-	// Right border: Rotation=90  (tile stands up, outer edge → right wall).
-	// Left  border: Rotation=270 (tile stands up, outer edge → left  wall).
+	var rotation int
 	var x float64
-	rotation := 90
 	if dir == DirEast {
-		x = b.ScreenWidth - b.Padding - b.TileWidth/2
+		x = tipX - halfW
+		if x+halfW > b.ScreenWidth-b.Padding {
+			x = b.ScreenWidth - b.Padding - halfW
+		}
 		rotation = 90
 	} else {
-		x = b.Padding + b.TileWidth/2
+		x = tipX + halfW
+		if x-halfW < b.Padding {
+			x = b.Padding + halfW
+		}
 		rotation = 270
 	}
-	return RenderedTile{Tile: t, X: x, Y: tipY, Rotation: rotation}, newDir
+
+	return RenderedTile{Tile: t, X: x, Y: y, Rotation: rotation, CurveType: CurveEnter}, dir
+}
+
+// placeCurveExit places the SECOND tile of the U-turn.
+// Placed directly above (growDown=false) or below (growDown=true) CurveEnter.
+// Gap is always TileLength to keep layout stable.
+//
+// Rotation is determined by the NEW direction (after inverting):
+//
+//	Non-doubles: 90° (newDir=East) or 270° (newDir=West).
+//	Doubles:     0°  (newDir=East) or 180° (newDir=West) — horizontal.
+func placeCurveExit(b BoardConfig, prevCurve RenderedTile, t Tile, dir string, growDown bool) (RenderedTile, string) {
+	newDir := invertDir(dir)
+	x := prevCurve.X
+
+	var y float64
+	if growDown {
+		y = prevCurve.Y + b.TileLength
+	} else {
+		y = prevCurve.Y - b.TileLength
+	}
+
+	var rotation int
+	if newDir == DirEast {
+		rotation = 90
+	} else {
+		rotation = 270
+	}
+
+	return RenderedTile{Tile: t, X: x, Y: y, Rotation: rotation, CurveType: CurveExit}, newDir
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Public API
 // ──────────────────────────────────────────────────────────────────────────────
 
-// FirstRenderedTile places the very first domino tile at the centre of the
-// canvas, horizontal (Rotation = 0). Both ends of the chain grow from here.
+// FirstRenderedTile places the first domino at the centre of the canvas.
 func FirstRenderedTile(b BoardConfig, tile Tile) RenderedTile {
+	doubles := 0
+	rotation := 0
+	if tile.IsDouble() {
+		doubles = 1
+		rotation = 90
+	}
+
 	return RenderedTile{
-		Tile:     tile,
-		X:        b.ScreenWidth / 2,
-		Y:        b.ScreenHeight / 2,
-		Rotation: 0,
+		Tile:       tile,
+		X:          b.ScreenWidth / 2,
+		Y:          b.ScreenHeight / 2,
+		Rotation:   rotation,
+		RowCount:   1,
+		RowDoubles: doubles,
 	}
 }
 
 // CalculateNextPosition computes the absolute X, Y and Rotation for newTile
-// when it is appended to one end of the chain (identified by currentEnd and
-// currentDirection). The result is ready for direct use by the frontend
-// renderer — no further calculations are needed client-side.
+// when it is appended to one end of the chain.
 //
-// Parameters:
+// growDown controls the vertical direction of U-turn curves:
 //
-//	b                – screen and tile configuration
-//	currentEnd       – last RenderedTile on the end being extended
-//	newTile          – tile to place
-//	currentDirection – DirEast ("E") or DirWest ("W")
-//
-// Returns:
-//
-//	RenderedTile – fully computed position, ready for rendering
-//	string       – new direction after placement (same or inverted on a curve)
-func CalculateNextPosition(b BoardConfig, currentEnd RenderedTile, newTile Tile, currentDirection string) (RenderedTile, string) {
-	tipX, tipY := connectionTip(currentEnd, currentDirection, b)
+//	true  → curves descend (use for right/East side)
+//	false → curves ascend  (use for left/West side)
+func CalculateNextPosition(b BoardConfig, currentEnd RenderedTile, newTile Tile, currentDirection string, growDown bool) (RenderedTile, string) {
+	if currentEnd.CurveType == CurveEnter {
+		rt, dir := placeCurveExit(b, currentEnd, newTile, currentDirection, growDown)
+		rt.RowCount = 0
+		rt.RowDoubles = 0
 
-	if wouldOverflow(tipX, currentDirection, b) {
-		return placeCurveOrWall(b, newTile, tipX, tipY, currentDirection)
+		return rt, dir
 	}
-	return placeRegular(b, newTile, tipX, tipY, currentDirection)
+
+	tipX, tipY := connectionTip(currentEnd, currentDirection, b, growDown)
+
+	maxTiles := 5
+	if currentEnd.RowDoubles >= 2 {
+		maxTiles = 6
+	}
+
+	rowFull := currentEnd.RowCount >= maxTiles && currentEnd.CurveType != CurveExit
+
+	if rowFull || wouldOverflow(tipX, currentDirection, b) {
+		return placeCurveEnter(b, newTile, tipX, tipY, currentDirection, growDown)
+	}
+
+	// Double immediately after CurveExit: place HORIZONTALLY instead of
+	// perpendicular. A perpendicular double at the same X as the curve
+	// column looks like a third curve tile; laying it flat makes it clearly
+	// the first tile of the new horizontal row.
+	if currentEnd.CurveType == CurveExit && newTile.IsDouble() {
+		rotation := 0
+		if currentDirection == DirWest {
+			rotation = 180
+		}
+		halfL := b.TileLength / 2
+		var x float64
+		if currentDirection == DirEast {
+			x = tipX + halfL
+		} else {
+			x = tipX - halfL
+		}
+
+		rt := RenderedTile{Tile: newTile, X: x, Y: tipY, Rotation: rotation}
+		rt.RowCount = 1
+		rt.RowDoubles = 1
+
+		return rt, currentDirection
+	}
+
+	// Doubles are narrower (TileWidth) than regular tiles (TileLength).
+	// If placing a double perpendicular here would leave no room for a full
+	// tile after it, treat the double as a curve tile instead of squeezing
+	// it in at the border.
+	if newTile.IsDouble() {
+		var doubleNextTip float64
+		if currentDirection == DirEast {
+			doubleNextTip = tipX + b.TileWidth
+		} else {
+			doubleNextTip = tipX - b.TileWidth
+		}
+
+		if wouldOverflow(doubleNextTip, currentDirection, b) {
+			return placeCurveEnter(b, newTile, tipX, tipY, currentDirection, growDown)
+		}
+	}
+
+	rt, dir := placeRegular(b, newTile, tipX, tipY, currentDirection)
+	rt.RowCount = currentEnd.RowCount + 1
+	rt.RowDoubles = currentEnd.RowDoubles
+	if newTile.IsDouble() {
+		rt.RowDoubles++
+	}
+
+	if currentEnd.CurveType == CurveExit {
+		rt.RowCount = 1
+		rt.RowDoubles = 0
+		if newTile.IsDouble() {
+			rt.RowDoubles = 1
+		}
+	}
+
+	return rt, dir
 }
 
 // RenderChain computes pixel positions for an entire ordered slice of tiles,
-// starting from the centre and growing East. It is a convenience wrapper
-// for scenarios where the full chain is known upfront (e.g., replay / spectator).
-//
-// Returns a slice of RenderedTile in the same order as the input tiles.
+// starting from the centre and growing East (curves go down).
 func RenderChain(b BoardConfig, tiles []Tile) []RenderedTile {
 	if len(tiles) == 0 {
 		return nil
@@ -293,11 +355,156 @@ func RenderChain(b BoardConfig, tiles []Tile) []RenderedTile {
 	current := first
 
 	for _, t := range tiles[1:] {
-		next, newDir := CalculateNextPosition(b, current, t, dir)
+		next, newDir := CalculateNextPosition(b, current, t, dir, true)
 		result = append(result, next)
 		current = next
 		dir = newDir
 	}
 
 	return result
+}
+
+// calculateNextPositionFromPlaced is like CalculateNextPosition but takes a
+// PlacedTile so it can apply the correct visual flip for horizontal and curve tiles.
+//
+// The game's Flipped flag is set assuming the chain's original direction
+// (East for right side, West for left side). After a U-turn the direction
+// reverses, so the flip must be compensated: when the current horizontal
+// direction differs from the side's starting direction, Flipped is inverted.
+func calculateNextPositionFromPlaced(b BoardConfig, currentEnd RenderedTile, newTile PlacedTile, dir string, growDown bool) (RenderedTile, string) {
+	rt, newDir := CalculateNextPosition(b, currentEnd, newTile.Tile, dir, growDown)
+
+	if newTile.Tile.IsDouble() {
+		return rt, newDir
+	}
+
+	if !isVerticalRT(rt) {
+		goingEast := rt.Rotation == 0
+		sideStartsEast := growDown
+		flipped := newTile.Flipped
+		if goingEast != sideStartsEast {
+			flipped = !flipped
+		}
+
+		if flipped {
+			rt.Rotation = 180
+		} else {
+			rt.Rotation = 0
+		}
+	} else if rt.CurveType != CurveNone {
+		flipped := newTile.Flipped
+		if (rt.CurveType == CurveEnter && dir == DirWest) || (rt.CurveType == CurveExit && dir == DirEast) {
+			flipped = !flipped
+		}
+
+		if flipped {
+			if rt.Rotation == 90 {
+				rt.Rotation = 270
+			} else {
+				rt.Rotation = 90
+			}
+		}
+	}
+
+	return rt, newDir
+}
+
+// RenderBidirectionalChain computes pixel positions for a domino chain that
+// grows in both directions from a centre tile.
+//
+// Right side (East) curves go DOWN. Left side (West) curves go UP.
+// This prevents the two halves from colliding vertically.
+func RenderBidirectionalChain(b BoardConfig, chain []PlacedTile, centerIdx int) []RenderedTile {
+	if len(chain) == 0 {
+		return nil
+	}
+
+	if centerIdx < 0 {
+		centerIdx = 0
+	}
+	if centerIdx >= len(chain) {
+		centerIdx = len(chain) - 1
+	}
+
+	result := make([]RenderedTile, len(chain))
+
+	cp := chain[centerIdx]
+	centerRotation := 0
+	if cp.Tile.IsDouble() {
+		centerRotation = 90
+	} else if cp.Flipped {
+		centerRotation = 180
+	}
+	doubles := 0
+	if cp.Tile.IsDouble() {
+		doubles = 1
+	}
+	centerRT := RenderedTile{
+		Tile:       cp.Tile,
+		X:          b.ScreenWidth / 2,
+		Y:          b.ScreenHeight / 2,
+		Rotation:   centerRotation,
+		RowCount:   3,
+		RowDoubles: doubles,
+	}
+	result[centerIdx] = centerRT
+
+	// Right portion: grows East, curves go DOWN.
+	dir := DirEast
+	cur := centerRT
+	for i := centerIdx + 1; i < len(chain); i++ {
+		rt, newDir := calculateNextPositionFromPlaced(b, cur, chain[i], dir, true)
+		result[i] = rt
+		cur = rt
+		dir = newDir
+	}
+
+	// Left portion: grows West, curves go UP.
+	dir = DirWest
+	cur = centerRT
+	for i := centerIdx - 1; i >= 0; i-- {
+		rt, newDir := calculateNextPositionFromPlaced(b, cur, chain[i], dir, false)
+		result[i] = rt
+		cur = rt
+		dir = newDir
+	}
+
+	return result
+}
+
+// RotateLayout applies a global rotation (0, 90, 180, 270) to every tile's
+// position and rotation. The engine always calculates in East/West; this
+// transforms the output into North/South or inverted layouts.
+//
+// engineCfg is the BoardConfig used by the engine (may have swapped W/H).
+// screenCfg is the real screen dimensions for re-centering after rotation.
+func RotateLayout(tiles []RenderedTile, engineCfg, screenCfg BoardConfig, angle int) {
+	if angle == 0 || len(tiles) == 0 {
+		return
+	}
+
+	ecx := engineCfg.ScreenWidth / 2
+	ecy := engineCfg.ScreenHeight / 2
+
+	scx := screenCfg.ScreenWidth / 2
+	scy := screenCfg.ScreenHeight / 2
+
+	for i := range tiles {
+		dx := tiles[i].X - ecx
+		dy := tiles[i].Y - ecy
+
+		switch angle {
+		case 90:
+			tiles[i].X = scx - dy
+			tiles[i].Y = scy + dx
+		case 180:
+			tiles[i].X = scx - dx
+			tiles[i].Y = scy - dy
+		case 270:
+			tiles[i].X = scx + dy
+			tiles[i].Y = scy - dx
+		}
+
+		tiles[i].Rotation = (tiles[i].Rotation + angle) % 360
+	}
 }
