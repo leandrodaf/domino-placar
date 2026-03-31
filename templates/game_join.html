@@ -32,6 +32,14 @@
 
 <script>
 (function() {
+  function generateSecureUid() {
+    var chars = '0123456789abcdefghijklmnopqrstuvwxyz';
+    var bytes = new Uint8Array(12);
+    (window.crypto || window.msCrypto).getRandomValues(bytes);
+    var result = '';
+    for (var i = 0; i < bytes.length; i++) { result += chars[bytes[i] % chars.length]; }
+    return result;
+  }
   var u = {};
   try { u = JSON.parse(localStorage.getItem('domino_user') || '{}'); } catch(e) {}
   var nameEl = document.getElementById('join-name');
@@ -42,7 +50,7 @@
   // Save to localStorage on submit
   document.getElementById('join-form').addEventListener('submit', function() {
     var name = (nameEl ? nameEl.value.trim() : '') || u.name || '';
-    var uid  = (uidEl  ? uidEl.value         : '') || u.unique_id || (Math.random().toString(36).substr(2,12));
+    var uid  = (uidEl  ? uidEl.value         : '') || u.unique_id || generateSecureUid();
     localStorage.setItem('domino_user', JSON.stringify({ name: name, unique_id: uid }));
     if (uidEl && !uidEl.value) uidEl.value = uid;
   });

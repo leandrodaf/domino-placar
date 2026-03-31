@@ -169,6 +169,14 @@
       <script>
       /* global showToast */
       (function() {
+        function generateSecureUid() {
+          var chars = '0123456789abcdefghijklmnopqrstuvwxyz';
+          var bytes = new Uint8Array(12);
+          (window.crypto || window.msCrypto).getRandomValues(bytes);
+          var result = '';
+          for (var i = 0; i < bytes.length; i++) { result += chars[bytes[i] % chars.length]; }
+          return result;
+        }
         var u = {};
         try { u = JSON.parse(localStorage.getItem('domino_user') || '{}'); } catch(e) {}
         var nm = document.getElementById('og-name');
@@ -178,7 +186,7 @@
         document.getElementById('online-game-form').addEventListener('submit', function() {
           var name = nm ? nm.value.trim() : '';
           var uidv = uid ? uid.value : '';
-          if (!uidv) { uidv = Math.random().toString(36).substr(2,12); if(uid) uid.value = uidv; }
+          if (!uidv) { uidv = generateSecureUid(); if(uid) uid.value = uidv; }
           localStorage.setItem('domino_user', JSON.stringify({ name: name || u.name, unique_id: uidv }));
         });
         // Quick-play form — fill from localStorage too
@@ -197,7 +205,7 @@
         function requireName(formId, nameEl, uidEl, e) {
           var n = nameEl ? nameEl.value.trim() : '';
           var id = uidEl ? uidEl.value.trim() : '';
-          if (!id) { id = Math.random().toString(36).substr(2,12); if(uidEl) uidEl.value = id; }
+          if (!id) { id = generateSecureUid(); if(uidEl) uidEl.value = id; }
           if (!n) {
             e.preventDefault();
             openNameModal(function(name) {
