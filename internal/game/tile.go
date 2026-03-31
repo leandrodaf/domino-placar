@@ -24,9 +24,11 @@ type PlacedTile struct {
 
 // BoardState is the current board.
 type BoardState struct {
-	Chain     []PlacedTile
-	LeftOpen  int
-	RightOpen int
+	Chain          []PlacedTile
+	LeftOpen       int
+	RightOpen      int
+	ChainCenter    int // index of the first-placed tile inside Chain; grows as tiles are prepended to the left
+	LayoutRotation int // 0, 90, 180, 270 — random rotation applied to the whole layout
 }
 
 func (b BoardState) IsEmpty() bool { return len(b.Chain) == 0 }
