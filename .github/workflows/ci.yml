@@ -52,6 +52,9 @@ jobs:
           }
           EOF
 
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
       - name: Build debug APK
         run: ./gradlew assembleDebug
 
@@ -72,7 +75,7 @@ jobs:
           node-version: "22"
 
       - name: Install ESLint
-        run: npm install eslint eslint-plugin-html --save-dev
+        run: npm ci --registry https://registry.npmjs.org
 
       - name: Run ESLint on HTML/JS
         run: npx eslint --max-warnings 0 "templates/**/*.html"

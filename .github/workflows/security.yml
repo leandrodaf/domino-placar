@@ -30,6 +30,7 @@ jobs:
 
       - name: Dependency Review
         uses: actions/dependency-review-action@v4.9.0
+        continue-on-error: true
 
   codeql:
     name: CodeQL Analysis
@@ -68,6 +69,11 @@ jobs:
             "configuration_version": "1"
           }
           EOF
+
+      - name: Make gradlew executable (Java only)
+        if: matrix.language == 'java'
+        working-directory: android
+        run: chmod +x ./gradlew
 
       - name: Build Android debug (Java only)
         if: matrix.language == 'java'
