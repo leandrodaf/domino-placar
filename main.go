@@ -39,28 +39,30 @@ func main() {
 		log.Fatalf("Failed to create uploads dir: %v", err)
 	}
 
-	// Initialize store (Firebase if FIREBASE_DATABASE_URL is set, otherwise SQLite)
-	var store db.Store
+	// SQLite is always initialised: it is the sole backend for online game
+	// sessions (/game/* routes) regardless of whether Firebase is used for
+	// the tournament/scoring store.
+	sqlDB, err := db.OpenDB("domino.db")
+	if err != nil {
+		log.Fatalf("Failed to open database: %v", err)
+	}
+	defer func() { _ = sqlDB.Close() }()
+	if err := db.CreateTables(sqlDB); err != nil {
+		log.Fatalf("Failed to create tables: %v", err)
+	}
+	sqliteStore := db.NewSQLiteStore(sqlDB)
 
+	// Initialize tournament/scoring store (Firebase if configured, otherwise reuse SQLite)
+	var store db.Store
 	if fbURL := os.Getenv("FIREBASE_DATABASE_URL"); fbURL != "" {
 		fbCreds := os.Getenv("FIREBASE_CREDENTIALS")
-		var err error
 		store, err = db.NewFirebaseStore(fbURL, fbCreds)
 		if err != nil {
 			log.Fatalf("Failed to init Firebase: %v", err)
 		}
-		log.Println("Using Firebase Realtime Database")
+		log.Println("Using Firebase Realtime Database (tournament store) + SQLite (game sessions)")
 	} else {
-		sqlDB, err := db.OpenDB("domino.db")
-		if err != nil {
-			log.Fatalf("Failed to open database: %v", err)
-		}
-		defer func() { _ = sqlDB.Close() }()
-
-		if err := db.CreateTables(sqlDB); err != nil {
-			log.Fatalf("Failed to create tables: %v", err)
-		}
-		store = db.NewSQLiteStore(sqlDB)
+		store = sqliteStore
 		log.Println("Using SQLite database")
 	}
 
@@ -269,9 +271,9 @@ func main() {
 	// Push notifications (FCM token registration from Android app)
 	mux.HandleFunc("POST /api/push/register", pushMgr.RegisterHandler())
 
-	// Online Domino Game — /game/* routes
-	if sqlStore, ok := store.(*db.SQLiteStore); ok {
-		gameMgr := handler.NewGameSessionManager(db.NewGameSQLiteStore(sqlStore))
+	// Online Domino Game — /game/* routes (always available; backed by SQLite)
+	{
+		gameMgr := handler.NewGameSessionManager(db.NewGameSQLiteStore(sqliteStore))
 		mux.HandleFunc("GET /game/new", handler.CreateGamePageHandler(tmpl))
 		mux.HandleFunc("POST /game", handler.CreateGameHandler(gameMgr, hub, tmpl))
 		mux.HandleFunc("POST /game/quickplay", handler.QuickPlayHandler(gameMgr, hub))
@@ -286,8 +288,6 @@ func main() {
 		mux.HandleFunc("POST /game/{id}/action", handler.GameActionHandler(gameMgr, hub))
 		mux.HandleFunc("GET /game/{id}/events", handler.GameSSEHandler(hub, gameMgr))
 		mux.HandleFunc("POST /game/{id}/bots-preview", handler.GameBotsPreviewHandler(gameMgr, hub))
-	} else {
-		log.Println("Online game requires SQLite — /game/* routes not registered (Firebase mode)")
 	}
 
 	port := os.Getenv("PORT")

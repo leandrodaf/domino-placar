@@ -5,7 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.0] - 2026-03-31
+## [1.1.1] - 2026-03-31
+
+### Fixed
+
+- **Game routes unavailable in Firebase mode** — SQLite is now always initialised at startup regardless of the active tournament store. Previously, when `FIREBASE_DATABASE_URL` was set the `store.(*db.SQLiteStore)` type assertion failed and all `/game/*` routes were silently skipped, causing `405 Method Not Allowed` / `404` responses in production.
+
+[1.1.1]: https://github.com/leandrodaf/domino-placar/compare/v1.1.0...v1.1.1
+
 
 ### Added
 
