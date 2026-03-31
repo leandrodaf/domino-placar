@@ -485,6 +485,10 @@ func TurmaSSEHandler(hub *SSEHub) http.HandlerFunc {
 		}
 
 		ch := hub.Subscribe(turmaID)
+		if ch == nil {
+			http.Error(w, "too many connections to this session", http.StatusServiceUnavailable)
+			return
+		}
 		defer hub.Unsubscribe(turmaID, ch)
 
 		// Register presence

@@ -17,6 +17,11 @@ import (
 
 var appSecret = initSecret()
 
+// secureCookies is true when SESSION_SECRET is set (production mode).
+// Dev environments without SESSION_SECRET work over plain HTTP;
+// production deployments must set SESSION_SECRET so cookies require HTTPS.
+var secureCookies = os.Getenv("SESSION_SECRET") != ""
+
 func initSecret() []byte {
 	if s := os.Getenv("SESSION_SECRET"); s != "" {
 		h := sha256.Sum256([]byte(s))
@@ -50,6 +55,7 @@ func SetHostCookie(w http.ResponseWriter, entityID string) {
 		Value:    macSign("host:" + entityID),
 		Path:     "/",
 		HttpOnly: true,
+		Secure:   secureCookies,
 		SameSite: http.SameSiteStrictMode,
 		MaxAge:   86400 * 30,
 	})
@@ -74,6 +80,7 @@ func SetPlayerCookie(w http.ResponseWriter, matchID, playerID string) {
 		Value:    tok,
 		Path:     "/",
 		HttpOnly: true,
+		Secure:   secureCookies,
 		SameSite: http.SameSiteStrictMode,
 		MaxAge:   86400 * 30,
 	})

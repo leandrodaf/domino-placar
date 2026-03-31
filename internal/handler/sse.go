@@ -31,17 +31,27 @@ func (h *SSEHub) SetPushManager(pm *PushManager) {
 	h.push = pm
 }
 
+// maxSSEConnsPerSession limits open SSE channels per session to prevent DoS.
+const maxSSEConnsPerSession = 50
+
 // Subscribe creates a new channel for the given matchID and returns it.
+// Returns nil if the session already has maxSSEConnsPerSession open connections.
 func (h *SSEHub) Subscribe(matchID string) chan string {
-	ch := make(chan string, 8)
 	h.mu.Lock()
+	defer h.mu.Unlock()
+	if len(h.clients[matchID]) >= maxSSEConnsPerSession {
+		return nil
+	}
+	ch := make(chan string, 32)
 	h.clients[matchID] = append(h.clients[matchID], ch)
-	h.mu.Unlock()
 	return ch
 }
 
 // Unsubscribe removes a channel from the given matchID subscribers.
 func (h *SSEHub) Unsubscribe(matchID string, ch chan string) {
+	if ch == nil {
+		return
+	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	chans := h.clients[matchID]
@@ -95,21 +105,42 @@ func (h *SSEHub) PresenceJoin(channel, uniqueID string) {
 }
 
 // PresenceLeave unregisters a unique_id from a channel.
-func (h *SSEHub) PresenceLeave(channel, uniqueID string) {
+// Returns the number of remaining connections for that uid on the channel.
+// A return value of 0 means the uid has truly gone offline (no more connections).
+// Callers should use this return value instead of a subsequent IsOnline call
+// to avoid the race between Leave and the check.
+func (h *SSEHub) PresenceLeave(channel, uniqueID string) int {
 	if uniqueID == "" {
-		return
+		return 0
 	}
 	h.mu.Lock()
+	remaining := 0
 	if m := h.presence[channel]; m != nil {
 		m[uniqueID]--
+		remaining = m[uniqueID]
 		if m[uniqueID] <= 0 {
 			delete(m, uniqueID)
+			remaining = 0
 		}
 		if len(m) == 0 {
 			delete(h.presence, channel)
 		}
 	}
 	h.mu.Unlock()
+	return remaining
+}
+
+// IsOnline returns true if the given uid still has at least one active SSE
+// connection on the channel. Used to detect page-transition disconnects
+// (e.g., lobby → play) where the player opens a new connection immediately
+// after closing the old one.
+func (h *SSEHub) IsOnline(channel, uid string) bool {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	if m := h.presence[channel]; m != nil {
+		return m[uid] > 0
+	}
+	return false
 }
 
 // OnlineUIDs returns the set of unique_ids currently connected to a channel.
@@ -148,6 +179,10 @@ func SSEHandler(hub *SSEHub) http.HandlerFunc {
 		}
 
 		ch := hub.Subscribe(matchID)
+		if ch == nil {
+			http.Error(w, "too many connections to this session", http.StatusServiceUnavailable)
+			return
+		}
 		defer hub.Unsubscribe(matchID, ch)
 
 		// Send initial ping
