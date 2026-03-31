@@ -303,7 +303,7 @@ function shareControlLink() {
     navigator.share({ title: '{{T .Lang "ranking.js.control_title"}}', text: '{{T .Lang "ranking.js.control_text"}}', url: url }).catch(function(){});
   } else {
     navigator.clipboard.writeText(url).then(function() {
-      alert('{{T .Lang "ranking.js.control_copied"}}\n\n' + url);
+      showToast('{{T .Lang "ranking.js.control_copied"}}');
     }).catch(function() { prompt('{{T .Lang "ranking.js.copy_control"}}', url); });
   }
 }
@@ -320,7 +320,7 @@ function shareScore() {
     navigator.share({ title: '{{T .Lang "ranking.js.share_title"}}', text: text, url: url }).catch(function(){});
   } else {
     navigator.clipboard.writeText(text + '\n' + url).then(function() {
-      alert('{{T .Lang "ranking.js.score_copied"}}');
+      showToast('{{T .Lang "ranking.js.score_copied"}}');
     }).catch(function() { prompt('{{T .Lang "ranking.js.copy_score"}}', text); });
   }
 }

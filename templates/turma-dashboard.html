@@ -283,12 +283,13 @@
 </div>
 
 <script>
+/* global showToast */
 /* exported copyCode, shareLink */
 function copyCode() {
   var code = document.getElementById('invite-code').textContent.trim();
   if (navigator.clipboard) {
     navigator.clipboard.writeText(code).then(function() {
-      alert('{{T .Lang "turma.code_copied"}}');
+      showToast('{{T .Lang "turma.code_copied"}}');
     });
   } else {
     prompt('{{T .Lang "turma.invite_code"}}:', code);

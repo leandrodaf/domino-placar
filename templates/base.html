@@ -2,7 +2,7 @@
 <html lang="{{LangAttr .Lang}}">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#09090f">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -45,7 +45,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/style.css?v=3">
+  <link rel="stylesheet" href="/static/style.css?v=4">
   <script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js" defer></script>
   {{block "head-extra" .}}{{end}}
   {{if .CSRFToken}}<meta name="csrf-token" content="{{.CSRFToken}}">{{end}}
@@ -139,5 +139,40 @@
       <a href="https://github.com/leandrodaf" target="_blank" rel="noopener" style="color:inherit; text-decoration:underline;">leandrodaf</a>
     </p>
   </footer>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script>
+  /* exported showToast */
+  var _toastTimer;
+  function showToast(msg, type) {
+    var el = document.getElementById('toast');
+    if (!el) return;
+    clearTimeout(_toastTimer);
+    el.textContent = msg;
+    el.setAttribute('data-type', type || '');
+    el.classList.add('show');
+    _toastTimer = setTimeout(function() { el.classList.remove('show'); }, 2800);
+  }
+
+  // Auto-dismiss server-rendered error/warning alerts after 4.5s
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.alert-danger, .alert-warning').forEach(function(el) {
+      setTimeout(function() {
+        el.style.transition = 'opacity 0.4s ease';
+        el.style.opacity = '0';
+        setTimeout(function() {
+          el.style.overflow = 'hidden';
+          el.style.maxHeight = el.offsetHeight + 'px';
+          requestAnimationFrame(function() {
+            el.style.transition = 'opacity 0.4s ease, max-height 0.35s ease, margin 0.35s ease, padding 0.35s ease';
+            el.style.maxHeight = '0';
+            el.style.marginBottom = '0';
+            el.style.padding = '0';
+          });
+        }, 400);
+      }, 4500);
+    });
+  });
+  </script>
 </body>
 </html>{{end}}

@@ -11,27 +11,30 @@
   <span class="badge badge-waiting" style="font-size:0.78rem;">Sala</span>
 </div>
 
-<!-- Seats grid -->
+<!-- Players list -->
 <div class="card">
-  <div class="card-title" style="margin-bottom:12px;">Jogadores ({{len .Participants}}/4)</div>
-  <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-    {{range .Seats}}
-    {{if .}}
-    <div style="border-radius:12px; padding:12px; background:rgba(34,197,94,0.07); border:1px solid rgba(34,197,94,0.25); display:flex; align-items:center; gap:8px;">
-      <span style="font-size:1.4rem;">{{if .IsBot}}🤖{{else}}👤{{end}}</span>
-      <div>
-        <div style="font-weight:600; font-size:0.9rem; color:var(--text-1);">{{.Name}}</div>
-        <div style="font-size:0.72rem; color:var(--muted); margin-top:2px;">
-          Assento {{add .Seat 1}}{{if $.Session.TeamMode}} · Time {{add .Team 1}}{{end}}{{if .IsBot}} · Bot{{end}}
-        </div>
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+    <div class="card-title" style="margin-bottom:0;">Jogadores</div>
+    <span id="player-counter" style="font-size:0.78rem; color:var(--muted);">{{.HumanCount}}/10</span>
+  </div>
+  <div id="player-list" style="display:flex; flex-direction:column; gap:8px;">
+    {{range .Participants}}
+    <div style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; background:rgba(34,197,94,0.07); border:1px solid rgba(34,197,94,0.2);">
+      <span style="font-size:1.3rem; line-height:1;">{{if .IsBot}}🤖{{else}}👤{{end}}</span>
+      <div style="flex:1; min-width:0;">
+        <div style="font-weight:600; font-size:0.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{.Name}}</div>
+        <div style="font-size:0.72rem; color:var(--muted); margin-top:1px;">Assento {{add .Seat 1}}</div>
       </div>
-    </div>
-    {{else}}
-    <div style="border-radius:12px; padding:12px; background:rgba(255,255,255,0.02); border:1px dashed var(--border); display:flex; align-items:center; gap:8px; opacity:0.5;">
-      <span style="font-size:1.4rem; opacity:0.4;">➕</span>
-      <div style="font-size:0.82rem; color:var(--muted);">Aguardando...</div>
+      {{if $.Session.TeamMode}}<span style="font-size:0.72rem; color:var(--muted); flex-shrink:0;">Time {{add .Team 1}}</span>{{end}}
     </div>
     {{end}}
+    <!-- Bot placeholder slots injected by JS -->
+    <div id="bot-slots"></div>
+    {{if lt .HumanCount 10}}
+    <div id="waiting-slot" style="display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; background:rgba(255,255,255,0.02); border:1px dashed var(--border); opacity:0.5;">
+      <span style="font-size:1.3rem; opacity:0.4;">➕</span>
+      <div style="font-size:0.82rem; color:var(--muted);">Aguardando jogadores...</div>
+    </div>
     {{end}}
   </div>
 </div>
@@ -41,7 +44,7 @@
   <div class="card-title" style="margin-bottom:10px;">Convidar jogadores</div>
   <div style="background:rgba(245,197,24,0.08); border:1px solid rgba(245,197,24,0.25); border-radius:10px; padding:12px; margin-bottom:12px;">
     <div style="font-size:0.7rem; color:var(--muted); margin-bottom:4px;">Link de acesso:</div>
-    <div id="join-link" style="font-size:0.75rem; color:var(--gold); word-break:break-all; font-family:monospace; line-height:1.4;">
+    <div style="font-size:0.75rem; color:var(--gold); word-break:break-all; font-family:monospace; line-height:1.4;">
       <span id="join-link-text">carregando...</span>
     </div>
   </div>
@@ -51,23 +54,40 @@
   </div>
 </div>
 
-<!-- Host: start button -->
+<!-- Host: start button with bot selector -->
 {{if .IsHost}}
 <div class="card" style="border-color:rgba(34,197,94,0.3); background:rgba(34,197,94,0.03);">
-  <form method="POST" action="/game/{{.Session.ID}}/start">
+  <form method="POST" action="/game/{{.Session.ID}}/start" id="start-form">
     <input type="hidden" name="_csrf" value="{{.CSRFToken}}">
-    {{if ge (len .Participants) 2}}
-    <input type="hidden" name="add_bots" value="0">
-    {{else}}
-    <input type="hidden" name="add_bots" value="1">
+    <input type="hidden" name="bot_count" id="bot-count-input" value="0">
+
+    {{if gt .MaxBots 0}}
+    <div style="margin-bottom:16px;">
+      <div style="font-size:0.82rem; color:var(--muted); margin-bottom:10px;">Completar com bots</div>
+      <div style="display:flex; align-items:center; gap:0; background:rgba(255,255,255,0.04); border:1px solid var(--border); border-radius:12px; overflow:hidden;">
+        <button type="button" onclick="changeBots(-1)"
+          style="min-width:48px; min-height:48px; background:none; border:none; color:var(--text); font-size:1.4rem; cursor:pointer; transition:background 0.15s;"
+          onmouseover="this.style.background='rgba(255,255,255,0.07)'" onmouseout="this.style.background='none'">−</button>
+        <div style="flex:1; text-align:center; padding:4px 0;">
+          <span id="bot-count-display" style="font-family:'Rajdhani',sans-serif; font-size:2rem; font-weight:700; color:var(--text); line-height:1;">0</span>
+          <div style="font-size:0.72rem; color:var(--muted); margin-top:2px;">bots (máx {{.MaxBots}})</div>
+        </div>
+        <button type="button" onclick="changeBots(1)"
+          style="min-width:48px; min-height:48px; background:none; border:none; color:var(--text); font-size:1.4rem; cursor:pointer; transition:background 0.15s;"
+          onmouseover="this.style.background='rgba(255,255,255,0.07)'" onmouseout="this.style.background='none'">+</button>
+      </div>
+    </div>
     {{end}}
-    <button type="submit" class="btn btn-success" style="width:100%; min-height:52px; font-size:1.05rem;">
+
+    <button type="submit" id="start-btn" class="btn btn-success" style="width:100%; min-height:52px; font-size:1.05rem;"
+      {{if lt .HumanCount 2}}disabled{{end}}>
       🚀 Iniciar Jogo
-      {{if lt (len .Participants) 2}}
-      <div style="font-size:0.75rem; font-weight:400; opacity:0.8; margin-top:2px;">Bots completarão a mesa</div>
-      {{end}}
+      <div id="start-hint" style="font-size:0.75rem; font-weight:400; opacity:0.8; margin-top:2px;{{if ge .HumanCount 2}}display:none{{end}}">
+        Adicione bots ou aguarde jogadores
+      </div>
     </button>
   </form>
+
 </div>
 {{else}}
 <div class="card" style="text-align:center; padding:24px 16px;">
@@ -78,12 +98,15 @@
 {{end}}
 
 <div style="text-align:center; margin-top:12px;">
-  <a href="/" class="btn btn-ghost" style="font-size:0.88rem;">← Início</a>
+  <button onclick="leaveGame()" class="btn btn-ghost" style="font-size:0.88rem;">← Início</button>
 </div>
 
 <script>
 var SESSION_ID = '{{.Session.ID}}';
 var BASE_URL = window.location.origin;
+var MAX_BOTS = {{.MaxBots}};
+var HUMAN_COUNT = {{.HumanCount}};
+var CSRF_TOKEN = '{{.CSRFToken}}';
 
 // Fill the join link display
 (function() {
@@ -94,9 +117,12 @@ var BASE_URL = window.location.origin;
 function copyGameLink() {
   var link = BASE_URL + '/game/' + SESSION_ID + '/join';
   if (navigator.clipboard) {
-    navigator.clipboard.writeText(link).then(function() { alert('Link copiado!'); });
+    navigator.clipboard.writeText(link).then(function() { showToast('Link copiado!'); });
   } else {
-    prompt('Link de convite:', link);
+    var ta = document.createElement('textarea');
+    ta.value = link; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    showToast('Link copiado!');
   }
 }
 // eslint-disable-next-line no-unused-vars
@@ -109,18 +135,105 @@ function shareGameLink() {
   }
 }
 
-// SSE listener
+function updateStartBtn() {
+  var btn = document.getElementById('start-btn');
+  var hint = document.getElementById('start-hint');
+  if (!btn) return;
+  var enough = (HUMAN_COUNT + _botCount) >= 2;
+  btn.disabled = !enough;
+  if (hint) hint.style.display = enough ? 'none' : '';
+}
+
+// Bot slots — injected into player list
+var _botCount = 0;
+function changeBots(delta) {
+  _botCount = Math.max(0, Math.min(MAX_BOTS, _botCount + delta));
+  document.getElementById('bot-count-input').value = _botCount;
+  document.getElementById('bot-count-display').textContent = _botCount;
+  updateBotSlots();
+  updateStartBtn();
+  // Notify other players in the lobby.
+  fetch('/game/' + SESSION_ID + '/bots-preview', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: 'bot_count=' + _botCount
+  }).catch(function() {});
+}
+
+function updateBotSlots() {
+  var container = document.getElementById('bot-slots');
+  var waitingSlot = document.getElementById('waiting-slot');
+  var counter = document.getElementById('player-counter');
+  if (!container) return;
+
+  container.innerHTML = '';
+  for (var i = 0; i < _botCount; i++) {
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; background:rgba(168,85,247,0.07); border:1px solid rgba(168,85,247,0.2);';
+    row.innerHTML =
+      '<span style="font-size:1.3rem; line-height:1;">🤖</span>' +
+      '<div style="flex:1; min-width:0;">' +
+        '<div style="font-weight:600; font-size:0.9rem;">Bot ' + (i + 1) + '</div>' +
+        '<div style="font-size:0.72rem; color:var(--muted); margin-top:1px;">Assento ' + (HUMAN_COUNT + i + 1) + '</div>' +
+      '</div>';
+    container.appendChild(row);
+  }
+
+  // Update counter
+  if (counter) counter.textContent = (HUMAN_COUNT + _botCount) + '/10';
+
+  // Hide "aguardando" slot when all seats are taken
+  if (waitingSlot) {
+    waitingSlot.style.display = (HUMAN_COUNT + _botCount >= 10) ? 'none' : 'flex';
+  }
+}
+
+// SSE listener — passes uid so the server detects true disconnects.
+// Grace period on server prevents self-removal during page reloads.
+var _lobbyES = null;
+var _leaving = false;
+
+function leaveGame() {
+  // Close SSE FIRST so the incoming game_joined broadcast (triggered by our
+  // own leave POST) doesn't fire window.location.reload() before the browser
+  // navigates to '/'.
+  _leaving = true;
+  if (_lobbyES) { _lobbyES.close(); _lobbyES = null; }
+  fetch('/game/' + SESSION_ID + '/leave', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: '_csrf=' + encodeURIComponent(CSRF_TOKEN)
+  })
+    .then(function() { window.location.href = '/'; })
+    .catch(function() { window.location.href = '/'; });
+}
+
 (function() {
   if (typeof EventSource === 'undefined') return;
-  var es = new EventSource('/game/' + SESSION_ID + '/events');
-  es.addEventListener('update', function(e) {
+  var uid = '';
+  try { uid = (JSON.parse(localStorage.getItem('domino_user') || '{}')).unique_id || ''; } catch(e) {}
+  var url = '/game/' + SESSION_ID + '/events' + (uid ? '?uid=' + encodeURIComponent(uid) : '');
+  _lobbyES = new EventSource(url);
+  _lobbyES.addEventListener('update', function(e) {
+    if (_leaving) return;
     if (e.data === 'game_joined') {
       window.location.reload();
     } else if (e.data === 'game_started') {
       window.location.href = '/game/' + SESSION_ID + '/play';
+    } else if (e.data && e.data.indexOf('game_bots_count:') === 0) {
+      var n = parseInt(e.data.split(':')[1], 10);
+      if (!isNaN(n)) {
+        _botCount = Math.max(0, Math.min(MAX_BOTS, n));
+        var display = document.getElementById('bot-count-display');
+        if (display) display.textContent = _botCount;
+        var input = document.getElementById('bot-count-input');
+        if (input) input.value = _botCount;
+        updateBotSlots();
+        updateStartBtn();
+      }
     }
   });
-  es.onerror = function() {};
+  _lobbyES.onerror = function() {};
 })();
 </script>
 {{end}}
