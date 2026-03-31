@@ -102,6 +102,19 @@ type GameStore interface {
 	GetGameSessionInfo(id string) (*GameSessionInfo, error)
 	GetActiveGameSessions() ([]string, error)
 	// FindOpenSession returns the ID of a waiting session with open seats
-	// that excludeUID has not already joined, or "" if none found.
-	FindOpenSession(excludeUID string) (string, error)
+	// that excludeUID has not already joined and matches the given variant,
+	// or "" if none found.
+	FindOpenSession(excludeUID, variant string) (string, error)
+	// FindMyWaitingSession returns the ID of a waiting session that uid IS
+	// already a participant in (for resuming after a page reload or brief disconnect).
+	FindMyWaitingSession(uid, variant string) (string, error)
+	// FindMyActiveSession returns the ID of an active (in-progress) session that
+	// uid is already a participant in (for reconnecting players who left mid-game).
+	FindMyActiveSession(uid string) (string, error)
+	RemoveGameParticipant(sessionID, uniqueID string) error
+	// CleanupZombieWaitingSessions marks waiting sessions as finished on startup.
+	CleanupZombieWaitingSessions() (int, error)
+	// CleanupZombieActiveSessions marks active sessions as finished on startup.
+	// After a restart all in-memory state and SSE connections are gone.
+	CleanupZombieActiveSessions() (int, error)
 }

@@ -53,11 +53,11 @@ func GetGameSession(db *sql.DB, id string) (*GameSessionRecord, error) {
 // SaveGameSession persists the current in-memory state of a session to the DB.
 func SaveGameSession(db *sql.DB, gs *game.GameSession) error {
 	_, err := db.Exec(`UPDATE game_sessions
-		SET status=?, turn_idx=?, round_number=?, board_json=?, boneyard_json=?, pass_count=?
+		SET status=?, turn_idx=?, round_number=?, board_json=?, boneyard_json=?, pass_count=?, host_unique_id=?
 		WHERE id=?`,
 		string(gs.Status), gs.TurnIdx, gs.RoundNumber,
 		game.BoardToJSON(gs.Board), game.BoneyardToJSON(gs.Boneyard), gs.PassCount,
-		gs.ID)
+		gs.HostID, gs.ID)
 	return err
 }
 
@@ -65,17 +65,17 @@ func SaveGameSession(db *sql.DB, gs *game.GameSession) error {
 
 // UpsertGameParticipant inserts or updates a participant record.
 func UpsertGameParticipant(db *sql.DB, sessionID string, p *game.Participant) error {
-	_, err := db.Exec(`INSERT INTO game_participants (id,session_id,name,unique_id,seat,team,is_bot,total_score,hand_json)
-		VALUES (?,?,?,?,?,?,?,?,?)
-		ON CONFLICT(id) DO UPDATE SET total_score=excluded.total_score, hand_json=excluded.hand_json`,
+	_, err := db.Exec(`INSERT INTO game_participants (id,session_id,name,unique_id,seat,team,is_bot,total_score,eliminated,hand_json)
+		VALUES (?,?,?,?,?,?,?,?,?,?)
+		ON CONFLICT(id) DO UPDATE SET total_score=excluded.total_score, eliminated=excluded.eliminated, hand_json=excluded.hand_json`,
 		p.ID, sessionID, p.Name, p.UniqueID, p.Seat, p.Team, boolToInt(p.IsBot),
-		p.TotalScore, game.HandToJSON(p.Hand))
+		p.TotalScore, boolToInt(p.Eliminated), game.HandToJSON(p.Hand))
 	return err
 }
 
 // GetGameParticipants returns all participants for a session, ordered by seat.
 func GetGameParticipants(db *sql.DB, sessionID string) ([]*game.Participant, error) {
-	rows, err := db.Query(`SELECT id,name,unique_id,seat,team,is_bot,total_score,hand_json
+	rows, err := db.Query(`SELECT id,name,unique_id,seat,team,is_bot,total_score,eliminated,hand_json
 		FROM game_participants WHERE session_id=? ORDER BY seat`, sessionID)
 	if err != nil {
 		return nil, err
@@ -84,12 +84,13 @@ func GetGameParticipants(db *sql.DB, sessionID string) ([]*game.Participant, err
 	var out []*game.Participant
 	for rows.Next() {
 		var p game.Participant
-		var isBotInt int
+		var isBotInt, eliminatedInt int
 		var handJSON string
-		if err := rows.Scan(&p.ID, &p.Name, &p.UniqueID, &p.Seat, &p.Team, &isBotInt, &p.TotalScore, &handJSON); err != nil {
+		if err := rows.Scan(&p.ID, &p.Name, &p.UniqueID, &p.Seat, &p.Team, &isBotInt, &p.TotalScore, &eliminatedInt, &handJSON); err != nil {
 			return nil, err
 		}
 		p.IsBot = isBotInt == 1
+		p.Eliminated = eliminatedInt == 1
 		p.Hand = game.HandFromJSON(handJSON)
 		out = append(out, &p)
 	}
@@ -152,27 +153,97 @@ func GetActiveGameSessions(db *sql.DB) ([]string, error) {
 	return ids, rows.Err()
 }
 
-// FindOpenSession returns the ID of a waiting session with fewer than 4 players
-// that excludeUID has not already joined. Returns "" if none is found.
-func FindOpenSession(db *sql.DB, excludeUID string) (string, error) {
+// FindOpenSession returns the ID of a waiting session that has at least 1 participant
+// and fewer than 10, that excludeUID has not already joined, matching the given variant.
+// Returns "" if none is found.
+func FindOpenSession(db *sql.DB, excludeUID, variant string) (string, error) {
 	row := db.QueryRow(`
 		SELECT gs.id
 		FROM game_sessions gs
 		LEFT JOIN game_participants gp ON gs.id = gp.session_id
 		WHERE gs.status = 'waiting'
+		  AND gs.variant = ?
 		  AND NOT EXISTS (
 		      SELECT 1 FROM game_participants
 		      WHERE session_id = gs.id AND unique_id = ?
 		  )
 		GROUP BY gs.id
-		HAVING COUNT(gp.id) < 4
+		HAVING COUNT(gp.id) >= 1 AND COUNT(gp.id) < 10
 		ORDER BY COUNT(gp.id) DESC, gs.created_at ASC
-		LIMIT 1`, excludeUID)
+		LIMIT 1`, variant, excludeUID)
 	var id string
 	if err := row.Scan(&id); err != nil {
 		return "", nil // no open session found
 	}
 	return id, nil
+}
+
+// FindMyWaitingSession returns the most recent waiting session the given uid is already in.
+// Used to resume a session after a page reload or brief disconnect.
+func FindMyWaitingSession(db *sql.DB, uid, variant string) (string, error) {
+	row := db.QueryRow(`
+		SELECT gs.id
+		FROM game_sessions gs
+		JOIN game_participants gp ON gp.session_id = gs.id
+		WHERE gs.status = 'waiting'
+		  AND gs.variant = ?
+		  AND gp.unique_id = ?
+		ORDER BY gs.created_at DESC
+		LIMIT 1`, variant, uid)
+	var id string
+	if err := row.Scan(&id); err != nil {
+		return "", nil // not found
+	}
+	return id, nil
+}
+
+// FindMyActiveSession returns the most recent active (in-progress) session the
+// given uid is already a participant in. Used to reconnect players who left mid-game.
+func FindMyActiveSession(db *sql.DB, uid string) (string, error) {
+	row := db.QueryRow(`
+		SELECT gs.id
+		FROM game_sessions gs
+		JOIN game_participants gp ON gp.session_id = gs.id
+		WHERE gs.status = 'active'
+		  AND gp.unique_id = ?
+		ORDER BY gs.created_at DESC
+		LIMIT 1`, uid)
+	var id string
+	if err := row.Scan(&id); err != nil {
+		return "", nil // not found
+	}
+	return id, nil
+}
+
+// RemoveGameParticipant deletes a participant from the DB by session+uniqueID.
+func RemoveGameParticipant(db *sql.DB, sessionID, uniqueID string) error {
+	_, err := db.Exec(`DELETE FROM game_participants WHERE session_id=? AND unique_id=?`, sessionID, uniqueID)
+	return err
+}
+
+// CleanupZombieWaitingSessions marks ALL waiting sessions as finished on startup.
+// Waiting sessions are always stale after a server restart: SSE connections are
+// gone, in-memory removal timers are lost, and any listed participants are ghosts.
+func CleanupZombieWaitingSessions(db *sql.DB) (int, error) {
+	res, err := db.Exec(`UPDATE game_sessions SET status = 'finished' WHERE status = 'waiting'`)
+	if err != nil {
+		return 0, err
+	}
+	n, _ := res.RowsAffected()
+	return int(n), nil
+}
+
+// CleanupZombieActiveSessions marks ALL active sessions as finished on startup.
+// After a server restart all SSE connections are gone and disconnect timers are
+// lost, so active sessions are equally orphaned — players cannot reconnect to a
+// meaningful game state hosted only in memory.
+func CleanupZombieActiveSessions(db *sql.DB) (int, error) {
+	res, err := db.Exec(`UPDATE game_sessions SET status = 'finished' WHERE status = 'active'`)
+	if err != nil {
+		return 0, err
+	}
+	n, _ := res.RowsAffected()
+	return int(n), nil
 }
 
 func boolToInt(b bool) int {
