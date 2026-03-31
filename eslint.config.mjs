@@ -6,6 +6,7 @@ export default [
     // ESLint cannot parse Go template expressions mixed with JavaScript
     ignores: [
       "templates/game.html",
+      "templates/game_lobby.html",
       "templates/lobby.html",
       "templates/ranking.html",
       "templates/round-scores.html",
@@ -46,6 +47,7 @@ export default [
         FileReader: "readonly",
         Notification: "readonly",
         AbortController: "readonly",
+        requestAnimationFrame: "readonly",
       },
     },
     rules: {
