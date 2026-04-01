@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.2] - 2026-04-01
+
+### Fixed
+
+- **Peças da mão invisíveis em landscape** — `#my-hand` usava `height: 100%` com `overflow-y: auto` dentro de um flex-column cuja altura vem de `align-self: stretch`. Esse padrão colapsa para `0px` no Android Chrome/WebView. Corrigido usando `flex: 1; min-height: 0` e adicionando `overflow: hidden` ao `#hand-area`.
+- **Botão de comprar (boneyard) não aparecia em landscape** — `display: none !important` no media query landscape impedia o JS de exibir o botão. Corrigido com posicionamento absoluto na base da coluna de peças.
+- **Seletor de lado (esquerda/direita) não aparecia em landscape** — `display: none !important` foi removido; o seletor agora usa `position: fixed` centralizado.
+- **Overlays não visíveis em tela cheia** — `#round-overlay`, `#gameover-overlay` e `#disconnect-banner` movidos para dentro de `#game-root` (a Fullscreen API só renderiza descendentes do elemento fullscreen).
+- **Placar final não aparecia em tela cheia** — corrigido pelo mesmo reposicionamento dos overlays acima.
+- **`#disconnect-banner` com gap de 56px** — o banner usava `top: 56px` compensando a nav, mas a nav está oculta na página do jogo. Corrigido para `top: 0`.
+- **Controles de zoom flutuando no meio da mesa** — `right` revertido para `4px` (posição relativa à área do tabuleiro, não à página).
+
+### Added
+
+- **Badge de pontuação no header** — exibe a pontuação acumulada do jogador em tempo real diretamente no cabeçalho da partida.
+
+[1.1.2]: https://github.com/leandrodaf/domino-placar/compare/v1.1.1...v1.1.2
+
 ## [1.1.1] - 2026-03-31
 
 ### Fixed
