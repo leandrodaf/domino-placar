@@ -588,7 +588,6 @@ footer { display: none; }
 :fullscreen #game-root, :-webkit-full-screen #game-root {
   height: 100dvh; margin: 0;
 }
-:fullscreen #disconnect-banner, :-webkit-full-screen #disconnect-banner { top: 0; }
 
 /* ── Standalone PWA (Add to Home Screen) ── */
 @media (display-mode: standalone) {
@@ -621,7 +620,7 @@ footer { display: none; }
 
 /* ── Disconnect banner ── */
 #disconnect-banner {
-  position: fixed; top: 56px; left: 0; right: 0; z-index: 200;
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
   padding: 10px 16px;
   background: linear-gradient(90deg, rgba(220,38,38,0.92), rgba(180,20,20,0.92));
   border-bottom: 2px solid #ef4444;
